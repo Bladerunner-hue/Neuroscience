@@ -456,7 +456,7 @@ print("""
 - BIDS ds000171: emotional music/non-music fMRI in MDD vs controls
 - Pipeline: Spark ingestion -> Nilearn preprocessing -> ROI features -> TF transformer
 - Visualisation: inline seaborn/matplotlib in notebooks (no HTML/PNG export)
-- Tracking: mlflow experiments in mlruns/
+- Tracking: mlflow experiments in mlflow.db (sqlite)
 - Limitations: small N=39; cross-subject CV essential; TR=3s
 """)
 '''},

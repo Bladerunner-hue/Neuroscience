@@ -25,7 +25,7 @@ def get_schaefer_masker(n_rois: int = 100) -> NiftiLabelsMasker:
     atlas = datasets.fetch_atlas_schaefer_2018(n_rois=n_rois, yeo_networks=7)
     return NiftiLabelsMasker(
         labels_img=atlas.maps,
-        standardize=True,
+        standardize="zscore_sample",
         detrend=True,
         low_pass=0.1,
         high_pass=0.01,

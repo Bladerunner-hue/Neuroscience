@@ -16,3 +16,6 @@ pyarrow
 fastparquet
 psutil
 openneuro-py
+marimo[recommended]
+plotly
+tensorflow-probability  # optional, for Gaussian Process / probabilistic layers
