@@ -1,0 +1,7 @@
+*.nii.gz filter=lfs diff=lfs merge=lfs -text
+*.bvec filter=lfs diff=lfs merge=lfs -text
+*.bval filter=lfs diff=lfs merge=lfs -text
+*.h5 filter=lfs diff=lfs merge=lfs -text
+*.pb filter=lfs diff=lfs merge=lfs -text
+models/** filter=lfs diff=lfs merge=lfs -text
+data/derivatives/** filter=lfs diff=lfs merge=lfs -text

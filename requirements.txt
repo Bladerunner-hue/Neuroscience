@@ -1,0 +1,6 @@
+tensorflow==2.16.*
+nibabel
+pandas
+scikit-learn
+matplotlib
+jupyterlab
