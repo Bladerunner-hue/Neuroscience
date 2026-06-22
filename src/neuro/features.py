@@ -14,7 +14,14 @@ from scipy.stats import entropy, skew
 from neuro.config import PROCESSED_DIR
 
 
+SCHAEFER_VALID_ROIS = (100, 200, 300, 400, 500, 600, 700, 800, 900, 1000)
+
+
 def get_schaefer_masker(n_rois: int = 100) -> NiftiLabelsMasker:
+    if n_rois not in SCHAEFER_VALID_ROIS:
+        raise ValueError(
+            f"n_rois must be one of {SCHAEFER_VALID_ROIS}, got {n_rois}"
+        )
     atlas = datasets.fetch_atlas_schaefer_2018(n_rois=n_rois, yeo_networks=7)
     return NiftiLabelsMasker(
         labels_img=atlas.maps,
@@ -71,7 +78,7 @@ def stimulus_locked_mean(
     return {k: float(np.mean(v)) for k, v in out.items()}
 
 
-def build_feature_table(runs_df: pd.DataFrame, n_rois: int = 50) -> pd.DataFrame:
+def build_feature_table(runs_df: pd.DataFrame, n_rois: int = 100) -> pd.DataFrame:
     available = runs_df[runs_df["bold_exists"]].copy()
     masker = get_schaefer_masker(n_rois=n_rois)
     rows = []
