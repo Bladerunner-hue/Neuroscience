@@ -4,3 +4,4 @@ notebooks/html/
 figures/
 mlruns/
 mlflow.db*
+data/*

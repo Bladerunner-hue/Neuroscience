@@ -30,9 +30,32 @@ marimo edit marimo_notebooks/02_spectral_biomarkers.py
 marimo edit marimo_notebooks/06_tf_spectrogram_model.py
 ```
 
+## HTML Dashboards (exported)
+
+Static, fully-interactive marimo exports live in `marimo_exports/`. Open them directly in Zed's preview pane or any browser.
+
+**Best way — launch the live browser notebook (recommended):**
+```bash
+marimo edit marimo_exports/dashboard_browser.py
+```
+
+It gives you a reactive selector + large live iframe preview of any dashboard (Plotly, sliders, everything works inside the iframe). Automatically sees new exports.
+
+**Quick static alternatives:**
+```bash
+# Option 1 — simple local server
+python marimo_exports/serve.py
+# then open http://localhost:8765/index.html
+
+# Option 2 — open the static index
+open marimo_exports/index.html
+```
+
+The static index links to the three current dashboards: `01_pre_flight.html`, `02_eda_univariate.html`, `demo_neuro_visuals.html`.
+
 **Notebook roadmap (upgraded):**
 1. `01_pre_flight` — stimulus event alignment, data inventory, delayed peak in MDD
-2. `02_spectral_biomarkers.py` ← **priority** — Welch PSDs, band power, interactive group/condition comparison
+2. `02_eda_univariate.py` ← **priority** — Welch PSDs, band power, interactive group/condition comparison
 3. `03_eda_multivariate` — coherence (auditory ↔ limbic) during music
 4. `04_feature_engineering` — spectral features + Spark + clustering → "music responder" subtypes
 5. `05_preprocessing_pipeline` — bandpass, Hilbert phase, TFRecords
