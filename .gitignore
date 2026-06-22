@@ -1,1 +1,6 @@
-venvdata/raw/ds000171/
+venv/
+data/raw/
+notebooks/html/
+figures/
+mlruns/
+mlflow.db*
