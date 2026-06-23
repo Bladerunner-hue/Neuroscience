@@ -39,26 +39,57 @@ jobs:
 
       - name: Export notebooks to WASM (free tier)
         run: |
+          echo "Running WASM export..."
           python marimo_exports/export_wasm.py || true
+          echo "WASM export step completed. Checking output..."
+          ls -la marimo_exports/wasm/ 2>/dev/null || echo "No wasm directory yet (this is ok if export had issues for some notebooks)"
 
       - name: Prepare docs/ for GitHub Pages
         run: |
+          echo "=== Preparing docs/ for GitHub Pages ==="
           mkdir -p docs/wasm
-          # Copy all available WASM exports
-          cp -r marimo_exports/wasm/* docs/wasm/ 2>/dev/null || true
 
-          # Ensure our custom landing page exists
-          if [ -f "docs/index.html" ]; then
-            cp docs/index.html docs/index.html
+          # Copy freshly generated WASM exports from the export step
+          if [ -d "marimo_exports/wasm" ] && [ "$(ls -A marimo_exports/wasm 2>/dev/null)" ]; then
+            echo "Copying WASM builds..."
+            cp -r marimo_exports/wasm/* docs/wasm/ 2>/dev/null || true
+          else
+            echo "No WASM builds found in marimo_exports/wasm (or directory empty)"
+          fi
+
+          # Ensure we always have a good landing page (committed in docs/index.html takes precedence)
+          if [ ! -f "docs/index.html" ]; then
+            echo "Creating fallback index.html"
+            cat > docs/index.html << 'HTMLEOF'
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><title>Neuroscience • Marimo Dashboards</title></head>
+<body style="font-family: sans-serif; padding: 2rem;">
+<h1>Neuroscience • Marimo WASM Dashboards</h1>
+<p>Fully interactive notebooks running in the browser.</p>
+<ul>
+  <li><a href="wasm/01_pre_flight/">01 — Pre-flight</a></li>
+  <li><a href="wasm/02_eda_univariate/">02 — Spectral Power</a></li>
+</ul>
+<p>Source: <a href="https://github.com/Bladerunner-hue/Neuroscience">GitHub</a></p>
+</body></html>
+HTMLEOF
           fi
 
           touch docs/.nojekyll
+
+          echo "=== Docs content prepared ==="
+          echo "docs/ contents:"
+          ls -la docs/ || true
+          echo "wasm/ contents:"
+          ls -la docs/wasm/ || true
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: docs
-          # Explicit name to match deploy step
           name: github-pages
 
   deploy:
@@ -67,11 +98,10 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     needs: build
+    # Temporary for Node 20 deprecation warning (as per GitHub blog)
+    env:
+      ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
-        # Note on Node 20 deprecation:
-        # If you see warnings about Node 20, you can temporarily add this to the job:
-        # env:
-        #   ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true
         uses: actions/deploy-pages@v4
