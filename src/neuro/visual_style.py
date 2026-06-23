@@ -15,7 +15,12 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import seaborn as sns
+from pathlib import Path
 from plotly.subplots import make_subplots
+
+from neuro.bids import inventory_runs
+from neuro.config import DATA_ROOT
+from neuro.features import parse_events
 
 try:
     from nilearn import plotting as nplt
@@ -270,8 +275,6 @@ def load_real_sample_ts_and_events(max_subjects: int = 2, tasks=("music", "nonmu
     Returns list of dicts: {subject, group_short, task, run, t, bold_mean, events_df, tr}
     Falls back gracefully.
     """
-    from neuro.config import DATA_ROOT
-    from neuro.bids import inventory_runs, parse_events  # reuse if available
     import nibabel as nib
 
     runs_df = inventory_runs()
@@ -294,7 +297,10 @@ def load_real_sample_ts_and_events(max_subjects: int = 2, tasks=("music", "nonmu
                 t = np.arange(len(bold_mean)) * (row["tr"] or 3.0)
 
                 ev_path = row["events_path"]
-                events = pd.read_csv(ev_path, sep="\t") if ev_path and Path(ev_path).exists() else pd.DataFrame()
+                if ev_path and Path(ev_path).exists():
+                    events = parse_events(ev_path)
+                else:
+                    events = pd.DataFrame()
                 samples.append({
                     "subject": row["subject"],
                     "group_short": row["group_short"],
