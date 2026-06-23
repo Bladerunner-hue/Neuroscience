@@ -57,22 +57,10 @@ jobs:
             echo "No WASM builds found in marimo_exports/wasm (or directory empty)"
           fi
 
-          # Ensure we always have a good landing page (committed in docs/index.html takes precedence)
+          # Ensure landing page exists (it is committed in docs/index.html)
           if [ ! -f "docs/index.html" ]; then
-            echo "Creating fallback index.html"
-            cat > docs/index.html << 'HTMLEOF'
-<!DOCTYPE html>
-<html lang="en"><head><meta charset="utf-8"><title>Neuroscience • Marimo Dashboards</title></head>
-<body style="font-family: sans-serif; padding: 2rem;">
-<h1>Neuroscience • Marimo WASM Dashboards</h1>
-<p>Fully interactive notebooks running in the browser.</p>
-<ul>
-  <li><a href="wasm/01_pre_flight/">01 — Pre-flight</a></li>
-  <li><a href="wasm/02_eda_univariate/">02 — Spectral Power</a></li>
-</ul>
-<p>Source: <a href="https://github.com/Bladerunner-hue/Neuroscience">GitHub</a></p>
-</body></html>
-HTMLEOF
+            echo "Warning: docs/index.html is missing - creating minimal placeholder"
+            echo '<!doctype html><html><body><h1>Neuroscience Dashboards</h1><p>See repo for details.</p></body></html>' > docs/index.html
           fi
 
           touch docs/.nojekyll

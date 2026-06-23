@@ -10,25 +10,30 @@ Implements upgrade plan:
 Uses real ROI extraction where possible + synthetic for reactivity + matplotlib/Plotly.
 """
 
-import sys
-from pathlib import Path
-REPO = Path.cwd()
-for c in [REPO, REPO.parent, REPO.parent.parent]:
-    if (c / "src" / "neuro").exists(): REPO = c; break
-sys.path.insert(0, str(REPO / "src"))
-
 import marimo as mo
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from scipy.signal import coherence, welch
 import plotly.express as px
+from pathlib import Path
 
-from neuro.bids import inventory_runs
-from neuro.features import get_schaefer_masker, extract_roi_timeseries
-from neuro.visual_style import (
-    set_global_style, hypothesis_card, key_insight_card, clinical_relevance_card,
-    make_synthetic_bold_dataset, CONTROL_COLOR, MDD_COLOR, MUSIC_COLOR,
+import marimo as mo
+from nilearn import datasets
+from nilearn.image import smooth_img
+from nilearn.maskers import NiftiLabelsMasker
+import nibabel as nib
+
+from helpers import (
+    set_global_style,
+    hypothesis_card,
+    key_insight_card,
+    clinical_relevance_card,
+    make_synthetic_bold_dataset,
+    CONTROL_COLOR,
+    MDD_COLOR,
+    MUSIC_COLOR,
+    load_participants_direct,
 )
 
 set_global_style()
@@ -55,21 +60,40 @@ def simulate_network_ts(df, condition="music"):
 
 aud, limb = simulate_network_ts(synth, focus_ui.value)
 
-# Real attempt (very limited sample)
+# Real attempt (very limited sample) - direct nilearn, no wrapper
 real_coh = None
 try:
-    runs = inventory_runs()
-    sample_run = runs[(runs.bold_exists) & (runs.task.str.contains("music", case=False))].iloc[0]
-    masker = get_schaefer_masker(n_rois_ui.value)
-    ts = extract_roi_timeseries(sample_run.bold_path, masker)
-    # Pick two representative ROIs (first ~auditory-ish, later ~limbic-ish in Schaefer)
-    if ts.shape[1] > 20:
-        aud_roi = ts[:, 0:5].mean(1)
-        limb_roi = ts[:, 20:30].mean(1)
-        f_coh, coh = coherence(aud_roi, limb_roi, fs=1.0/3.0, nperseg=32)
-        real_coh = (f_coh, coh, sample_run.subject, sample_run.group_short)
+    DATA_DIR = Path("data/raw/ds000171")
+    runs = []
+    for sub in load_participants_direct()["participant_id"].head(3):
+        for f in (DATA_DIR / sub / "func").glob(f"{sub}_task-music*_bold.nii.gz"):
+            parts = f.stem.split("_")
+            task = parts[2].replace("task-", "")
+            run = int(parts[3].replace("run-", ""))
+            runs.append({"subject": sub, "task": task, "run": run, "bold_path": str(f)})
+    runs_df = pd.DataFrame(runs)
+    if len(runs_df) > 0:
+        sample_run = runs_df.iloc[0]
+        atlas = datasets.fetch_atlas_schaefer_2018(n_rois=n_rois_ui.value, yeo_networks=7)
+        masker = NiftiLabelsMasker(
+            labels_img=atlas.maps,
+            standardize="zscore_sample",
+            detrend=True,
+            low_pass=0.1,
+            high_pass=0.01,
+            t_r=3.0,
+        )
+        img = nib.load(sample_run["bold_path"])
+        smoothed = smooth_img(img, fwhm=6)
+        ts = masker.fit_transform(smoothed)
+        if ts.shape[1] > 20:
+            aud_roi = ts[:, 0:5].mean(1)
+            limb_roi = ts[:, 20:30].mean(1)
+            f_coh, coh = coherence(aud_roi, limb_roi, fs=1.0/3.0, nperseg=32)
+            real_coh = (f_coh, coh, sample_run["subject"], "Control" if "control" in sample_run["subject"] else "MDD")
 except Exception as e:
     real_coh = None
+    print("Real coh attempt:", e)
 
 # =============================================================================
 # Coherence calculation + viz

@@ -18,7 +18,7 @@ import seaborn as sns
 from pathlib import Path
 from plotly.subplots import make_subplots
 
-from neuro.bids import inventory_runs
+from neuro.bids import inventory_runs  # only inventory_runs, parse_events is from features
 from neuro.config import DATA_ROOT
 from neuro.features import parse_events
 
@@ -276,6 +276,10 @@ def load_real_sample_ts_and_events(max_subjects: int = 2, tasks=("music", "nonmu
     Falls back gracefully.
     """
     import nibabel as nib
+    try:
+        from neuro.features import parse_events
+    except ImportError:
+        parse_events = None
 
     runs_df = inventory_runs()
     avail = runs_df[runs_df["bold_exists"]].copy()
@@ -298,7 +302,10 @@ def load_real_sample_ts_and_events(max_subjects: int = 2, tasks=("music", "nonmu
 
                 ev_path = row["events_path"]
                 if ev_path and Path(ev_path).exists():
-                    events = parse_events(ev_path)
+                    if parse_events is not None:
+                        events = parse_events(ev_path)
+                    else:
+                        events = pd.read_csv(ev_path, sep="\t")
                 else:
                     events = pd.DataFrame()
                 samples.append({

@@ -17,16 +17,8 @@ def _():
 
     import marimo as mo
 
-    REPO = Path.cwd()
-    for c in [REPO, REPO.parent, REPO.parent.parent]:
-        if (c / "src" / "neuro").exists():
-            REPO = c
-            break
-    sys.path.insert(0, str(REPO / "src"))
-
-    from neuro.bids import inventory_runs, load_participants, validate_bids
-    from neuro.config import DATA_ROOT, TR_SEC
-    from neuro.visual_style import (
+    # Direct load, no src/neuro wrapper
+    from helpers import (
         CONTROL_COLOR,
         HIGHLIGHT,
         MDD_COLOR,
@@ -34,16 +26,21 @@ def _():
         clinical_relevance_card,
         hypothesis_card,
         key_insight_card,
-        load_real_sample_ts_and_events,
+        load_bold_mean_direct,
+        load_events_direct,
+        load_participants_direct,
         make_synthetic_bold_dataset,
         set_global_style,
     )
 
     set_global_style()
 
+    DATA_DIR = Path("data/raw/ds000171")
+    TR_SEC = 3.0
+
     return (
         CONTROL_COLOR,
-        DATA_ROOT,
+        DATA_DIR,
         HIGHLIGHT,
         MDD_COLOR,
         MUSIC_COLOR,
@@ -51,17 +48,16 @@ def _():
         clinical_relevance_card,
         go,
         hypothesis_card,
-        inventory_runs,
         key_insight_card,
-        load_participants,
-        load_real_sample_ts_and_events,
+        load_bold_mean_direct,
+        load_events_direct,
+        load_participants_direct,
         make_synthetic_bold_dataset,
         mo,
         np,
         pd,
         plt,
         px,
-        validate_bids,
     )
 
 
@@ -91,53 +87,49 @@ def _(hypothesis_card, mo):
 
 
 @app.cell
-def _(DATA_ROOT, inventory_runs, load_participants, load_real_sample_ts_and_events, mo, pd, validate_bids):
-    report = validate_bids()
-    parts = load_participants()
-    runs = inventory_runs()
-    real_samples = []
+def _(DATA_DIR, load_bold_mean_direct, load_events_direct, load_participants_direct, mo, pd):
+    participants = load_participants_direct()
+    # Simple direct inventory summary
+    runs = []
+    for sub in participants["participant_id"].head(5):  # sample for speed
+        for f in (DATA_DIR / sub / "func").glob(f"{sub}_*_bold.nii.gz"):
+            parts = f.stem.split("_")
+            task = parts[2].replace("task-", "")
+            run = int(parts[3].replace("run-", ""))
+            runs.append({"subject": sub, "task": task, "run": run})
+    runs_df = pd.DataFrame(runs)
+
+    # Direct real sample load for one
+    real_bold = []
     try:
-        real_samples = load_real_sample_ts_and_events(max_subjects=1)
+        real_bold = load_bold_mean_direct("sub-control01", "music", 1)
     except Exception as e:
-        print("Warning loading real samples:", e)
+        print("Warning loading real BOLD:", e)
 
-    mo.md("## Data Intake")
-    mo.md(f"**Resolved DATA_ROOT:** `{DATA_ROOT}`")
+    mo.md("## Data Intake - Direct Load (no wrappers)")
+    mo.md(f"**DATA_DIR:** `{DATA_DIR}`")
+    mo.ui.table(participants.head())
+    mo.ui.table(runs_df.head() if not runs_df.empty else pd.DataFrame({"note": ["no runs"]}))
 
-    mo.ui.table(
-        pd.DataFrame(
-            {
-                "n_subjects": [report["n_subjects"]],
-                "MDD": [report["n_mdd"]],
-                "Controls": [report["n_nd"]],
-                "runs_available": [report["n_runs_available"]],
-            }
-        )
-    )
-
-    if real_samples:
-        mo.md("**Real data sample loaded successfully** (mean BOLD from one subject)")
+    if len(real_bold) > 0:
+        mo.md("**Real BOLD mean loaded directly** (first 10 vols shown)")
+        mo.ui.table(pd.DataFrame({"bold_mean": real_bold[:10]}))
     else:
-        mo.md("**No real BOLD files loaded** (using only synthetic data). Ensure the BIDS dataset is checked out in data/raw/ds000171 (git submodule update --init --recursive if applicable).")
-    return (real_samples,)
+        mo.md("**No real BOLD** - using synthetic only for demo.")
+    return (participants, runs_df, real_bold)
 
 
 @app.cell
-def _(mo, px, real_samples):
-    if real_samples:
-        sample = real_samples[0]
-        mo.md(f"### Real Data Example: {sample['subject']} ({sample['group_short']}) — {sample['task']}")
-        fig = px.line(
-            x=sample["t"],
-            y=sample["bold_mean"],
-            title=f"Real mean BOLD trace (TR={sample['tr']}s)",
-        )
-        mo.ui.plotly(fig)
-
-        # Show a few events
-        if not sample["events"].empty:
-            mo.md("Sample events:")
-            mo.ui.table(sample["events"].head(6))
+def _(DATA_DIR, mo, pd, px):
+    # Direct event load example
+    try:
+        events = pd.read_csv(DATA_DIR / "sub-control01/func/sub-control01_task-music_run-1_events.tsv", sep="\t")
+        mo.md("### Direct Events Load Example (sub-control01 music run-1)")
+        mo.ui.table(events.head(8))
+        fig_events = px.bar(events["trial_type"].value_counts().reset_index(), x="trial_type", y="count", title="Trial types (direct load)")
+        mo.ui.plotly(fig_events)
+    except Exception as e:
+        mo.md(f"Direct events load failed: {e}")
     return
 
 
@@ -145,6 +137,18 @@ def _(mo, px, real_samples):
 def _(mo):
     n_sub = mo.ui.slider(6, 16, value=8, label="Synthetic subjects")
     return (n_sub,)
+
+
+@app.cell
+def _(mo):
+    # Example prod caching
+    import marimo as mo
+    @mo.cache
+    def cached_load_participants():
+        from helpers import load_participants_direct
+        return load_participants_direct()
+    # cached = cached_load_participants()
+    return
 
 
 @app.cell
@@ -172,7 +176,7 @@ def _(
     bold = subdf["bold"].values
 
     # Matplotlib alignment
-    fig, ax = plt.subplots(figsize=(10, 4))
+    fig_synth, ax = plt.subplots(figsize=(10, 4))
     ax.plot(t, bold, color=HIGHLIGHT, label="Mean BOLD")
     for onset, label in [(0, "tones"), (36, "pos_music"), (105, "neg_music")]:
         color = MUSIC_COLOR if "music" in label else "#FF9800"
@@ -181,7 +185,7 @@ def _(
     ax.set_xlabel("Time (s)")
     ax.legend()
     ax.grid(True, alpha=0.3)
-    mo.pyplot(fig)
+    mo.pyplot(fig_synth)
 
     # Also Plotly
     pfig = px.line(x=t, y=bold, title="Interactive: BOLD trace with event markers")

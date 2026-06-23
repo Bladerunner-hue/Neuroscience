@@ -10,13 +10,6 @@ Full implementation of plan:
 Uses existing src/neuro + visual helpers. Shows path to Spark scaling.
 """
 
-import sys
-from pathlib import Path
-REPO = Path.cwd()
-for c in [REPO, REPO.parent, REPO.parent.parent]:
-    if (c / "src" / "neuro").exists(): REPO = c; break
-sys.path.insert(0, str(REPO / "src"))
-
 import marimo as mo
 import numpy as np
 import pandas as pd
@@ -26,13 +19,22 @@ from sklearn.cluster import SpectralClustering
 from sklearn.mixture import GaussianMixture
 from sklearn.preprocessing import StandardScaler
 import plotly.express as px
+from pathlib import Path
 
-from neuro.visual_style import (
-    set_global_style, hypothesis_card, key_insight_card, clinical_relevance_card,
-    make_synthetic_bold_dataset, CONTROL_COLOR, MDD_COLOR,
+import marimo as mo
+from helpers import (
+    set_global_style,
+    hypothesis_card,
+    key_insight_card,
+    clinical_relevance_card,
+    make_synthetic_bold_dataset,
+    CONTROL_COLOR,
+    MDD_COLOR,
+    get_connect_spark,
 )
-from neuro.features import build_feature_table  # existing, we can call on small sample
-from neuro.bids import inventory_runs
+
+# Direct load helpers (no wrappers)
+DATA_DIR = Path("data/raw/ds000171")
 
 set_global_style()
 
@@ -128,27 +130,25 @@ mo.md(key_insight_card(
 ))
 
 # =============================================================================
-# Spark path (shown for production scale)
+# Spark Connect path (prod ready, direct)
 # =============================================================================
-mo.md("## Production Path: Spark + Parallel Feature Extraction")
+mo.md("## Production Path: Spark Connect + Direct Data (no wrappers)")
+
+from pyspark.sql import SparkSession
+import pyspark.sql.functions as F
+from pyspark.sql.types import FloatType
+
+# Example usage (uncomment with a running connect server)
+# spark = get_connect_spark("sc://localhost:15002")
+# print("Spark Connect session:", spark)
 
 mo.md(r"""
 ```python
-# Example of how this scales with your existing spark_utils
-from pyspark.sql import functions as F
-from neuro.features import extract_roi_timeseries, get_schaefer_masker
-
-masker = get_schaefer_masker(100)
-
-@F.pandas_udf(...)   # or mapInPandas for full ts
-def spectral_features_udf(paths):
-    ...
-
-# Then:
-spark_df = spark.createDataFrame(runs_pdf[["bold_path"]])
-features_sdf = spark_df.withColumn("spectral_fp", spectral_features_udf("bold_path"))
+from helpers import get_connect_spark
+spark = get_connect_spark("sc://your-cluster:15002")
+# Direct + Spark Connect for scale. Use mo.cache on prep.
 ```
-This is exactly how you parallelize across hundreds of subjects on a cluster.
+Set partitions, use Arrow UDFs, keep TF training outside Spark.
 """)
 
 # =============================================================================

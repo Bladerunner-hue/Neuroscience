@@ -36,9 +36,9 @@ These are automatically deployed on every relevant push using GitHub Actions + G
 - **Workflow runs**: https://github.com/Bladerunner-hue/Neuroscience/actions/workflows/deploy-pages.yml
 - **Source code**: https://github.com/Bladerunner-hue/Neuroscience
 
-## Working with Marimo Notebooks
+## Working with Marimo Notebooks (Direct, No Legacy Wrappers)
 
-The `Neuroscience` repository contains both the raw marimo notebooks (`.py`) and their exports. It is important to understand what each format provides.
+All active notebooks are now **self-contained** (Python 3.12+ ready). They load data **directly** using pandas + nibabel + Path (no src/neuro wrappers, no sys.path hacks).
 
 ### Static vs. Fully Interactive Exports
 
@@ -66,7 +66,22 @@ marimo edit --sandbox marimo_notebooks/02_eda_univariate.py
 
 The editor runs a live reactive session. Changes to the `.py` (even from Zed) are reflected immediately in the browser.
 
+Use `@mo.cache` on loads for prod.
+
 Many scientific packages (NumPy, SciPy, pandas, matplotlib via Pyodide, scikit-learn, etc.) are supported in the browser runtime.
+
+Data is loaded directly:
+```python
+participants = pd.read_csv("data/raw/ds000171/participants.tsv", sep="\t")
+events = pd.read_csv("data/raw/ds000171/sub-..._events.tsv", sep="\t")
+img = nibabel.load("... .nii.gz")
+```
+
+### Spark Connect (updated)
+See 04 for `get_connect_spark("sc://...")` and direct loads + pandas_udf examples. Use `pyspark[connect]`.
+
+## Archived Legacy
+Old logic (src/) and classic notebooks/ moved to `archives/` for reference. No ties remain in active marimo_notebooks.
 
 ### Quick Exploration of Existing Exports
 

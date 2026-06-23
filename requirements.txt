@@ -1,5 +1,6 @@
 tensorflow[and-cuda]==2.20
-PySpark==4.1.1
+pyspark[connect]==4.1.1
+datalad
 nibabel
 nilearn
 pandas

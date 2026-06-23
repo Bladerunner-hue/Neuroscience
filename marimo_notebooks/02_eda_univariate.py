@@ -14,22 +14,25 @@ def __(mo):
     import plotly.graph_objects as go
     import plotly.express as px
 
-    REPO = Path.cwd()
-    for c in [REPO, REPO.parent, REPO.parent.parent]:
-        if (c / "src" / "neuro").exists():
-            REPO = c
-            break
-    sys.path.insert(0, str(REPO / "src"))
+    import marimo as mo  # ensure
 
-    from neuro.visual_style import (
-        set_global_style, hypothesis_card, key_insight_card, clinical_relevance_card,
-        make_synthetic_bold_dataset, band_power, CONTROL_COLOR, MDD_COLOR, HIGHLIGHT
+    # Direct, from local helpers (no src)
+    from helpers import (
+        set_global_style,
+        hypothesis_card,
+        key_insight_card,
+        clinical_relevance_card,
+        make_synthetic_bold_dataset,
+        band_power,
+        CONTROL_COLOR,
+        MDD_COLOR,
+        HIGHLIGHT,
     )
-    from neuro.config import TR_SEC
 
     set_global_style()
     mo.md("# 02 — EDA Univariate: Spectral Power (Welch PSD)")
-    return band_power, go, make_synthetic_bold_dataset, mo, np, pd, plt, px, set_global_style, sys, tf, welch, TR_SEC, CONTROL_COLOR, MDD_COLOR, HIGHLIGHT, hypothesis_card, key_insight_card, clinical_relevance_card
+    TR_SEC = 3.0
+    return band_power, go, make_synthetic_bold_dataset, mo, np, pd, plt, px, tf, welch, TR_SEC, CONTROL_COLOR, MDD_COLOR, HIGHLIGHT, hypothesis_card, key_insight_card, clinical_relevance_card
 
 @app.cell
 def __(mo, hypothesis_card):

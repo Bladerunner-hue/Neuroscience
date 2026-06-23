@@ -16,22 +16,13 @@ Run:
     marimo edit marimo_notebooks/06_tf_spectrogram_model.py
 """
 
-import sys
-from pathlib import Path
-
-REPO = Path.cwd()
-for cand in [REPO, REPO.parent, REPO.parent.parent]:
-    if (cand / "src" / "neuro").exists():
-        REPO = cand
-        break
-sys.path.insert(0, str(REPO / "src"))
-
 import marimo as mo
 import numpy as np
 import pandas as pd
 import tensorflow as tf
 
-from neuro.visual_style import (
+import marimo as mo
+from helpers import (
     set_global_style,
     make_synthetic_bold_dataset,
     hypothesis_card,
