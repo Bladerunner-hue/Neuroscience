@@ -96,8 +96,13 @@
     <div class="mt-12 text-center">
       <div class="inline-flex items-center gap-2 text-xs px-4 py-2 rounded-2xl bg-zinc-900 border border-zinc-800 text-zinc-500">
         <i class="fa-solid fa-info-circle"></i>
-        <span>These are static marimo HTML exports — fully interactive (no server needed)</span>
+        <span>Static exports (read-only widgets). For full reactivity use <code>marimo edit</code> or WASM exports.</span>
       </div>
+    </div>
+
+    <div class="mt-8 text-center text-xs text-zinc-500">
+      Want fully interactive WASM versions? Run:<br>
+      <code class="bg-zinc-900 px-2 py-0.5 rounded">python marimo_exports/export_wasm.py</code>
     </div>
   </div>
 </body>

@@ -25,7 +25,8 @@ class Handler(SimpleHTTPRequestHandler):
 if __name__ == "__main__":
     os.chdir(DIRECTORY)
     print(f"🚀 Serving marimo dashboards at http://localhost:{PORT}")
-    print(f"   Open http://localhost:{PORT}/index.html in Zed or your browser")
+    print(f"   Static index:   http://localhost:{PORT}/index.html")
+    print(f"   WASM gallery:   http://localhost:{PORT}/wasm/ (if exported)")
     print(f"   (Press Ctrl+C to stop)")
     try:
         HTTPServer(("0.0.0.0", PORT), Handler).serve_forever()

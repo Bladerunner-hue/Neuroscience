@@ -91,8 +91,8 @@ def __(choice, mo):
                 f"""
                 <div style="font-size:0.8rem; color:#71717a; margin-top:8px;">
                     📁 File: <code>{file_name}</code> &nbsp;•&nbsp;
-                    This is a fully interactive static marimo export.
-                    Plotly, sliders, and reactivity all work inside the iframe.
+                    Static marimo HTML export (outputs rendered). Widgets are read-only.
+                    For full reactivity run the .py with `marimo edit` or export as html-wasm.
                 </div>
                 """
             ),
@@ -107,9 +107,10 @@ def __(mo):
         """
         ---
         ### Tips
-        - Re-export any notebook with `marimo export html your_notebook.py -o marimo_exports/XX_new.html`
-        - This browser will automatically pick it up when you re-run the cell above.
-        - The dashboards are completely self-contained — no server needed.
+        - Regular `marimo export html` gives a **static** snapshot (no live widgets).
+        - For fully interactive browser-only versions use:
+          `marimo export html-wasm notebook.py -o out_dir --mode run`
+        - This dashboard auto-discovers new .html files when you re-run the selector cell.
         """
     )
     return

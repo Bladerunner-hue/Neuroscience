@@ -1,0 +1,2 @@
+# This file tells GitHub Pages not to process the directory with Jekyll.
+# Required when hosting marimo WASM/HTML exports that contain underscores and special files.

@@ -97,15 +97,23 @@ def __(mo, bp_c, bp_m, band_low, band_high, key_insight_card):
     return
 
 @app.cell
-def __(mo, tf, np, synth, nper):
-    # TF signal preview
+def __(mo, np, synth, nper):
+    # Optional TF / SciPy STFT preview (graceful in browser WASM)
     sig = synth.groupby("time")["bold"].mean().values.astype("float32")
-    stft = tf.signal.stft(sig, frame_length=16, frame_step=4, fft_length=32)
-    mag = np.abs(stft)
+    try:
+        import tensorflow as tf
+        stft = tf.signal.stft(sig, frame_length=16, frame_step=4, fft_length=32)
+        mag = np.abs(stft)
+        title = "TF STFT Spectrogram (demo)"
+    except Exception:
+        from scipy.signal import stft
+        f, t, Zxx = stft(sig, fs=1/3., nperseg=16)
+        mag = np.abs(Zxx)
+        title = "SciPy STFT (browser fallback)"
 
     fig2, ax2 = plt.subplots(figsize=(8, 3.5))
-    ax2.imshow(mag.T, aspect="auto", origin="lower", cmap="viridis")
-    ax2.set_title("TF STFT Spectrogram (ready for Conv2D in notebook 06)")
+    ax2.imshow(mag, aspect="auto", origin="lower", cmap="viridis")
+    ax2.set_title(title)
     mo.pyplot(fig2)
     return
 

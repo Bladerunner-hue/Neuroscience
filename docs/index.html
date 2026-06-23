@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🧠 Neuroscience • Interactive Marimo Dashboards</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style>
+    body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    .card { transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
+    .card:hover { transform: translateY(-4px); box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1); }
+  </style>
+</head>
+<body class="bg-zinc-950 text-zinc-200">
+  <div class="max-w-4xl mx-auto px-6 py-16">
+    <!-- Header -->
+    <div class="flex items-center gap-4 mb-4">
+      <div class="w-14 h-14 bg-emerald-500 rounded-3xl flex items-center justify-center shadow-lg">
+        <i class="fa-solid fa-brain text-white text-4xl"></i>
+      </div>
+      <div>
+        <h1 class="text-5xl font-semibold tracking-tighter">Neuroscience</h1>
+        <p class="text-emerald-400 text-lg">Spectral Biomarkers • Music vs Non-Musical Processing in Depression</p>
+      </div>
+    </div>
+
+    <p class="max-w-2xl text-zinc-400 mb-10 text-lg">
+      Fully interactive marimo notebooks running entirely in your browser via WebAssembly (Pyodide). 
+      No Python installation or server required.
+    </p>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
+      <!-- 01 -->
+      <a href="wasm/01_pre_flight/" class="card group block bg-zinc-900 border border-zinc-800 hover:border-emerald-500/50 rounded-3xl p-6">
+        <div class="flex items-center gap-4 mb-4">
+          <div class="w-11 h-11 bg-sky-500/10 text-sky-400 rounded-2xl flex items-center justify-center">
+            <i class="fa-solid fa-plane fa-lg"></i>
+          </div>
+          <div>
+            <div class="font-semibold text-2xl tracking-tight">01 — Pre-flight</div>
+            <div class="text-sm text-zinc-500">Event Alignment &amp; Data Intake</div>
+          </div>
+        </div>
+        <p class="text-zinc-400 mb-4">
+          BOLD response alignment to music/tones onsets. Hypothesis-driven exploration of delayed peaks in MDD.
+        </p>
+        <div class="flex items-center text-emerald-400 text-sm font-medium">
+          Open interactive dashboard <i class="fa-solid fa-arrow-right ml-2 group-hover:translate-x-0.5 transition"></i>
+        </div>
+      </a>
+
+      <!-- 02 -->
+      <a href="wasm/02_eda_univariate/" class="card group block bg-zinc-900 border border-zinc-800 hover:border-emerald-500/50 rounded-3xl p-6">
+        <div class="flex items-center gap-4 mb-4">
+          <div class="w-11 h-11 bg-violet-500/10 text-violet-400 rounded-2xl flex items-center justify-center">
+            <i class="fa-solid fa-chart-line fa-lg"></i>
+          </div>
+          <div>
+            <div class="font-semibold text-2xl tracking-tight">02 — Spectral Power</div>
+            <div class="text-sm text-zinc-500">Welch PSD • Anhedonia Biomarker</div>
+          </div>
+        </div>
+        <p class="text-zinc-400 mb-4">
+          Reactive Welch power spectra. Compare high-frequency power in Controls vs MDD during positive music.
+          Band power quantification and TF STFT preview (fallback).
+        </p>
+        <div class="flex items-center text-emerald-400 text-sm font-medium">
+          Open interactive dashboard <i class="fa-solid fa-arrow-right ml-2 group-hover:translate-x-0.5 transition"></i>
+        </div>
+      </a>
+    </div>
+
+    <div class="bg-zinc-900 border border-zinc-800 rounded-3xl p-8 mb-8">
+      <h2 class="font-semibold text-xl mb-3 flex items-center gap-2">
+        <i class="fa-solid fa-rocket"></i> 
+        How to use
+      </h2>
+      <ul class="space-y-2 text-sm text-zinc-300">
+        <li><strong>Interactive editing:</strong> <code class="bg-zinc-950 px-1.5 py-px rounded">marimo edit marimo_notebooks/02_eda_univariate.py</code></li>
+        <li><strong>WASM source export:</strong> <code class="bg-zinc-950 px-1.5 py-px rounded">python marimo_exports/export_wasm.py</code></li>
+        <li><strong>Local preview:</strong> <code class="bg-zinc-950 px-1.5 py-px rounded">python marimo_exports/serve.py</code></li>
+        <li><strong>Full source notebooks:</strong> All reactive notebooks live in <code>marimo_notebooks/</code></li>
+      </ul>
+    </div>
+
+    <div class="text-xs text-zinc-500 flex items-center gap-4 flex-wrap">
+      <div>
+        <a href="https://github.com/" class="underline hover:text-zinc-300">Source on GitHub</a>
+      </div>
+      <div>
+        Deployed with GitHub Pages (free tier)
+      </div>
+      <div>
+        Powered by <a href="https://marimo.io" class="underline hover:text-zinc-300">marimo</a> + Pyodide (WebAssembly)
+      </div>
+    </div>
+  </div>
+</body>
+</html>

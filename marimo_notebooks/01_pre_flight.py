@@ -1,9 +1,12 @@
-import marimo as mo
+import marimo
 
-app = mo.App()
+__generated_with = "0.23.10"
+app = marimo.App()
 
-@app.cell
-def __(mo):
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
     import sys
     from pathlib import Path
     import numpy as np
@@ -28,10 +31,12 @@ def __(mo):
 
     set_global_style()
     mo.md("# 01 — Pre-flight + Event Alignment (Marimo)")
-    return go, load_participants, make_synthetic_bold_dataset, mo, np, pd, plt, px, set_global_style, sys, validate_bids, TR_SEC, CONTROL_COLOR, MDD_COLOR, MUSIC_COLOR, HIGHLIGHT, hypothesis_card, key_insight_card, clinical_relevance_card
+    """)
+    return
+
 
 @app.cell
-def __(mo):
+def _(mo):
     mo.md("""
     **Music vs Non-Musical Emotional Auditory Processing in Depression**
 
@@ -39,16 +44,18 @@ def __(mo):
     """)
     return
 
+
 @app.cell
-def __(mo, hypothesis_card):
+def _(hypothesis_card, mo):
     mo.md(hypothesis_card(
         "Positive music shows delayed peak in MDD — possible reward anticipation deficit.",
         "Controls will have sharper earlier BOLD response after music onsets. MDD blunted/delayed."
     ))
     return
 
+
 @app.cell
-def __(mo, load_participants, validate_bids):
+def _(load_participants, mo, pd, validate_bids):
     report = validate_bids()
     parts = load_participants()
     mo.md("## Data Intake")
@@ -58,10 +65,19 @@ def __(mo, load_participants, validate_bids):
         "Controls": [report["n_nd"]],
         "runs_available": [report["n_runs_available"]]
     }))
-    return parts, report
+    return
+
 
 @app.cell
-def __(mo, make_synthetic_bold_dataset, np, pd, plt, TR_SEC):
+def _(
+    HIGHLIGHT,
+    MUSIC_COLOR,
+    TR_SEC,
+    make_synthetic_bold_dataset,
+    mo,
+    plt,
+    px,
+):
     # Reactive slider for demo
     n_sub = mo.ui.slider(6, 16, value=8, label="Synthetic subjects")
     synth = make_synthetic_bold_dataset(n_sub.value, 105, TR_SEC)
@@ -86,10 +102,11 @@ def __(mo, make_synthetic_bold_dataset, np, pd, plt, TR_SEC):
     # Also Plotly
     pfig = px.line(x=t, y=bold, title="Interactive: BOLD trace with event markers")
     mo.ui.plotly(pfig)
-    return bold, n_sub, pfig, subdf, synth, t
+    return
+
 
 @app.cell
-def __(mo, key_insight_card):
+def _(key_insight_card, mo):
     mo.md(key_insight_card(
         "Positive music shows delayed peak in MDD — possible reward anticipation deficit.",
         "This temporal signature is the starting point for the spectral analysis in notebook 02.",
@@ -97,12 +114,21 @@ def __(mo, key_insight_card):
     ))
     return
 
+
 @app.cell
-def __(mo, clinical_relevance_card):
+def _(clinical_relevance_card, mo):
     mo.md(clinical_relevance_card(
         "Event alignment reveals the temporal dynamics of reward processing. This informs spectral biomarker discovery for music therapy recommendation systems."
     ))
     return
+
+
+@app.cell
+def _():
+    import marimo as mo
+
+    return (mo,)
+
 
 if __name__ == "__main__":
     app.run()
