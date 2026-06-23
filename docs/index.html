@@ -3,17 +3,17 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>🧠 Neuroscience • Interactive Marimo Dashboards</title>
+  <title>🧠 Neuroscience • Interactive Marimo Dashboards (WASM)</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <style>
     body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    .card { transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
+    .card { transition: all 0.2s cubic-bezier(0.4, 0.0, 0.2, 1); }
     .card:hover { transform: translateY(-4px); box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1); }
   </style>
 </head>
 <body class="bg-zinc-950 text-zinc-200">
-  <div class="max-w-4xl mx-auto px-6 py-16">
+  <div class="max-w-5xl mx-auto px-6 py-16">
     <!-- Header -->
     <div class="flex items-center gap-4 mb-4">
       <div class="w-14 h-14 bg-emerald-500 rounded-3xl flex items-center justify-center shadow-lg">
@@ -26,8 +26,8 @@
     </div>
 
     <p class="max-w-2xl text-zinc-400 mb-10 text-lg">
-      Fully interactive marimo notebooks running entirely in your browser via WebAssembly (Pyodide). 
-      No Python installation or server required.
+      Fully interactive marimo notebooks running entirely in your browser via <strong>WebAssembly (Pyodide)</strong>. 
+      No Python installation or backend server required.
     </p>
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
@@ -46,7 +46,7 @@
           BOLD response alignment to music/tones onsets. Hypothesis-driven exploration of delayed peaks in MDD.
         </p>
         <div class="flex items-center text-emerald-400 text-sm font-medium">
-          Open interactive dashboard <i class="fa-solid fa-arrow-right ml-2 group-hover:translate-x-0.5 transition"></i>
+          Launch interactive dashboard <i class="fa-solid fa-arrow-right ml-2 group-hover:translate-x-0.5 transition"></i>
         </div>
       </a>
 
@@ -62,38 +62,32 @@
           </div>
         </div>
         <p class="text-zinc-400 mb-4">
-          Reactive Welch power spectra. Compare high-frequency power in Controls vs MDD during positive music.
-          Band power quantification and TF STFT preview (fallback).
+          Interactive Welch power spectra comparing Control vs MDD during positive music. Band power analysis + STFT preview.
         </p>
         <div class="flex items-center text-emerald-400 text-sm font-medium">
-          Open interactive dashboard <i class="fa-solid fa-arrow-right ml-2 group-hover:translate-x-0.5 transition"></i>
+          Launch interactive dashboard <i class="fa-solid fa-arrow-right ml-2 group-hover:translate-x-0.5 transition"></i>
         </div>
       </a>
     </div>
 
     <div class="bg-zinc-900 border border-zinc-800 rounded-3xl p-8 mb-8">
-      <h2 class="font-semibold text-xl mb-3 flex items-center gap-2">
-        <i class="fa-solid fa-rocket"></i> 
-        How to use
-      </h2>
-      <ul class="space-y-2 text-sm text-zinc-300">
-        <li><strong>Interactive editing:</strong> <code class="bg-zinc-950 px-1.5 py-px rounded">marimo edit marimo_notebooks/02_eda_univariate.py</code></li>
-        <li><strong>WASM source export:</strong> <code class="bg-zinc-950 px-1.5 py-px rounded">python marimo_exports/export_wasm.py</code></li>
-        <li><strong>Local preview:</strong> <code class="bg-zinc-950 px-1.5 py-px rounded">python marimo_exports/serve.py</code></li>
-        <li><strong>Full source notebooks:</strong> All reactive notebooks live in <code>marimo_notebooks/</code></li>
-      </ul>
+      <h2 class="font-semibold text-xl mb-4">How this works</h2>
+      <div class="grid md:grid-cols-2 gap-x-8 text-sm text-zinc-300">
+        <ul class="space-y-2">
+          <li>• <strong>marimo edit</strong> — full reactive editing locally</li>
+          <li>• <strong>html-wasm</strong> export — self-contained browser version</li>
+          <li>• Pyodide runs Python in the browser</li>
+        </ul>
+        <ul class="space-y-2 mt-4 md:mt-0">
+          <li>• Deployed automatically via GitHub Actions</li>
+          <li>• Hosted free on GitHub Pages</li>
+          <li>• Source: <a href="https://github.com/Bladerunner-hue/Neuroscience" class="underline">Bladerunner-hue/Neuroscience</a></li>
+        </ul>
+      </div>
     </div>
 
-    <div class="text-xs text-zinc-500 flex items-center gap-4 flex-wrap">
-      <div>
-        <a href="https://github.com/" class="underline hover:text-zinc-300">Source on GitHub</a>
-      </div>
-      <div>
-        Deployed with GitHub Pages (free tier)
-      </div>
-      <div>
-        Powered by <a href="https://marimo.io" class="underline hover:text-zinc-300">marimo</a> + Pyodide (WebAssembly)
-      </div>
+    <div class="text-center text-xs text-zinc-500">
+      Open the dashboards above or run locally with <code class="bg-zinc-900 px-1.5 py-0.5 rounded">marimo edit marimo_notebooks/02_eda_univariate.py</code>
     </div>
   </div>
 </body>

@@ -127,15 +127,29 @@ That's the main reason you're currently seeing the `404 Not Found` error when th
 
 #### How the automation works
 
-The workflow (`.github/workflows/deploy-pages.yml`) does the following on every push to `main` (when notebooks change) or on manual trigger:
+The workflow (`.github/workflows/deploy-pages.yml`) does the following on every push to `main` (when notebooks or exports change) or on manual trigger:
 
 - Checks out the code
 - Installs marimo
-- Runs `python marimo_exports/export_wasm.py`
-- Prepares the `docs/` folder with the WASM builds + landing page
-- Deploys to GitHub Pages using the official `actions/deploy-pages` action
+- Runs `python marimo_exports/export_wasm.py` (prints debug info)
+- Prepares the `docs/` folder:
+  - `mkdir -p docs/wasm`
+  - `cp -r marimo_exports/wasm/* docs/wasm/`
+  - Ensures `docs/index.html` + `docs/.nojekyll`
+- Uses `actions/configure-pages` + `actions/upload-pages-artifact`
+- Deploys with `actions/deploy-pages@v4`
 
-After you enable "GitHub Actions" as the source, the next run of the workflow should succeed.
+The prepare step includes `ls` commands so you can see in the Actions logs exactly what was copied.
+
+After setting the source to GitHub Actions in repo settings, the workflow should succeed.
+
+#### Troubleshooting the 404 "Creating Pages deployment failed"
+
+1. Go to https://github.com/Bladerunner-hue/Neuroscience/settings/pages
+2. Set **Source** to **GitHub Actions**
+3. Re-run the workflow (push or manual dispatch from Actions tab)
+
+Also make sure the "github-pages" environment is allowed to deploy (usually automatic on first successful run).
 
 #### Manual trigger
 
@@ -181,16 +195,20 @@ This gives you (and others) the full reactive marimo experience for the neurosci
 - Source notebooks: https://github.com/Bladerunner-hue/Neuroscience/tree/main/marimo_notebooks
 
 **Critical for deployment to work**
-- You **must** set GitHub Pages source to GitHub Actions:  
-  https://github.com/Bladerunner-hue/Neuroscience/settings/pages  
-  (Under "Build and deployment" → Source → **GitHub Actions**)
+- You **must** set GitHub Pages source to **GitHub Actions** (not "Deploy from a branch"):  
+  https://github.com/Bladerunner-hue/Neuroscience/settings/pages
 
-  If you see a 404 when the workflow runs "Creating Pages deployment", this is the cause.
+  This is the #1 reason for the error:  
+  `Error: Creating Pages deployment failed` + `HttpError: Not Found (status: 404)`
+
+**Node 20 deprecation**
+The workflow temporarily sets `ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true` in the deploy job (as recommended during the transition). This will be removed once all official actions are updated.
 
 **Helpful Tools & Docs**
 - marimo: https://marimo.io
-- marimo WebAssembly docs: https://docs.marimo.io/guides/webassembly
-- molab (GitHub → browser mirror): https://molab.marimo.io
+- marimo WebAssembly (html-wasm) docs: https://docs.marimo.io/guides/webassembly
+- molab (mirror notebooks from GitHub): https://molab.marimo.io
+- Local WASM export: `python marimo_exports/export_wasm.py`
 
 ## Current Marimo Notebooks
 
@@ -216,7 +234,7 @@ marimo edit marimo_notebooks/06_tf_spectrogram_model.py   # TF-heavy (not suitab
 - Static snapshots: `marimo_exports/*.html`
 - Interactive WASM versions: run the export script above (or manually with `html-wasm`)
 
-Open `marimo_exports/index.html` or launch the dashboard browser for a nice gallery.
+Open `docs/index.html` (this is what GitHub Pages serves) or use the local helpers (`marimo_exports/dashboard_browser.py` / `serve.py`) for development.
 
 ## Data & Dependencies
 
