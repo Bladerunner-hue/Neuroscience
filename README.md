@@ -110,16 +110,44 @@ The outputs land in `marimo_exports/wasm/`.
 
 **Important:** Only notebooks using Pyodide-compatible packages will work. Notebooks that rely on TensorFlow (e.g. `06_tf_spectrogram_model.py`) cannot run fully in the browser.
 
-### Hosting on GitHub Pages
+### Hosting on GitHub Pages (Free Tier)
 
-1. Export using the WASM command above.
-2. Copy the resulting directory (or the whole `wasm/` folder) into `docs/`.
-3. Add a `.nojekyll` file in the published directory.
-4. Enable GitHub Pages on the repo (source = `docs/` or `main` branch + `/docs`).
+We use the modern GitHub Pages deployment via **GitHub Actions** (recommended and free).
 
-A helper `.nojekyll` is already present in `marimo_exports/`.
+#### One-time setup (required)
 
-You can also automate this with a GitHub Action that runs the export script and deploys the `docs/` folder.
+1. Go to your repository settings:  
+   https://github.com/Bladerunner-hue/Neuroscience/settings/pages
+
+2. Under **"Build and deployment"** → **Source**, select **GitHub Actions**.
+
+3. Save the change.
+
+That's the main reason you're currently seeing the `404 Not Found` error when the workflow tries to create a deployment.
+
+#### How the automation works
+
+The workflow (`.github/workflows/deploy-pages.yml`) does the following on every push to `main` (when notebooks change) or on manual trigger:
+
+- Checks out the code
+- Installs marimo
+- Runs `python marimo_exports/export_wasm.py`
+- Prepares the `docs/` folder with the WASM builds + landing page
+- Deploys to GitHub Pages using the official `actions/deploy-pages` action
+
+After you enable "GitHub Actions" as the source, the next run of the workflow should succeed.
+
+#### Manual trigger
+
+You can also force a deployment at any time:
+- Go to the Actions tab → **Deploy Marimo WASM Dashboards to GitHub Pages** → **Run workflow**
+
+#### Current live site
+
+- Gallery: https://bladerunner-hue.github.io/Neuroscience/
+- WASM dashboards live under `/wasm/...`
+
+A `.nojekyll` file is present in `docs/` so GitHub Pages serves all files correctly (important for WASM assets).
 
 ### Alternative: Sharing via molab
 
@@ -151,6 +179,13 @@ This gives you (and others) the full reactive marimo experience for the neurosci
 - GitHub repo: https://github.com/Bladerunner-hue/Neuroscience
 - Deployment Action: https://github.com/Bladerunner-hue/Neuroscience/actions/workflows/deploy-pages.yml
 - Source notebooks: https://github.com/Bladerunner-hue/Neuroscience/tree/main/marimo_notebooks
+
+**Critical for deployment to work**
+- You **must** set GitHub Pages source to GitHub Actions:  
+  https://github.com/Bladerunner-hue/Neuroscience/settings/pages  
+  (Under "Build and deployment" → Source → **GitHub Actions**)
+
+  If you see a 404 when the workflow runs "Creating Pages deployment", this is the cause.
 
 **Helpful Tools & Docs**
 - marimo: https://marimo.io

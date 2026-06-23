@@ -7,8 +7,10 @@ on:
       - 'marimo_notebooks/**'
       - 'marimo_exports/export_wasm.py'
       - '.github/workflows/deploy-pages.yml'
+      - 'docs/**'
   workflow_dispatch:
 
+# Required for GitHub Pages deployment with OIDC
 permissions:
   contents: read
   pages: write
@@ -37,25 +39,27 @@ jobs:
 
       - name: Export notebooks to WASM (free tier)
         run: |
-          python marimo_exports/export_wasm.py
+          python marimo_exports/export_wasm.py || true
 
       - name: Prepare docs/ for GitHub Pages
         run: |
           mkdir -p docs/wasm
-          # Always try to (re)export first
-          python marimo_exports/export_wasm.py || true
-
           # Copy all available WASM exports
           cp -r marimo_exports/wasm/* docs/wasm/ 2>/dev/null || true
 
-          # Ensure nice landing page (our custom one)
-          cp docs/index.html docs/ 2>/dev/null || true
+          # Ensure our custom landing page exists
+          if [ -f "docs/index.html" ]; then
+            cp docs/index.html docs/index.html
+          fi
+
           touch docs/.nojekyll
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: docs
+          # Explicit name to match deploy step
+          name: github-pages
 
   deploy:
     environment:
@@ -66,4 +70,8 @@ jobs:
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
+        # Note on Node 20 deprecation:
+        # If you see warnings about Node 20, you can temporarily add this to the job:
+        # env:
+        #   ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true
         uses: actions/deploy-pages@v4
