@@ -7,7 +7,6 @@
 #     "numpy",
 #     "pandas",
 #     "matplotlib",
-#     "plotly",
 #     "scipy",
 # ]
 # ///
@@ -22,9 +21,8 @@ app = marimo.App(width="medium", app_title="02 — Spectral Power")
 def _():
     import marimo as mo
     import numpy as np
-    import pandas as pd  # helpers + tables (must be declared for WASM/Pyodide)
+    import pandas as pd
     import matplotlib.pyplot as plt
-    import plotly.express as px
     from scipy.signal import welch, stft
 
     from helpers import (
@@ -55,7 +53,6 @@ def _():
         np,
         pd,
         plt,
-        px,
         stft,
         welch,
     )
@@ -63,24 +60,26 @@ def _():
 
 @app.cell
 def _(mo):
-    mo.md(
+    _title = mo.md(
         r"""
 # 02 — Spectral Power (Welch PSD)
 
 **Chapter 2** · Univariate spectral biomarkers of anhedonia during positive music.
 """
     )
+    _title
     return
 
 
 @app.cell
 def _(hypothesis_card, mo):
-    mo.md(
+    _hypo = mo.md(
         hypothesis_card(
             "MDD shows reduced high-frequency power to positive music — anhedonia biomarker.",
             "Controls have higher power in the target band during positive music; tones show little group difference.",
         )
     )
+    _hypo
     return
 
 
@@ -91,9 +90,14 @@ def _(mo):
     band_low = mo.ui.slider(0.01, 0.12, value=0.03, step=0.01, label="Band low (Hz)")
     band_high = mo.ui.slider(0.06, 0.18, value=0.10, step=0.01, label="Band high (Hz)")
     nper = mo.ui.slider(16, 48, value=32, step=8, label="Welch nperseg")
-    mo.md("## Reactive controls")
-    mo.hstack([n_subj, tr, nper], justify="start")
-    mo.hstack([band_low, band_high], justify="start")
+    _controls = mo.vstack(
+        [
+            mo.md("## Reactive controls"),
+            mo.hstack([n_subj, tr, nper], justify="start"),
+            mo.hstack([band_low, band_high], justify="start"),
+        ]
+    )
+    _controls
     return band_high, band_low, n_subj, nper, tr
 
 
@@ -105,6 +109,7 @@ def _(
     band_high,
     band_low,
     band_power,
+    key_insight_card,
     make_synthetic_bold_dataset,
     mo,
     n_subj,
@@ -147,19 +152,31 @@ def _(
     axes[1].legend()
     axes[1].grid(True, alpha=0.3)
     fig.suptitle("Welch PSD: stimulus-specific group difference", y=1.02)
-    mo.output.append(fig)
 
     bp_c = band_power(f_c, pxx_c, float(band_low.value), float(band_high.value))
     bp_m = band_power(f_m, pxx_m, float(band_low.value), float(band_high.value))
     bp_c_nm = band_power(f_c_nm, pxx_c_nm, float(band_low.value), float(band_high.value))
     bp_m_nm = band_power(f_m_nm, pxx_m_nm, float(band_low.value), float(band_high.value))
-    return bp_c, bp_c_nm, bp_m, bp_m_nm, synth
+    ratio = bp_c / max(bp_m, 1e-12)
 
+    # Bar chart via matplotlib (no plotly — avoids micropip hang on Pages)
+    fig_bar, axb = plt.subplots(figsize=(7, 3.5))
+    x = np.arange(2)
+    w = 0.35
+    axb.bar(x - w / 2, [bp_c, bp_c_nm], w, label="Control", color=CONTROL_COLOR)
+    axb.bar(x + w / 2, [bp_m, bp_m_nm], w, label="MDD", color=MDD_COLOR)
+    axb.set_xticks(x)
+    axb.set_xticklabels(["music", "tones"])
+    axb.set_ylabel("Band power")
+    axb.set_title("Band power by group × condition")
+    axb.legend()
+    axb.grid(True, axis="y", alpha=0.3)
 
-@app.cell
-def _(band_high, band_low, bp_c, bp_c_nm, bp_m, bp_m_nm, key_insight_card, mo, px):
-    mo.md(
-        f"""
+    _spectra = mo.vstack(
+        [
+            fig,
+            mo.md(
+                f"""
 **Band power [{float(band_low.value):.2f}–{float(band_high.value):.2f} Hz]**
 
 | Condition | Control | MDD |
@@ -167,35 +184,23 @@ def _(band_high, band_low, bp_c, bp_c_nm, bp_m, bp_m_nm, key_insight_card, mo, p
 | Positive music | {bp_c:.4f} | {bp_m:.4f} |
 | Tones | {bp_c_nm:.4f} | {bp_m_nm:.4f} |
 """
+            ),
+            fig_bar,
+            mo.md(
+                key_insight_card(
+                    "MDD shows reduced high-frequency power to positive music.",
+                    "Dissociation is stimulus-specific (little group difference on tones).",
+                    effect_size=f"~{ratio:.1f}× higher band power in Controls (music)",
+                )
+            ),
+        ]
     )
-    mo.ui.plotly(
-        px.bar(
-            {
-                "condition": ["music", "music", "tones", "tones"],
-                "group": ["Control", "MDD", "Control", "MDD"],
-                "band_power": [bp_c, bp_m, bp_c_nm, bp_m_nm],
-            },
-            x="condition",
-            y="band_power",
-            color="group",
-            barmode="group",
-            color_discrete_map={"Control": "#2E86AB", "MDD": "#C73E1D"},
-            title="Band power by group × condition",
-        )
-    )
-    ratio = bp_c / max(bp_m, 1e-12)
-    mo.md(
-        key_insight_card(
-            "MDD shows reduced high-frequency power to positive music.",
-            "Dissociation is stimulus-specific (little group difference on tones).",
-            effect_size=f"~{ratio:.1f}× higher band power in Controls (music)",
-        )
-    )
-    return
+    _spectra
+    return (synth,)
 
 
 @app.cell
-def _(mo, np, plt, stft, synth):
+def _(np, plt, stft, synth):
     sig = synth.groupby("time")["bold"].mean().values.astype("float64")
     _f, _t, Zxx = stft(sig, fs=1 / 3.0, nperseg=16)
     fig2, ax2 = plt.subplots(figsize=(9, 3.5))
@@ -203,18 +208,23 @@ def _(mo, np, plt, stft, synth):
     ax2.set_title("SciPy STFT spectrogram")
     ax2.set_xlabel("Time frames")
     ax2.set_ylabel("Frequency bins")
-    mo.output.append(fig2)
+    fig2
     return
 
 
 @app.cell
 def _(book_nav, clinical_relevance_card, mo):
-    mo.md(
-        clinical_relevance_card(
-            "Spectral power during positive music is an objective anhedonia biomarker and a RecSys feature."
-        )
+    _wrap = mo.vstack(
+        [
+            mo.md(
+                clinical_relevance_card(
+                    "Spectral power during positive music is an objective anhedonia biomarker and a RecSys feature."
+                )
+            ),
+            mo.md(book_nav("02_eda_univariate")),
+        ]
     )
-    mo.md(book_nav("02_eda_univariate"))
+    _wrap
     return
 
 

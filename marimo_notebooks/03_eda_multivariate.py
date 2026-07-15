@@ -7,7 +7,6 @@
 #     "numpy",
 #     "pandas",
 #     "matplotlib",
-#     "plotly",
 #     "scipy",
 # ]
 # ///
@@ -24,14 +23,12 @@ def _():
     import numpy as np
     import pandas as pd
     import matplotlib.pyplot as plt
-    import plotly.express as px
     from scipy.signal import coherence
     from scipy.ndimage import gaussian_filter1d
 
     from helpers import (
         CONTROL_COLOR,
         MDD_COLOR,
-        MUSIC_COLOR,
         book_nav,
         clinical_relevance_card,
         hypothesis_card,
@@ -57,7 +54,6 @@ def _():
     return (
         CONTROL_COLOR,
         MDD_COLOR,
-        MUSIC_COLOR,
         book_nav,
         clinical_relevance_card,
         coherence,
@@ -68,7 +64,6 @@ def _():
         np,
         pd,
         plt,
-        px,
         simulate_network_ts,
         trapz_integral,
     )
@@ -76,24 +71,26 @@ def _():
 
 @app.cell
 def _(mo):
-    mo.md(
+    _title = mo.md(
         r"""
 # 03 — Multivariate Coherence
 
 **Chapter 3** · Auditory–limbic spectral coherence during music vs non-music.
 """
     )
+    _title
     return
 
 
 @app.cell
 def _(hypothesis_card, mo):
-    mo.md(
+    _hypo = mo.md(
         hypothesis_card(
             "Music increases auditory–limbic coherence in Controls; modulation is absent or reversed in MDD.",
             "Decoupling in MDD is specific to positive music.",
         )
     )
+    _hypo
     return
 
 
@@ -109,9 +106,14 @@ def _(mo):
     mdd_coupling = mo.ui.slider(
         0.1, 0.8, value=0.35, step=0.05, label="MDD coupling (music)"
     )
-    mo.md("## Reactive controls")
-    mo.hstack([focus_ui, n_subj], justify="start")
-    mo.hstack([control_coupling, mdd_coupling], justify="start")
+    _controls = mo.vstack(
+        [
+            mo.md("## Reactive controls"),
+            mo.hstack([focus_ui, n_subj], justify="start"),
+            mo.hstack([control_coupling, mdd_coupling], justify="start"),
+        ]
+    )
+    _controls
     return control_coupling, focus_ui, mdd_coupling, n_subj
 
 
@@ -122,14 +124,13 @@ def _(
     coherence,
     control_coupling,
     focus_ui,
+    key_insight_card,
     make_synthetic_bold_dataset,
     mdd_coupling,
     mo,
     n_subj,
     np,
-    pd,
     plt,
-    px,
     simulate_network_ts,
     trapz_integral,
 ):
@@ -158,7 +159,6 @@ def _(
     ax.set_ylabel("Coherence")
     ax.legend()
     ax.grid(True, alpha=0.3)
-    mo.output.append(fig)
 
     def integ(f, c):
         mask = (f > 0.03) & (f < 0.10)
@@ -166,9 +166,6 @@ def _(
 
     band_c = integ(f_c, coh_c)
     band_m = integ(f_m, coh_m)
-    mo.md(
-        f"**Integrated coherence 0.03–0.10 Hz** — Control: **{band_c:.3f}** · MDD: **{band_m:.3f}**"
-    )
 
     def band_for(group, condition, coupling, seed):
         aud, limb = simulate_network_ts(
@@ -177,29 +174,23 @@ def _(
         f, c = coherence(aud, limb, fs=1 / 3.0, nperseg=28)
         return integ(f, c)
 
-    coh_df = pd.DataFrame(
-        {
-            "group": ["Control", "MDD", "Control", "MDD"],
-            "condition": ["music", "music", "nonmusic", "nonmusic"],
-            "coherence": [
-                band_for("Control", "music", coup_c, 1),
-                band_for("MDD", "music", float(mdd_coupling.value), 2),
-                band_for("Control", "nonmusic", 0.5, 3),
-                band_for("MDD", "nonmusic", 0.52, 4),
-            ],
-        }
-    )
-    mo.ui.plotly(
-        px.bar(
-            coh_df,
-            x="condition",
-            y="coherence",
-            color="group",
-            barmode="group",
-            color_discrete_map={"Control": CONTROL_COLOR, "MDD": MDD_COLOR},
-            title="Auditory–limbic coherence by condition",
-        )
-    )
+    vals = [
+        band_for("Control", "music", coup_c, 1),
+        band_for("MDD", "music", float(mdd_coupling.value), 2),
+        band_for("Control", "nonmusic", 0.5, 3),
+        band_for("MDD", "nonmusic", 0.52, 4),
+    ]
+    fig_bar, axb = plt.subplots(figsize=(7, 3.5))
+    x = np.arange(2)
+    w = 0.35
+    axb.bar(x - w / 2, [vals[0], vals[2]], w, label="Control", color=CONTROL_COLOR)
+    axb.bar(x + w / 2, [vals[1], vals[3]], w, label="MDD", color=MDD_COLOR)
+    axb.set_xticks(x)
+    axb.set_xticklabels(["music", "nonmusic"])
+    axb.set_ylabel("Integrated coherence")
+    axb.set_title("Auditory–limbic coherence by condition")
+    axb.legend()
+    axb.grid(True, axis="y", alpha=0.3)
 
     off = band_c if cond == "music" else 0.45
     conn = np.array([[1.0, off], [off, 1.0]])
@@ -211,25 +202,41 @@ def _(
     ax2.set_yticklabels(["Auditory", "Limbic"])
     plt.colorbar(im, ax=ax2, label="Coherence")
     ax2.set_title(f"Coupling during {cond}")
-    mo.output.append(fig2)
-    return band_c, band_m
+
+    _panel = mo.vstack(
+        [
+            fig,
+            mo.md(
+                f"**Integrated coherence 0.03–0.10 Hz** — Control: **{band_c:.3f}** · MDD: **{band_m:.3f}**"
+            ),
+            fig_bar,
+            fig2,
+            mo.md(
+                key_insight_card(
+                    "Music increases auditory–limbic coherence in controls but not MDD.",
+                    "Non-music produces comparable (low) coherence in both groups.",
+                    effect_size=f"music band Δ ≈ {band_c - band_m:.3f}",
+                )
+            ),
+        ]
+    )
+    _panel
+    return
 
 
 @app.cell
-def _(band_c, band_m, book_nav, clinical_relevance_card, key_insight_card, mo):
-    mo.md(
-        key_insight_card(
-            "Music increases auditory–limbic coherence in controls but not MDD.",
-            "Non-music produces comparable (low) coherence in both groups.",
-            effect_size=f"music band Δ ≈ {band_c - band_m:.3f}",
-        )
+def _(book_nav, clinical_relevance_card, mo):
+    _wrap = mo.vstack(
+        [
+            mo.md(
+                clinical_relevance_card(
+                    "Auditory–limbic decoupling during music is a candidate anhedonia mechanism and intervention selector."
+                )
+            ),
+            mo.md(book_nav("03_eda_multivariate")),
+        ]
     )
-    mo.md(
-        clinical_relevance_card(
-            "Auditory–limbic decoupling during music is a candidate anhedonia mechanism and intervention selector."
-        )
-    )
-    mo.md(book_nav("03_eda_multivariate"))
+    _wrap
     return
 
 

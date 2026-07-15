@@ -7,7 +7,6 @@
 #     "numpy",
 #     "pandas",
 #     "matplotlib",
-#     "plotly",
 #     "scipy",
 # ]
 # ///
@@ -22,10 +21,9 @@ app = marimo.App(width="medium", app_title="01 — Pre-flight")
 def _():
     import marimo as mo
     import numpy as np
-    import pandas as pd  # required for helpers + tables (must be declared for WASM)
+    import pandas as pd
     import matplotlib.pyplot as plt
-    import plotly.express as px
-    import scipy  # noqa: F401  # ensure scipy is installed under Pyodide
+    import scipy  # noqa: F401
 
     from helpers import (
         CONTROL_COLOR,
@@ -55,13 +53,12 @@ def _():
         np,
         pd,
         plt,
-        px,
     )
 
 
 @app.cell
 def _(mo):
-    mo.md(
+    _title = mo.md(
         r"""
 # 01 — Pre-flight + Event Alignment
 
@@ -70,25 +67,27 @@ def _(mo):
 Runs on synthetic BOLD that mirrors the OpenNeuro ds000171 design (Control vs MDD × tones / music).
 """
     )
+    _title
     return
 
 
 @app.cell
 def _(hypothesis_card, mo):
-    mo.md(
+    _hypo = mo.md(
         hypothesis_card(
             "Positive music shows delayed peak in MDD — possible reward anticipation deficit.",
             "Controls have sharper earlier BOLD response after music onsets; MDD is blunted/delayed.",
         )
     )
+    _hypo
     return
 
 
 @app.cell
 def _(mo):
     n_sub = mo.ui.slider(6, 16, value=8, step=1, label="Synthetic subjects")
-    mo.md("## Reactive controls")
-    n_sub
+    _controls = mo.vstack([mo.md("## Reactive controls"), n_sub])
+    _controls
     return (n_sub,)
 
 
@@ -100,24 +99,19 @@ def _(make_synthetic_bold_dataset, mo, n_sub):
         .agg(n_rows=("bold", "size"), mean_bold=("bold", "mean"))
         .round(3)
     )
-    mo.md("## Cohort summary")
-    mo.ui.table(summary)
-    mo.ui.table(synth.head(8))
+    _cohort = mo.vstack(
+        [
+            mo.md("## Cohort summary"),
+            mo.ui.table(summary),
+            mo.ui.table(synth.head(8)),
+        ]
+    )
+    _cohort
     return (synth,)
 
 
 @app.cell
-def _(
-    CONTROL_COLOR,
-    MDD_COLOR,
-    MUSIC_COLOR,
-    mo,
-    np,
-    pd,
-    plt,
-    px,
-    synth,
-):
+def _(CONTROL_COLOR, MDD_COLOR, MUSIC_COLOR, mo, np, plt, synth):
     def mean_trace(group: str, trial: str):
         sub = (
             synth[(synth["group"] == group) & (synth["trial_type"] == trial)]
@@ -140,34 +134,24 @@ def _(
     ax.set_ylabel("BOLD (a.u.)")
     ax.legend()
     ax.grid(True, alpha=0.3)
-    mo.output.append(fig)
 
     peak_c = float(t_c[int(np.argmax(b_c))]) if len(b_c) else float("nan")
     peak_m = float(t_m[int(np.argmax(b_m))]) if len(b_m) else float("nan")
-    mo.md(f"**Peak latency proxy** — Control: **{peak_c:.1f}s** · MDD: **{peak_m:.1f}s**")
 
-    plot_df = pd.DataFrame(
-        {
-            "time": list(t_c) + list(t_m),
-            "bold": list(b_c) + list(b_m),
-            "group": ["Control"] * len(t_c) + ["MDD"] * len(t_m),
-        }
+    _align = mo.vstack(
+        [
+            fig,
+            mo.md(
+                f"**Peak latency proxy** — Control: **{peak_c:.1f}s** · MDD: **{peak_m:.1f}s**"
+            ),
+        ]
     )
-    mo.ui.plotly(
-        px.line(
-            plot_df,
-            x="time",
-            y="bold",
-            color="group",
-            color_discrete_map={"Control": CONTROL_COLOR, "MDD": MDD_COLOR},
-            title="Interactive: positive-music BOLD traces",
-        )
-    )
+    _align
     return
 
 
 @app.cell
-def _(HIGHLIGHT, MUSIC_COLOR, mo, plt, synth):
+def _(HIGHLIGHT, MUSIC_COLOR, plt, synth):
     subj = sorted(synth["subject"].unique())[0]
     s = synth[(synth["subject"] == subj) & (synth["condition"] == "music")].sort_values(
         "time"
@@ -179,25 +163,30 @@ def _(HIGHLIGHT, MUSIC_COLOR, mo, plt, synth):
     ax2.set_title(f"Single-subject music run: {subj}")
     ax2.set_xlabel("Time (s)")
     ax2.grid(True, alpha=0.3)
-    mo.output.append(fig2)
+    fig2
     return
 
 
 @app.cell
 def _(book_nav, clinical_relevance_card, key_insight_card, mo):
-    mo.md(
-        key_insight_card(
-            "Positive music shows delayed / blunted peak in MDD.",
-            "Temporal misalignment seeds spectral analysis in chapter 02.",
-            "Controls: earlier, higher-amplitude response.",
-        )
+    _wrap = mo.vstack(
+        [
+            mo.md(
+                key_insight_card(
+                    "Positive music shows delayed / blunted peak in MDD.",
+                    "Temporal misalignment seeds spectral analysis in chapter 02.",
+                    "Controls: earlier, higher-amplitude response.",
+                )
+            ),
+            mo.md(
+                clinical_relevance_card(
+                    "Event alignment reveals reward-processing dynamics used downstream as spectral biomarker features."
+                )
+            ),
+            mo.md(book_nav("01_pre_flight")),
+        ]
     )
-    mo.md(
-        clinical_relevance_card(
-            "Event alignment reveals reward-processing dynamics used downstream as spectral biomarker features."
-        )
-    )
-    mo.md(book_nav("01_pre_flight"))
+    _wrap
     return
 
 
