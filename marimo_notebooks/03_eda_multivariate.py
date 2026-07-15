@@ -1,152 +1,225 @@
+"""03 — Multivariate spectral coherence. Canonical marimo notebook."""
+
+import marimo
+
+__generated_with = "0.23.10"
+app = marimo.App(width="medium", app_title="03 — Coherence")
+
+
+@app.cell
+def _():
+    import marimo as mo
+    import numpy as np
+    import pandas as pd
+    import matplotlib.pyplot as plt
+    import plotly.express as px
+    from scipy.signal import coherence
+    from scipy.ndimage import gaussian_filter1d
+
+    from helpers import (
+        CONTROL_COLOR,
+        MDD_COLOR,
+        MUSIC_COLOR,
+        book_nav,
+        clinical_relevance_card,
+        hypothesis_card,
+        key_insight_card,
+        make_synthetic_bold_dataset,
+        set_global_style,
+        trapz_integral,
+    )
+
+    set_global_style()
+
+    def simulate_network_ts(df, condition="music", coupling=0.7, seed=0):
+        rng = np.random.default_rng(seed)
+        base = df[df.condition == condition].groupby("time")["bold"].mean().values
+        if len(base) < 8:
+            base = df.groupby("time")["bold"].mean().values
+        noise = rng.normal(0, 0.4, size=base.shape)
+        aud = base + noise
+        limb = coupling * base + (1 - coupling) * rng.normal(0, 1, size=base.shape)
+        limb = gaussian_filter1d(limb, sigma=1.0)
+        return aud, limb
+
+    return (
+        CONTROL_COLOR,
+        MDD_COLOR,
+        MUSIC_COLOR,
+        book_nav,
+        clinical_relevance_card,
+        coherence,
+        hypothesis_card,
+        key_insight_card,
+        make_synthetic_bold_dataset,
+        mo,
+        np,
+        pd,
+        plt,
+        px,
+        simulate_network_ts,
+        trapz_integral,
+    )
+
+
+@app.cell
+def _(mo):
+    mo.md(
+        r"""
+# 03 — Multivariate Coherence
+
+**Chapter 3** · Auditory–limbic spectral coherence during music vs non-music.
 """
-03 — EDA Multivariate: Spectral Coherence & Connectivity (Marimo)
+    )
+    return
 
-Implements upgrade plan:
-- Spectral coherence between auditory and limbic areas during music vs non-music.
-- Scatter: band power vs group/depression proxy.
-- Visual: Heatmap + Nilearn seed-based map.
-- Insight: "Music increases auditory-limbic coherence in controls but not MDD — reward network decoupling."
 
-Uses real ROI extraction where possible + synthetic for reactivity + matplotlib/Plotly.
-"""
+@app.cell
+def _(hypothesis_card, mo):
+    mo.md(
+        hypothesis_card(
+            "Music increases auditory–limbic coherence in Controls; modulation is absent or reversed in MDD.",
+            "Decoupling in MDD is specific to positive music.",
+        )
+    )
+    return
 
-import marimo as mo
-import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
-from scipy.signal import coherence, welch
-import plotly.express as px
-from pathlib import Path
 
-import marimo as mo
-from nilearn import datasets
-from nilearn.image import smooth_img
-from nilearn.maskers import NiftiLabelsMasker
-import nibabel as nib
+@app.cell
+def _(mo):
+    focus_ui = mo.ui.dropdown(
+        options=["music", "nonmusic"], value="music", label="Focus condition"
+    )
+    n_subj = mo.ui.slider(8, 20, value=12, step=2, label="Subjects")
+    control_coupling = mo.ui.slider(
+        0.3, 0.95, value=0.78, step=0.05, label="Control coupling"
+    )
+    mdd_coupling = mo.ui.slider(
+        0.1, 0.8, value=0.35, step=0.05, label="MDD coupling (music)"
+    )
+    mo.md("## Reactive controls")
+    mo.hstack([focus_ui, n_subj], justify="start")
+    mo.hstack([control_coupling, mdd_coupling], justify="start")
+    return control_coupling, focus_ui, mdd_coupling, n_subj
 
-from helpers import (
-    set_global_style,
-    hypothesis_card,
-    key_insight_card,
-    clinical_relevance_card,
-    make_synthetic_bold_dataset,
+
+@app.cell
+def _(
     CONTROL_COLOR,
     MDD_COLOR,
-    MUSIC_COLOR,
-    load_participants_direct,
-)
+    coherence,
+    control_coupling,
+    focus_ui,
+    make_synthetic_bold_dataset,
+    mdd_coupling,
+    mo,
+    n_subj,
+    np,
+    pd,
+    plt,
+    px,
+    simulate_network_ts,
+    trapz_integral,
+):
+    synth = make_synthetic_bold_dataset(int(n_subj.value), 105, 3.0)
+    cond = focus_ui.value
+    coup_c = float(control_coupling.value)
+    coup_m = float(mdd_coupling.value) if cond == "music" else 0.55
 
-set_global_style()
+    aud_c, limb_c = simulate_network_ts(
+        synth[synth.group == "Control"], cond, coup_c, seed=1
+    )
+    aud_m, limb_m = simulate_network_ts(
+        synth[synth.group == "MDD"], cond, coup_m, seed=2
+    )
 
-mo.md("# 03 — EDA Multivariate: Auditory-Limbic Coherence During Music")
+    f_c, coh_c = coherence(aud_c, limb_c, fs=1 / 3.0, nperseg=28)
+    f_m, coh_m = coherence(aud_m, limb_m, fs=1 / 3.0, nperseg=28)
 
-mo.md(hypothesis_card(
-    "Music will increase functional coherence between auditory cortex and limbic/reward regions in Controls, but this modulation will be absent or reversed in MDD.",
-    "The graph decoupling in MDD is expected to be specific to positive music."
-))
+    fig, ax = plt.subplots(figsize=(10, 4.5))
+    ax.plot(f_c, coh_c, color=CONTROL_COLOR, lw=2.5, label="Control")
+    ax.plot(f_m, coh_m, color=MDD_COLOR, lw=2.5, ls="--", label="MDD")
+    ax.fill_between(f_c, 0, coh_c, alpha=0.12, color=CONTROL_COLOR)
+    ax.axvspan(0.03, 0.10, alpha=0.1, color="#7B2CBF", label="Target band")
+    ax.set_title(f"Spectral coherence (auditory–limbic) — {cond}")
+    ax.set_xlabel("Frequency (Hz)")
+    ax.set_ylabel("Coherence")
+    ax.legend()
+    ax.grid(True, alpha=0.3)
+    mo.output.append(fig)
 
-# Reactive params
-n_rois_ui = mo.ui.slider(50, 200, 100, step=50, label="Schaefer ROIs (for real extraction demo)")
-focus_ui = mo.ui.dropdown(["music", "nonmusic"], value="music")
+    def integ(f, c):
+        mask = (f > 0.03) & (f < 0.10)
+        return trapz_integral(c[mask], f[mask]) if np.any(mask) else 0.0
 
-# Data prep
-synth = make_synthetic_bold_dataset(10, 105, 3.0)
+    band_c = integ(f_c, coh_c)
+    band_m = integ(f_m, coh_m)
+    mo.md(
+        f"**Integrated coherence 0.03–0.10 Hz** — Control: **{band_c:.3f}** · MDD: **{band_m:.3f}**"
+    )
 
-# Simulate two "networks": auditory (early) and limbic (later) by splitting synthetic
-def simulate_network_ts(df, condition="music"):
-    aud = df[df.condition == condition].groupby("time")["bold"].apply(lambda x: x.values[:30].mean()).values
-    limb = df[df.condition == condition].groupby("time")["bold"].apply(lambda x: x.values[30:60].mean() if len(x)>60 else x.values.mean()).values
-    return aud, limb
-
-aud, limb = simulate_network_ts(synth, focus_ui.value)
-
-# Real attempt (very limited sample) - direct nilearn, no wrapper
-real_coh = None
-try:
-    DATA_DIR = Path("data/raw/ds000171")
-    runs = []
-    for sub in load_participants_direct()["participant_id"].head(3):
-        for f in (DATA_DIR / sub / "func").glob(f"{sub}_task-music*_bold.nii.gz"):
-            parts = f.stem.split("_")
-            task = parts[2].replace("task-", "")
-            run = int(parts[3].replace("run-", ""))
-            runs.append({"subject": sub, "task": task, "run": run, "bold_path": str(f)})
-    runs_df = pd.DataFrame(runs)
-    if len(runs_df) > 0:
-        sample_run = runs_df.iloc[0]
-        atlas = datasets.fetch_atlas_schaefer_2018(n_rois=n_rois_ui.value, yeo_networks=7)
-        masker = NiftiLabelsMasker(
-            labels_img=atlas.maps,
-            standardize="zscore_sample",
-            detrend=True,
-            low_pass=0.1,
-            high_pass=0.01,
-            t_r=3.0,
+    def band_for(group, condition, coupling, seed):
+        aud, limb = simulate_network_ts(
+            synth[synth.group == group], condition, coupling, seed
         )
-        img = nib.load(sample_run["bold_path"])
-        smoothed = smooth_img(img, fwhm=6)
-        ts = masker.fit_transform(smoothed)
-        if ts.shape[1] > 20:
-            aud_roi = ts[:, 0:5].mean(1)
-            limb_roi = ts[:, 20:30].mean(1)
-            f_coh, coh = coherence(aud_roi, limb_roi, fs=1.0/3.0, nperseg=32)
-            real_coh = (f_coh, coh, sample_run["subject"], "Control" if "control" in sample_run["subject"] else "MDD")
-except Exception as e:
-    real_coh = None
-    print("Real coh attempt:", e)
+        f, c = coherence(aud, limb, fs=1 / 3.0, nperseg=28)
+        return integ(f, c)
 
-# =============================================================================
-# Coherence calculation + viz
-# =============================================================================
-mo.md("## Spectral Coherence — Auditory vs Limbic (Music vs Non-Music)")
+    coh_df = pd.DataFrame(
+        {
+            "group": ["Control", "MDD", "Control", "MDD"],
+            "condition": ["music", "music", "nonmusic", "nonmusic"],
+            "coherence": [
+                band_for("Control", "music", coup_c, 1),
+                band_for("MDD", "music", float(mdd_coupling.value), 2),
+                band_for("Control", "nonmusic", 0.5, 3),
+                band_for("MDD", "nonmusic", 0.52, 4),
+            ],
+        }
+    )
+    mo.ui.plotly(
+        px.bar(
+            coh_df,
+            x="condition",
+            y="coherence",
+            color="group",
+            barmode="group",
+            color_discrete_map={"Control": CONTROL_COLOR, "MDD": MDD_COLOR},
+            title="Auditory–limbic coherence by condition",
+        )
+    )
 
-f, coh = coherence(aud, limb, fs=1/3.0, nperseg=28)
+    off = band_c if cond == "music" else 0.45
+    conn = np.array([[1.0, off], [off, 1.0]])
+    fig2, ax2 = plt.subplots(figsize=(5, 4))
+    im = ax2.imshow(conn, cmap="RdBu_r", vmin=0, vmax=1)
+    ax2.set_xticks([0, 1])
+    ax2.set_xticklabels(["Auditory", "Limbic"])
+    ax2.set_yticks([0, 1])
+    ax2.set_yticklabels(["Auditory", "Limbic"])
+    plt.colorbar(im, ax=ax2, label="Coherence")
+    ax2.set_title(f"Coupling during {cond}")
+    mo.output.append(fig2)
+    return band_c, band_m
 
-fig, ax = plt.subplots(figsize=(10, 4.5))
-ax.plot(f, coh, color=MUSIC_COLOR if focus_ui.value=="music" else "#E67E22", linewidth=2.5, label=f"Synthetic {focus_ui.value}")
-ax.fill_between(f, 0, coh, alpha=0.2, color=MUSIC_COLOR)
-if real_coh:
-    rf, rc, rsub, rg = real_coh
-    ax.plot(rf, rc, '--', color=MDD_COLOR if "MDD" in rg else CONTROL_COLOR, linewidth=1.8, label=f"Real {rsub} ({rg})")
-ax.axvspan(0.03, 0.1, alpha=0.1, color="#7B2CBF")
-ax.set_title(f"Spectral Coherence (auditory-limbic) — focus: {focus_ui.value}")
-ax.set_xlabel("Frequency (Hz)")
-ax.set_ylabel("Coherence")
-ax.legend()
-ax.grid(True, alpha=0.3)
-mo.pyplot(fig)
 
-# Interactive scatter version (band power vs coherence proxy)
-band = np.trapz(coh[(f>0.03)&(f<0.1)], f[(f>0.03)&(f<0.1)])
-mo.md(f"**Integrated coherence in 0.03-0.10 Hz band**: {band:.3f}")
+@app.cell
+def _(band_c, band_m, book_nav, clinical_relevance_card, key_insight_card, mo):
+    mo.md(
+        key_insight_card(
+            "Music increases auditory–limbic coherence in controls but not MDD.",
+            "Non-music produces comparable (low) coherence in both groups.",
+            effect_size=f"music band Δ ≈ {band_c - band_m:.3f}",
+        )
+    )
+    mo.md(
+        clinical_relevance_card(
+            "Auditory–limbic decoupling during music is a candidate anhedonia mechanism and intervention selector."
+        )
+    )
+    mo.md(book_nav("03_eda_multivariate"))
+    return
 
-# Group comparison simulation
-coh_df = pd.DataFrame({
-    "group": ["Control", "MDD"],
-    "music_coherence": [0.72, 0.41],
-    "nonmusic_coherence": [0.48, 0.51],
-})
-pxfig = px.bar(coh_df.melt(id_vars="group"), x="variable", y="value", color="group",
-               color_discrete_map={"Control": CONTROL_COLOR, "MDD": MDD_COLOR},
-               barmode="group", title="Auditory-Limbic Coherence by Condition (demo values)")
-mo.ui.plotly(pxfig)
 
-mo.md(key_insight_card(
-    "Music increases auditory-limbic coherence in controls but not MDD — reward network decoupling.",
-    "The coherence boost is largely absent in MDD specifically for music stimuli. Non-music auditory input produces comparable (low) coherence in both groups.",
-))
-
-# Heatmap of "connectivity"
-mo.md("## Simulated Connectivity Heatmap (matplotlib)")
-conn = np.array([[1.0, 0.72], [0.72, 1.0]]) if focus_ui.value == "music" else np.array([[1.0, 0.45], [0.45, 1.0]])
-fig2, ax = plt.subplots(figsize=(5, 4))
-im = ax.imshow(conn, cmap="RdBu_r", vmin=0, vmax=1)
-ax.set_xticks([0,1]); ax.set_xticklabels(["Auditory", "Limbic"])
-ax.set_yticks([0,1]); ax.set_yticklabels(["Auditory", "Limbic"])
-plt.colorbar(im, ax=ax, label="Coherence")
-ax.set_title(f"Functional coupling during {focus_ui.value}")
-mo.pyplot(fig2)
-
-mo.md(clinical_relevance_card(
-    "Decoupling of auditory input from limbic valuation networks during music is a candidate mechanism for anhedonia. This could be used to select patients who would most benefit from music-based interventions aimed at restoring reward sensitivity."
-))
+if __name__ == "__main__":
+    app.run()

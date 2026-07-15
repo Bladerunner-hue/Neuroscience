@@ -1,57 +1,42 @@
+"""01 — Pre-flight + Event Alignment. Canonical marimo notebook."""
+
 import marimo
 
 __generated_with = "0.23.10"
-app = marimo.App()
+app = marimo.App(width="medium", app_title="01 — Pre-flight")
 
 
-@app.cell(hide_code=True)
+@app.cell
 def _():
-    import sys
-    from pathlib import Path
-
-    import matplotlib.pyplot as plt
+    import marimo as mo
     import numpy as np
     import pandas as pd
+    import matplotlib.pyplot as plt
     import plotly.express as px
-    import plotly.graph_objects as go
 
-    import marimo as mo
-
-    # Direct load, no src/neuro wrapper
     from helpers import (
         CONTROL_COLOR,
         HIGHLIGHT,
         MDD_COLOR,
         MUSIC_COLOR,
+        book_nav,
         clinical_relevance_card,
         hypothesis_card,
         key_insight_card,
-        load_bold_mean_direct,
-        load_events_direct,
-        load_participants_direct,
         make_synthetic_bold_dataset,
         set_global_style,
     )
 
     set_global_style()
-
-    DATA_DIR = Path("data/raw/ds000171")
-    TR_SEC = 3.0
-
     return (
         CONTROL_COLOR,
-        DATA_DIR,
         HIGHLIGHT,
         MDD_COLOR,
         MUSIC_COLOR,
-        TR_SEC,
+        book_nav,
         clinical_relevance_card,
-        go,
         hypothesis_card,
         key_insight_card,
-        load_bold_mean_direct,
-        load_events_direct,
-        load_participants_direct,
         make_synthetic_bold_dataset,
         mo,
         np,
@@ -65,12 +50,12 @@ def _():
 def _(mo):
     mo.md(
         r"""
-    # 01 — Pre-flight + Event Alignment (Marimo)
+# 01 — Pre-flight + Event Alignment
 
-    **Music vs Non-Musical Emotional Auditory Processing in Depression**
+**Chapter 1** · Music vs non-musical emotional auditory processing in depression.
 
-    Real data from ds000171. This marimo notebook gives you reactive controls and beautiful visuals (matplotlib + Plotly).
-    """
+Runs on synthetic BOLD that mirrors the OpenNeuro ds000171 design (Control vs MDD × tones / music).
+"""
     )
     return
 
@@ -80,138 +65,126 @@ def _(hypothesis_card, mo):
     mo.md(
         hypothesis_card(
             "Positive music shows delayed peak in MDD — possible reward anticipation deficit.",
-            "Controls will have sharper earlier BOLD response after music onsets. MDD blunted/delayed.",
+            "Controls have sharper earlier BOLD response after music onsets; MDD is blunted/delayed.",
         )
     )
     return
 
 
 @app.cell
-def _(DATA_DIR, load_bold_mean_direct, load_events_direct, load_participants_direct, mo, pd):
-    participants = load_participants_direct()
-    # Simple direct inventory summary
-    runs = []
-    for sub in participants["participant_id"].head(5):  # sample for speed
-        for f in (DATA_DIR / sub / "func").glob(f"{sub}_*_bold.nii.gz"):
-            parts = f.stem.split("_")
-            task = parts[2].replace("task-", "")
-            run = int(parts[3].replace("run-", ""))
-            runs.append({"subject": sub, "task": task, "run": run})
-    runs_df = pd.DataFrame(runs)
-
-    # Direct real sample load for one
-    real_bold = []
-    try:
-        real_bold = load_bold_mean_direct("sub-control01", "music", 1)
-    except Exception as e:
-        print("Warning loading real BOLD:", e)
-
-    mo.md("## Data Intake - Direct Load (no wrappers)")
-    mo.md(f"**DATA_DIR:** `{DATA_DIR}`")
-    mo.ui.table(participants.head())
-    mo.ui.table(runs_df.head() if not runs_df.empty else pd.DataFrame({"note": ["no runs"]}))
-
-    if len(real_bold) > 0:
-        mo.md("**Real BOLD mean loaded directly** (first 10 vols shown)")
-        mo.ui.table(pd.DataFrame({"bold_mean": real_bold[:10]}))
-    else:
-        mo.md("**No real BOLD** - using synthetic only for demo.")
-    return (participants, runs_df, real_bold)
-
-
-@app.cell
-def _(DATA_DIR, mo, pd, px):
-    # Direct event load example
-    try:
-        events = pd.read_csv(DATA_DIR / "sub-control01/func/sub-control01_task-music_run-1_events.tsv", sep="\t")
-        mo.md("### Direct Events Load Example (sub-control01 music run-1)")
-        mo.ui.table(events.head(8))
-        fig_events = px.bar(events["trial_type"].value_counts().reset_index(), x="trial_type", y="count", title="Trial types (direct load)")
-        mo.ui.plotly(fig_events)
-    except Exception as e:
-        mo.md(f"Direct events load failed: {e}")
-    return
-
-
-@app.cell
 def _(mo):
-    n_sub = mo.ui.slider(6, 16, value=8, label="Synthetic subjects")
+    n_sub = mo.ui.slider(6, 16, value=8, step=1, label="Synthetic subjects")
+    mo.md("## Reactive controls")
+    n_sub
     return (n_sub,)
 
 
 @app.cell
-def _(mo):
-    # Example prod caching
-    import marimo as mo
-    @mo.cache
-    def cached_load_participants():
-        from helpers import load_participants_direct
-        return load_participants_direct()
-    # cached = cached_load_participants()
-    return
+def _(make_synthetic_bold_dataset, mo, n_sub):
+    synth = make_synthetic_bold_dataset(int(n_sub.value), n_timepoints=105, tr=3.0)
+    summary = (
+        synth.groupby(["group", "condition"], as_index=False)
+        .agg(n_rows=("bold", "size"), mean_bold=("bold", "mean"))
+        .round(3)
+    )
+    mo.md("## Cohort summary")
+    mo.ui.table(summary)
+    mo.ui.table(synth.head(8))
+    return (synth,)
 
 
 @app.cell
 def _(
-    HIGHLIGHT,
+    CONTROL_COLOR,
+    MDD_COLOR,
     MUSIC_COLOR,
-    TR_SEC,
-    make_synthetic_bold_dataset,
     mo,
-    n_sub,
+    np,
+    pd,
     plt,
     px,
+    synth,
 ):
-    # Reactive slider for demo
-    synth = make_synthetic_bold_dataset(n_sub.value, 105, TR_SEC)
+    def mean_trace(group: str, trial: str):
+        sub = (
+            synth[(synth["group"] == group) & (synth["trial_type"] == trial)]
+            .groupby("time", as_index=False)["bold"]
+            .mean()
+        )
+        return sub["time"].values, sub["bold"].values
 
-    # Representative trace
-    subdf = (
-        synth[(synth["group"] == "Control") & (synth["trial_type"] == "positive_music")]
-        .groupby("time")["bold"]
-        .mean()
-        .reset_index()
-    )
-    t = subdf["time"].values
-    bold = subdf["bold"].values
+    t_c, b_c = mean_trace("Control", "positive_music")
+    t_m, b_m = mean_trace("MDD", "positive_music")
 
-    # Matplotlib alignment
-    fig_synth, ax = plt.subplots(figsize=(10, 4))
-    ax.plot(t, bold, color=HIGHLIGHT, label="Mean BOLD")
-    for onset, label in [(0, "tones"), (36, "pos_music"), (105, "neg_music")]:
-        color = MUSIC_COLOR if "music" in label else "#FF9800"
-        ax.axvline(onset, color=color, linestyle="--", alpha=0.8)
-    ax.set_title("Event Alignment: Music onsets vs BOLD (synthetic but matches real pattern)")
+    fig, ax = plt.subplots(figsize=(10, 4.5))
+    ax.plot(t_c, b_c, color=CONTROL_COLOR, lw=2.5, label="Control · positive music")
+    ax.plot(t_m, b_m, color=MDD_COLOR, lw=2.5, ls="--", label="MDD · positive music")
+    for _onset, _label in [(0, "tones"), (31.5, "neg music"), (63, "pos music")]:
+        color = MUSIC_COLOR if "music" in _label else "#FF9800"
+        ax.axvline(_onset, color=color, ls=":", alpha=0.7)
+    ax.set_title("Event alignment: mean BOLD during positive music")
     ax.set_xlabel("Time (s)")
+    ax.set_ylabel("BOLD (a.u.)")
     ax.legend()
     ax.grid(True, alpha=0.3)
-    mo.pyplot(fig_synth)
+    mo.output.append(fig)
 
-    # Also Plotly
-    pfig = px.line(x=t, y=bold, title="Interactive: BOLD trace with event markers")
-    mo.ui.plotly(pfig)
+    peak_c = float(t_c[int(np.argmax(b_c))]) if len(b_c) else float("nan")
+    peak_m = float(t_m[int(np.argmax(b_m))]) if len(b_m) else float("nan")
+    mo.md(f"**Peak latency proxy** — Control: **{peak_c:.1f}s** · MDD: **{peak_m:.1f}s**")
+
+    plot_df = pd.DataFrame(
+        {
+            "time": list(t_c) + list(t_m),
+            "bold": list(b_c) + list(b_m),
+            "group": ["Control"] * len(t_c) + ["MDD"] * len(t_m),
+        }
+    )
+    mo.ui.plotly(
+        px.line(
+            plot_df,
+            x="time",
+            y="bold",
+            color="group",
+            color_discrete_map={"Control": CONTROL_COLOR, "MDD": MDD_COLOR},
+            title="Interactive: positive-music BOLD traces",
+        )
+    )
     return
 
 
 @app.cell
-def _(key_insight_card, mo):
+def _(HIGHLIGHT, MUSIC_COLOR, mo, plt, synth):
+    subj = sorted(synth["subject"].unique())[0]
+    s = synth[(synth["subject"] == subj) & (synth["condition"] == "music")].sort_values(
+        "time"
+    )
+    fig2, ax2 = plt.subplots(figsize=(10, 3.5))
+    ax2.plot(s["time"], s["bold"], color=HIGHLIGHT, lw=1.8)
+    for _t0 in (0, 31.5, 63, 94.5):
+        ax2.axvline(_t0, color=MUSIC_COLOR, ls="--", alpha=0.55)
+    ax2.set_title(f"Single-subject music run: {subj}")
+    ax2.set_xlabel("Time (s)")
+    ax2.grid(True, alpha=0.3)
+    mo.output.append(fig2)
+    return
+
+
+@app.cell
+def _(book_nav, clinical_relevance_card, key_insight_card, mo):
     mo.md(
         key_insight_card(
-            "Positive music shows delayed peak in MDD — possible reward anticipation deficit.",
-            "This temporal signature is the starting point for the spectral analysis in notebook 02.",
-            "Effect size: Controls show earlier and higher amplitude response to positive music.",
+            "Positive music shows delayed / blunted peak in MDD.",
+            "Temporal misalignment seeds spectral analysis in chapter 02.",
+            "Controls: earlier, higher-amplitude response.",
         )
     )
-    return
-
-
-@app.cell
-def _(clinical_relevance_card, mo):
     mo.md(
         clinical_relevance_card(
-            "Event alignment reveals the temporal dynamics of reward processing. This informs spectral biomarker discovery for music therapy recommendation systems."
+            "Event alignment reveals reward-processing dynamics used downstream as spectral biomarker features."
         )
     )
+    mo.md(book_nav("01_pre_flight"))
     return
 
 

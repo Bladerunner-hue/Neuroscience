@@ -1,7 +1,29 @@
 venv/
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Data (large / LFS)
 data/raw/
-notebooks/html/
+data/*
+!data/.gitkeep
+
+# ML / notebooks clutter
 figures/
 mlruns/
 mlflow.db*
-data/*
+notebooks/html/
+
+# Local editor
+.vscode/
+.idea/
+
+# marimo runtime (sessions are regenerated; keep folder via export)
+marimo_notebooks/__pycache__/
+
+# Optional: uncomment to stop tracking huge WASM assets and rely on CI only
+# docs/wasm/
+# marimo_exports/wasm/

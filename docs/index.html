@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>🧠 Neuroscience • Interactive Marimo Dashboards (WASM)</title>
+  <title>Neuroscience Interactive Book · Spectral Biomarkers</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <style>
@@ -14,80 +14,94 @@
 </head>
 <body class="bg-zinc-950 text-zinc-200">
   <div class="max-w-5xl mx-auto px-6 py-16">
-    <!-- Header -->
     <div class="flex items-center gap-4 mb-4">
       <div class="w-14 h-14 bg-emerald-500 rounded-3xl flex items-center justify-center shadow-lg">
-        <i class="fa-solid fa-brain text-white text-4xl"></i>
+        <i class="fa-solid fa-book-open text-white text-3xl"></i>
       </div>
       <div>
-        <h1 class="text-5xl font-semibold tracking-tighter">Neuroscience</h1>
-        <p class="text-emerald-400 text-lg">Spectral Biomarkers • Music vs Non-Musical Processing in Depression</p>
+        <h1 class="text-4xl md:text-5xl font-semibold tracking-tighter">Interactive Book</h1>
+        <p class="text-emerald-400 text-lg">Music, Reward &amp; Depression · Spectral Biomarkers</p>
       </div>
     </div>
 
-    <p class="max-w-2xl text-zinc-400 mb-10 text-lg">
-      Fully interactive marimo notebooks running entirely in your browser via <strong>WebAssembly (Pyodide)</strong>. 
-      No Python installation or backend server required.
+    <p class="max-w-2xl text-zinc-400 mb-4 text-lg">
+      Four marimo chapters from <code class="text-zinc-300">marimo_notebooks/</code>, running in-browser via
+      <strong>WebAssembly (Pyodide)</strong>. Source of truth is the <code class="text-zinc-300">.py</code> notebooks;
+      this site is a build artifact.
+    </p>
+    <p class="max-w-2xl text-zinc-500 mb-10 text-sm">
+      Repo:
+      <a class="underline hover:text-emerald-400" href="https://github.com/Bladerunner-hue/Neuroscience">Bladerunner-hue/Neuroscience</a>
+      · Built by GitHub Actions from <code>marimo_notebooks/</code>
     </p>
 
+    <div class="flex flex-wrap gap-2 mb-10 text-xs text-zinc-400">
+      <span class="px-3 py-1 rounded-full bg-zinc-900 border border-zinc-800">Ch 1 Pre-flight</span>
+      <span class="text-zinc-600">→</span>
+      <span class="px-3 py-1 rounded-full bg-zinc-900 border border-zinc-800">Ch 2 Spectral Power</span>
+      <span class="text-zinc-600">→</span>
+      <span class="px-3 py-1 rounded-full bg-zinc-900 border border-zinc-800">Ch 3 Coherence</span>
+      <span class="text-zinc-600">→</span>
+      <span class="px-3 py-1 rounded-full bg-zinc-900 border border-zinc-800">Ch 4 Features &amp; Clusters</span>
+    </div>
+
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
-      <!-- 01 -->
-      <a href="wasm/01_pre_flight/" class="card group block bg-zinc-900 border border-zinc-800 hover:border-emerald-500/50 rounded-3xl p-6">
+      <a href="wasm/01_pre_flight/" class="card group block bg-zinc-900 border border-zinc-800 hover:border-sky-500/50 rounded-3xl p-6">
         <div class="flex items-center gap-4 mb-4">
-          <div class="w-11 h-11 bg-sky-500/10 text-sky-400 rounded-2xl flex items-center justify-center">
-            <i class="fa-solid fa-plane fa-lg"></i>
-          </div>
+          <div class="w-11 h-11 bg-sky-500/10 text-sky-400 rounded-2xl flex items-center justify-center font-bold">01</div>
           <div>
-            <div class="font-semibold text-2xl tracking-tight">01 — Pre-flight</div>
-            <div class="text-sm text-zinc-500">Event Alignment &amp; Data Intake</div>
+            <div class="font-semibold text-2xl tracking-tight">Pre-flight</div>
+            <div class="text-sm text-zinc-500">Event alignment</div>
           </div>
         </div>
-        <p class="text-zinc-400 mb-4">
-          BOLD response alignment to music/tones onsets. Hypothesis-driven exploration of delayed peaks in MDD.
-        </p>
-        <div class="flex items-center text-emerald-400 text-sm font-medium">
-          Launch interactive dashboard <i class="fa-solid fa-arrow-right ml-2 group-hover:translate-x-0.5 transition"></i>
-        </div>
+        <p class="text-zinc-400 mb-4">BOLD onsets, Control vs MDD traces, delayed peak hypothesis.</p>
+        <div class="flex items-center text-emerald-400 text-sm font-medium">Open chapter <i class="fa-solid fa-arrow-right ml-2"></i></div>
       </a>
 
-      <!-- 02 -->
-      <a href="wasm/02_eda_univariate/" class="card group block bg-zinc-900 border border-zinc-800 hover:border-emerald-500/50 rounded-3xl p-6">
+      <a href="wasm/02_eda_univariate/" class="card group block bg-zinc-900 border border-zinc-800 hover:border-violet-500/50 rounded-3xl p-6">
         <div class="flex items-center gap-4 mb-4">
-          <div class="w-11 h-11 bg-violet-500/10 text-violet-400 rounded-2xl flex items-center justify-center">
-            <i class="fa-solid fa-chart-line fa-lg"></i>
-          </div>
+          <div class="w-11 h-11 bg-violet-500/10 text-violet-400 rounded-2xl flex items-center justify-center font-bold">02</div>
           <div>
-            <div class="font-semibold text-2xl tracking-tight">02 — Spectral Power</div>
-            <div class="text-sm text-zinc-500">Welch PSD • Anhedonia Biomarker</div>
+            <div class="font-semibold text-2xl tracking-tight">Spectral Power</div>
+            <div class="text-sm text-zinc-500">Welch PSD</div>
           </div>
         </div>
-        <p class="text-zinc-400 mb-4">
-          Interactive Welch power spectra comparing Control vs MDD during positive music. Band power analysis + STFT preview.
-        </p>
-        <div class="flex items-center text-emerald-400 text-sm font-medium">
-          Launch interactive dashboard <i class="fa-solid fa-arrow-right ml-2 group-hover:translate-x-0.5 transition"></i>
+        <p class="text-zinc-400 mb-4">Reactive band power: music vs tones · anhedonia biomarker.</p>
+        <div class="flex items-center text-emerald-400 text-sm font-medium">Open chapter <i class="fa-solid fa-arrow-right ml-2"></i></div>
+      </a>
+
+      <a href="wasm/03_eda_multivariate/" class="card group block bg-zinc-900 border border-zinc-800 hover:border-amber-500/50 rounded-3xl p-6">
+        <div class="flex items-center gap-4 mb-4">
+          <div class="w-11 h-11 bg-amber-500/10 text-amber-400 rounded-2xl flex items-center justify-center font-bold">03</div>
+          <div>
+            <div class="font-semibold text-2xl tracking-tight">Coherence</div>
+            <div class="text-sm text-zinc-500">Auditory–limbic</div>
+          </div>
         </div>
+        <p class="text-zinc-400 mb-4">Spectral coherence &amp; music-specific decoupling in MDD.</p>
+        <div class="flex items-center text-emerald-400 text-sm font-medium">Open chapter <i class="fa-solid fa-arrow-right ml-2"></i></div>
+      </a>
+
+      <a href="wasm/04_feature_engineering/" class="card group block bg-zinc-900 border border-zinc-800 hover:border-rose-500/50 rounded-3xl p-6">
+        <div class="flex items-center gap-4 mb-4">
+          <div class="w-11 h-11 bg-rose-500/10 text-rose-400 rounded-2xl flex items-center justify-center font-bold">04</div>
+          <div>
+            <div class="font-semibold text-2xl tracking-tight">Features &amp; Clusters</div>
+            <div class="text-sm text-zinc-500">Responder subtypes</div>
+          </div>
+        </div>
+        <p class="text-zinc-400 mb-4">Fingerprints, GMM / spectral clustering → RecSys features.</p>
+        <div class="flex items-center text-emerald-400 text-sm font-medium">Open chapter <i class="fa-solid fa-arrow-right ml-2"></i></div>
       </a>
     </div>
 
-    <div class="bg-zinc-900 border border-zinc-800 rounded-3xl p-8 mb-8">
-      <h2 class="font-semibold text-xl mb-4">How this works</h2>
-      <div class="grid md:grid-cols-2 gap-x-8 text-sm text-zinc-300">
-        <ul class="space-y-2">
-          <li>• <strong>marimo edit</strong> — full reactive editing locally</li>
-          <li>• <strong>html-wasm</strong> export — self-contained browser version</li>
-          <li>• Pyodide runs Python in the browser</li>
-        </ul>
-        <ul class="space-y-2 mt-4 md:mt-0">
-          <li>• Deployed automatically via GitHub Actions</li>
-          <li>• Hosted free on GitHub Pages</li>
-          <li>• Source: <a href="https://github.com/Bladerunner-hue/Neuroscience" class="underline">Bladerunner-hue/Neuroscience</a></li>
-        </ul>
-      </div>
-    </div>
-
-    <div class="text-center text-xs text-zinc-500">
-      Open the dashboards above or run locally with <code class="bg-zinc-900 px-1.5 py-0.5 rounded">marimo edit marimo_notebooks/02_eda_univariate.py</code>
+    <div class="bg-zinc-900 border border-zinc-800 rounded-3xl p-8 mb-8 text-sm text-zinc-300">
+      <h2 class="font-semibold text-xl mb-3 text-zinc-100">Canonical workflow</h2>
+      <pre class="bg-zinc-950 rounded-xl p-4 overflow-x-auto text-xs text-zinc-400"><code>marimo edit marimo_notebooks/01_pre_flight.py   # develop
+python marimo_notebooks/02_eda_univariate.py     # run as script
+python marimo_exports/export_wasm.py --sync-docs # build Pages book
+python marimo_exports/serve.py                   # preview locally</code></pre>
+      <p class="mt-4 text-zinc-500">Chapter 06 (TensorFlow) is local-only and not part of the WASM book.</p>
     </div>
   </div>
 </body>
