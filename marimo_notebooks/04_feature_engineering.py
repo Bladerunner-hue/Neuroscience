@@ -1,5 +1,18 @@
 """04 — Feature engineering & responder clusters. Canonical marimo notebook."""
 
+# /// script
+# requires-python = ">=3.11"
+# dependencies = [
+#     "marimo",
+#     "numpy",
+#     "pandas",
+#     "matplotlib",
+#     "plotly",
+#     "scipy",
+#     "scikit-learn",
+# ]
+# ///
+
 import marimo
 
 __generated_with = "0.23.10"
@@ -11,6 +24,7 @@ def _():
     import marimo as mo
     import numpy as np
     import pandas as pd
+    import matplotlib.pyplot as plt  # noqa: F401  # pull for Pyodide package graph
     import plotly.express as px
     from scipy.signal import welch
     from sklearn.cluster import SpectralClustering

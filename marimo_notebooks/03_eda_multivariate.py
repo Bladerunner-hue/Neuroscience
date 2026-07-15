@@ -1,5 +1,17 @@
 """03 — Multivariate spectral coherence. Canonical marimo notebook."""
 
+# /// script
+# requires-python = ">=3.11"
+# dependencies = [
+#     "marimo",
+#     "numpy",
+#     "pandas",
+#     "matplotlib",
+#     "plotly",
+#     "scipy",
+# ]
+# ///
+
 import marimo
 
 __generated_with = "0.23.10"

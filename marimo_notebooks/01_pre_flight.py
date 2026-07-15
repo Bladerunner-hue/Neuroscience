@@ -1,5 +1,17 @@
 """01 — Pre-flight + Event Alignment. Canonical marimo notebook."""
 
+# /// script
+# requires-python = ">=3.11"
+# dependencies = [
+#     "marimo",
+#     "numpy",
+#     "pandas",
+#     "matplotlib",
+#     "plotly",
+#     "scipy",
+# ]
+# ///
+
 import marimo
 
 __generated_with = "0.23.10"
@@ -10,9 +22,10 @@ app = marimo.App(width="medium", app_title="01 — Pre-flight")
 def _():
     import marimo as mo
     import numpy as np
-    import pandas as pd
+    import pandas as pd  # required for helpers + tables (must be declared for WASM)
     import matplotlib.pyplot as plt
     import plotly.express as px
+    import scipy  # noqa: F401  # ensure scipy is installed under Pyodide
 
     from helpers import (
         CONTROL_COLOR,

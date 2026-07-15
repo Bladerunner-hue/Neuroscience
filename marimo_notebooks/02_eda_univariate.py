@@ -1,5 +1,17 @@
 """02 — Spectral Power (Welch PSD). Canonical marimo notebook."""
 
+# /// script
+# requires-python = ">=3.11"
+# dependencies = [
+#     "marimo",
+#     "numpy",
+#     "pandas",
+#     "matplotlib",
+#     "plotly",
+#     "scipy",
+# ]
+# ///
+
 import marimo
 
 __generated_with = "0.23.10"
@@ -10,6 +22,7 @@ app = marimo.App(width="medium", app_title="02 — Spectral Power")
 def _():
     import marimo as mo
     import numpy as np
+    import pandas as pd  # helpers + tables (must be declared for WASM/Pyodide)
     import matplotlib.pyplot as plt
     import plotly.express as px
     from scipy.signal import welch, stft
@@ -40,6 +53,7 @@ def _():
         make_synthetic_bold_dataset,
         mo,
         np,
+        pd,
         plt,
         px,
         stft,

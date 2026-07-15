@@ -10,8 +10,8 @@ app = marimo.App(width="medium", app_title="06 — TF Spectrograms")
 def _():
     import os
 
-    # Prefer CPU so local/CI runs don't depend on a working CUDA/cuDNN stack
-    os.environ.setdefault("CUDA_VISIBLE_DEVICES", "")
+    # Local training: use GPU when available (do not force CPU).
+    # Override with CUDA_VISIBLE_DEVICES="" if you must run CPU-only.
     os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "2")
 
     import marimo as mo
@@ -21,10 +21,14 @@ def _():
     import plotly.express as px
     import tensorflow as tf
 
-    try:
-        tf.config.set_visible_devices([], "GPU")
-    except Exception:
-        pass
+    gpus = tf.config.list_physical_devices("GPU")
+    for _gpu in gpus:
+        try:
+            tf.config.experimental.set_memory_growth(_gpu, True)
+        except Exception:
+            pass
+    TF_DEVICE = f"GPU×{len(gpus)}" if gpus else "CPU"
+    print(f"TensorFlow {tf.__version__} · device: {TF_DEVICE}")
 
     from helpers import (
         CONTROL_COLOR,
@@ -48,6 +52,7 @@ def _():
     return (
         CONTROL_COLOR,
         MDD_COLOR,
+        TF_DEVICE,
         TFP_AVAILABLE,
         book_nav,
         clinical_relevance_card,
@@ -64,12 +69,14 @@ def _():
 
 
 @app.cell
-def _(mo):
+def _(TF_DEVICE, mo, tf):
     mo.md(
-        r"""
+        f"""
 # 06 — TensorFlow: Spectrogram ConvNets
 
-**Chapter 6 · local only** (TensorFlow required; not on GitHub Pages WASM).
+**Chapter 6 · local only** (not on GitHub Pages WASM).
+
+TensorFlow **{tf.__version__}** · device: **{TF_DEVICE}**
 
 Predict MDD vs Control from the spectral signature of music vs tones.
 """
@@ -267,17 +274,40 @@ def _(batch_size, epochs, mo, model, np, plt, train_ds):
     X_train, y_train = X_specs[train_idx], y_arr[train_idx]
     X_val, y_val = X_specs[val_idx], y_arr[val_idx]
 
-    hist = model.fit(
-        X_train,
-        {"is_mdd": y_train, "uncertainty": np.zeros_like(y_train, dtype="float32")},
-        validation_data=(
-            X_val,
-            {"is_mdd": y_val, "uncertainty": np.zeros_like(y_val, dtype="float32")},
-        ),
-        epochs=int(epochs.value),
-        batch_size=int(batch_size.value),
-        verbose=0,
-    )
+    try:
+        hist = model.fit(
+            X_train,
+            {"is_mdd": y_train, "uncertainty": np.zeros_like(y_train, dtype="float32")},
+            validation_data=(
+                X_val,
+                {"is_mdd": y_val, "uncertainty": np.zeros_like(y_val, dtype="float32")},
+            ),
+            epochs=int(epochs.value),
+            batch_size=int(batch_size.value),
+            verbose=0,
+        )
+    except Exception as _fit_err:
+        # Broken CUDA/cuDNN stacks: fall back to CPU for a successful local run
+        import os
+        import tensorflow as _tf
+
+        mo.md(f"⚠️ GPU training failed (`{_fit_err.__class__.__name__}`); retrying on CPU…")
+        os.environ["CUDA_VISIBLE_DEVICES"] = ""
+        try:
+            _tf.config.set_visible_devices([], "GPU")
+        except Exception:
+            pass
+        hist = model.fit(
+            X_train,
+            {"is_mdd": y_train, "uncertainty": np.zeros_like(y_train, dtype="float32")},
+            validation_data=(
+                X_val,
+                {"is_mdd": y_val, "uncertainty": np.zeros_like(y_val, dtype="float32")},
+            ),
+            epochs=int(epochs.value),
+            batch_size=int(batch_size.value),
+            verbose=0,
+        )
 
     def _pick(keys):
         for k in keys:

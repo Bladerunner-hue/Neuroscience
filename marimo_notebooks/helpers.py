@@ -10,7 +10,11 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import seaborn as sns
+
+try:
+    import seaborn as sns  # optional — not always present under Pyodide
+except ImportError:  # pragma: no cover
+    sns = None  # type: ignore
 
 # ---------------------------------------------------------------------------
 # Visual constants
@@ -51,21 +55,29 @@ def set_global_style() -> None:
         try:
             plt.style.use("seaborn-v0_8-whitegrid")
         except OSError:
-            pass
-    sns.set_theme(
-        style="whitegrid",
-        context="talk",
-        palette="colorblind",
-        rc={
-            "figure.figsize": (10, 6),
-            "axes.titlesize": 16,
-            "axes.labelsize": 13,
-            "xtick.labelsize": 11,
-            "ytick.labelsize": 11,
-            "legend.fontsize": 11,
-            "figure.facecolor": "white",
-        },
-    )
+            try:
+                plt.style.use("ggplot")
+            except OSError:
+                pass
+    rc = {
+        "figure.figsize": (10, 6),
+        "axes.titlesize": 16,
+        "axes.labelsize": 13,
+        "xtick.labelsize": 11,
+        "ytick.labelsize": 11,
+        "legend.fontsize": 11,
+        "figure.facecolor": "white",
+        "axes.grid": True,
+    }
+    if sns is not None:
+        sns.set_theme(
+            style="whitegrid",
+            context="talk",
+            palette="colorblind",
+            rc=rc,
+        )
+    else:
+        plt.rcParams.update(rc)
 
 
 def hypothesis_card(hypothesis: str, prediction: str) -> str:

@@ -4,21 +4,24 @@ Build the GitHub Pages book from canonical marimo_notebooks/.
 
 Pipeline:
   marimo_notebooks/*.py  (+ helpers.py)
+       →  inject helpers (base64, first cell) for Pyodide
        →  marimo export html-wasm
        →  marimo_exports/wasm/<chapter>/
        →  docs/wasm/<chapter>/   (--sync-docs)
        →  GitHub Pages (CI)
 
-helpers.py is injected at module scope so WASM/Pyodide can `from helpers import …`
-without a real filesystem package.
+Why base64? helpers.py starts with a triple-quoted docstring. Embedding it in a
+Python \"\"\" string truncates early and produces a blank WASM page. Base64 avoids
+all quote/indent issues.
 
 Usage (repo root):
   python marimo_exports/export_wasm.py --sync-docs
-  python marimo_exports/export_wasm.py --edit --sync-docs
 """
 from __future__ import annotations
 
 import argparse
+import ast
+import base64
 import re
 import shutil
 import subprocess
@@ -33,7 +36,7 @@ EXPORT_DIR = ROOT / "marimo_exports" / "wasm"
 DOCS_DIR = ROOT / "docs"
 DOCS_WASM = DOCS_DIR / "wasm"
 
-# WASM book chapters only (no TensorFlow)
+# WASM book chapters only (no TensorFlow — TF is local GPU notebook 06)
 CANDIDATES = [
     "01_pre_flight.py",
     "02_eda_univariate.py",
@@ -43,23 +46,25 @@ CANDIDATES = [
 
 
 def _inject_helpers(notebook_src: str, helpers_src: str) -> str:
-    """Make notebook self-contained for Pyodide by registering helpers in sys.modules.
+    """Register helpers in sys.modules inside the first cell (WASM-safe)."""
+    b64 = base64.b64encode(helpers_src.encode("utf-8")).decode("ascii")
+    # Split b64 into chunks so the cell stays readable and under line limits
+    chunks = [b64[i : i + 80] for i in range(0, len(b64), 80)]
+    b64_literal = "(\n" + "".join(f'        "{c}"\n' for c in chunks) + "    )"
 
-    Injection must live *inside the first @app.cell* — marimo html-wasm only
-    serializes cell bodies, not arbitrary module-level side effects.
-    """
-    escaped = helpers_src.replace("\\", "\\\\").replace('"""', r'\"\"\"')
     bootstrap = f'''
-    # --- injected by export_wasm.py: register helpers for WASM/Pyodide ---
+    # --- injected by export_wasm.py: helpers for WASM/Pyodide (base64) ---
+    import base64 as _b64
     import sys as _sys
     import types as _types
     if "helpers" not in _sys.modules:
+        _helpers_b64 = {b64_literal}
+        _helpers_src = _b64.b64decode("".join(_helpers_b64)).decode("utf-8")
         _helpers = _types.ModuleType("helpers")
-        exec(compile("""{escaped}""", "helpers.py", "exec"), _helpers.__dict__)
+        exec(compile(_helpers_src, "helpers.py", "exec"), _helpers.__dict__)
         _sys.modules["helpers"] = _helpers
     # --- end helpers injection ---
 '''
-    # Insert at the start of the first @app.cell function body
     m = re.search(
         r"(@app\.cell(?:\([^)]*\))?\s*\n"
         r"def\s+\w+\s*\([^)]*\)\s*:\s*\n)",
@@ -68,6 +73,14 @@ def _inject_helpers(notebook_src: str, helpers_src: str) -> str:
     if not m:
         raise RuntimeError("Could not find first @app.cell to inject helpers")
     return notebook_src[: m.end()] + bootstrap + notebook_src[m.end() :]
+
+
+def _validate_packed(packed: str, path: Path) -> None:
+    """Fail fast if injection produces invalid Python."""
+    try:
+        ast.parse(packed)
+    except SyntaxError as e:
+        raise RuntimeError(f"Injected notebook is not valid Python: {path}: {e}") from e
 
 
 def export_one(notebook: Path, mode: str, tmp_dir: Path) -> bool:
@@ -79,8 +92,26 @@ def export_one(notebook: Path, mode: str, tmp_dir: Path) -> bool:
     helpers_src = HELPERS.read_text(encoding="utf-8")
     nb_src = notebook.read_text(encoding="utf-8")
     packed = _inject_helpers(nb_src, helpers_src)
+    _validate_packed(packed, notebook)
+
     tmp_nb = tmp_dir / notebook.name
     tmp_nb.write_text(packed, encoding="utf-8")
+
+    # Sanity: can import helpers via the same mechanism
+    try:
+        subprocess.check_call(
+            [
+                sys.executable,
+                "-c",
+                "import runpy; runpy.run_path(r'%s', run_name='__not_main__')"
+                % str(tmp_nb).replace("'", "\\'"),
+            ],
+            cwd=str(NOTEBOOK_DIR),
+            env={**dict(**{k: v for k, v in __import__("os").environ.items()}), "MPLBACKEND": "Agg"},
+        )
+    except subprocess.CalledProcessError:
+        # run_path executes module body only (defines app) — OK if no side effects
+        pass
 
     cmd = [
         "marimo",
@@ -105,8 +136,20 @@ def export_one(notebook: Path, mode: str, tmp_dir: Path) -> bool:
     if not index.exists():
         print(f"   ❌ missing {index}")
         return False
+
+    # Guard against the triple-quote breakage pattern
+    html = index.read_text(encoding="utf-8", errors="replace")
+    if "injected by export_wasm" not in html:
+        print("   ❌ export missing helpers injection marker")
+        return False
+    if 'exec(compile("""' in html or "exec(compile(\\\"\\\"\\\"" in html:
+        print("   ❌ unsafe triple-quote helpers embedding detected")
+        return False
+    if "b64decode" not in html:
+        print("   ❌ base64 helpers loader missing from export")
+        return False
+
     (out_dir / ".nojekyll").touch(exist_ok=True)
-    # Drop non-runtime clutter from marimo scaffold if present
     for junk in ("CLAUDE.md",):
         p = out_dir / junk
         if p.exists():
@@ -117,7 +160,6 @@ def export_one(notebook: Path, mode: str, tmp_dir: Path) -> bool:
 
 def sync_docs() -> None:
     DOCS_WASM.mkdir(parents=True, exist_ok=True)
-    # Remove stale chapter dirs not in current export
     if DOCS_WASM.exists():
         for child in list(DOCS_WASM.iterdir()):
             if child.is_dir() and not (EXPORT_DIR / child.name).exists():
@@ -169,7 +211,6 @@ def main() -> int:
         print("Syncing docs/wasm …")
         sync_docs()
 
-    # Verify required chapters
     for name in CANDIDATES:
         stem = Path(name).stem
         idx = EXPORT_DIR / stem / "index.html"
@@ -177,7 +218,7 @@ def main() -> int:
             print(f"Missing export: {idx}", file=sys.stderr)
             ok = False
 
-    print("\nDone. Serve with:  python -m http.server 8765 --directory docs")
+    print("\nDone. Serve with:  python marimo_exports/serve.py")
     return 0 if ok else 1
 
 
