@@ -3,106 +3,88 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Neuroscience Interactive Book · Spectral Biomarkers</title>
+  <title>Music, Reward &amp; Depression · An Interactive Methods Book</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Source+Sans+3:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
-    body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    .card { transition: all 0.2s cubic-bezier(0.4, 0.0, 0.2, 1); }
-    .card:hover { transform: translateY(-4px); box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1); }
+    body { font-family: "Source Sans 3", system-ui, sans-serif; }
+    .serif { font-family: "Cormorant Garamond", Georgia, serif; }
+    .card { transition: transform .2s ease, box-shadow .2s ease; }
+    .card:hover { transform: translateY(-3px); box-shadow: 0 18px 40px -18px rgba(0,0,0,.45); }
   </style>
 </head>
-<body class="bg-zinc-950 text-zinc-200">
-  <div class="max-w-5xl mx-auto px-6 py-16">
-    <div class="flex items-center gap-4 mb-4">
-      <div class="w-14 h-14 bg-emerald-500 rounded-3xl flex items-center justify-center shadow-lg">
-        <i class="fa-solid fa-book-open text-white text-3xl"></i>
-      </div>
-      <div>
-        <h1 class="text-4xl md:text-5xl font-semibold tracking-tighter">Interactive Book</h1>
-        <p class="text-emerald-400 text-lg">Music, Reward &amp; Depression · Spectral Biomarkers</p>
-      </div>
-    </div>
-
-    <p class="max-w-2xl text-zinc-400 mb-4 text-lg">
-      Four marimo chapters from <code class="text-zinc-300">marimo_notebooks/</code>, running in-browser via
-      <strong>WebAssembly (Pyodide)</strong>. Source of truth is the <code class="text-zinc-300">.py</code> notebooks;
-      this site is a build artifact.
+<body class="bg-[#0f1419] text-stone-200">
+  <div class="max-w-4xl mx-auto px-6 py-16 md:py-20">
+    <p class="text-emerald-500/90 text-xs tracking-[0.2em] uppercase mb-4">OpenNeuro ds000171 · Interactive methods book</p>
+    <h1 class="serif text-4xl md:text-6xl font-semibold tracking-tight text-stone-50 leading-[1.1] mb-4">
+      Music, Reward &amp; Depression
+    </h1>
+    <p class="text-lg md:text-xl text-stone-400 max-w-2xl mb-3 leading-relaxed">
+      A public-facing walkthrough of spectral biomarkers for emotional music processing in major depressive disorder — built on <strong class="text-stone-300">real BOLD</strong> from OpenNeuro, not mock oscillators.
     </p>
-    <p class="max-w-2xl text-zinc-500 mb-10 text-sm">
-      Repo:
-      <a class="underline hover:text-emerald-400" href="https://github.com/Bladerunner-hue/Neuroscience">Bladerunner-hue/Neuroscience</a>
-      · Built by GitHub Actions from <code>marimo_notebooks/</code>
+    <p class="text-sm text-stone-500 mb-12">
+      Lepping et al. · OpenNeuro <a class="underline hover:text-emerald-400" href="https://openneuro.org/datasets/ds000171">ds000171</a>
+      · Source <a class="underline hover:text-emerald-400" href="https://github.com/Bladerunner-hue/Neuroscience">GitHub</a>
+      · Runs in-browser via marimo + Pyodide
     </p>
 
-    <div class="flex flex-wrap gap-2 mb-10 text-xs text-zinc-400">
-      <span class="px-3 py-1 rounded-full bg-zinc-900 border border-zinc-800">Ch 1 Pre-flight</span>
-      <span class="text-zinc-600">→</span>
-      <span class="px-3 py-1 rounded-full bg-zinc-900 border border-zinc-800">Ch 2 Spectral Power</span>
-      <span class="text-zinc-600">→</span>
-      <span class="px-3 py-1 rounded-full bg-zinc-900 border border-zinc-800">Ch 3 Coherence</span>
-      <span class="text-zinc-600">→</span>
-      <span class="px-3 py-1 rounded-full bg-zinc-900 border border-zinc-800">Ch 4 Features &amp; Clusters</span>
+    <div class="border border-stone-800 rounded-2xl p-5 mb-12 bg-stone-900/40">
+      <p class="text-sm text-stone-400 leading-relaxed">
+        <span class="text-stone-200 font-medium">How to read this book.</span>
+        Each chapter is a reactive marimo notebook exported to WebAssembly. First load may take 15–40 seconds while scientific packages install.
+        Figures and tables use a processed feature store extracted from downloaded NIfTI runs (whole-brain mean BOLD, Welch PSD, event-locked peaks).
+      </p>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
-      <a href="wasm/01_pre_flight/" class="card group block bg-zinc-900 border border-zinc-800 hover:border-sky-500/50 rounded-3xl p-6">
-        <div class="flex items-center gap-4 mb-4">
-          <div class="w-11 h-11 bg-sky-500/10 text-sky-400 rounded-2xl flex items-center justify-center font-bold">01</div>
-          <div>
-            <div class="font-semibold text-2xl tracking-tight">Pre-flight</div>
-            <div class="text-sm text-zinc-500">Event alignment</div>
+    <ol class="space-y-4 mb-14">
+      <li>
+        <a href="wasm/01_pre_flight/" class="card block rounded-2xl border border-stone-800 bg-gradient-to-br from-sky-950/40 to-stone-900/80 p-6 hover:border-sky-700/50">
+          <div class="flex items-baseline justify-between gap-4 mb-2">
+            <span class="text-sky-400/80 text-xs tracking-widest uppercase">Chapter I</span>
+            <span class="text-stone-600 text-xs">Cohort · paradigm · real BOLD</span>
           </div>
-        </div>
-        <p class="text-zinc-400 mb-4">BOLD onsets, Control vs MDD traces, delayed peak hypothesis.</p>
-        <div class="flex items-center text-emerald-400 text-sm font-medium">Open chapter <i class="fa-solid fa-arrow-right ml-2"></i></div>
-      </a>
-
-      <a href="wasm/02_eda_univariate/" class="card group block bg-zinc-900 border border-zinc-800 hover:border-violet-500/50 rounded-3xl p-6">
-        <div class="flex items-center gap-4 mb-4">
-          <div class="w-11 h-11 bg-violet-500/10 text-violet-400 rounded-2xl flex items-center justify-center font-bold">02</div>
-          <div>
-            <div class="font-semibold text-2xl tracking-tight">Spectral Power</div>
-            <div class="text-sm text-zinc-500">Welch PSD</div>
+          <h2 class="serif text-2xl md:text-3xl text-stone-50 mb-2">Cohort &amp; Design</h2>
+          <p class="text-stone-400 text-sm leading-relaxed">Who was scanned, what they heard, and how event files lock BOLD to musical structure. Full-cohort demographics plus processed whole-brain traces.</p>
+        </a>
+      </li>
+      <li>
+        <a href="wasm/02_eda_univariate/" class="card block rounded-2xl border border-stone-800 bg-gradient-to-br from-violet-950/40 to-stone-900/80 p-6 hover:border-violet-700/50">
+          <div class="flex items-baseline justify-between gap-4 mb-2">
+            <span class="text-violet-400/80 text-xs tracking-widest uppercase">Chapter II</span>
+            <span class="text-stone-600 text-xs">Welch PSD · band energy</span>
           </div>
-        </div>
-        <p class="text-zinc-400 mb-4">Reactive band power: music vs tones · anhedonia biomarker.</p>
-        <div class="flex items-center text-emerald-400 text-sm font-medium">Open chapter <i class="fa-solid fa-arrow-right ml-2"></i></div>
-      </a>
-
-      <a href="wasm/03_eda_multivariate/" class="card group block bg-zinc-900 border border-zinc-800 hover:border-amber-500/50 rounded-3xl p-6">
-        <div class="flex items-center gap-4 mb-4">
-          <div class="w-11 h-11 bg-amber-500/10 text-amber-400 rounded-2xl flex items-center justify-center font-bold">03</div>
-          <div>
-            <div class="font-semibold text-2xl tracking-tight">Coherence</div>
-            <div class="text-sm text-zinc-500">Auditory–limbic</div>
+          <h2 class="serif text-2xl md:text-3xl text-stone-50 mb-2">Spectral Power</h2>
+          <p class="text-stone-400 text-sm leading-relaxed">Welch PSDs on real runs, high-band fractions, spectral centroids, and the case for stimulus-specific anhedonia markers.</p>
+        </a>
+      </li>
+      <li>
+        <a href="wasm/03_eda_multivariate/" class="card block rounded-2xl border border-stone-800 bg-gradient-to-br from-amber-950/40 to-stone-900/80 p-6 hover:border-amber-700/50">
+          <div class="flex items-baseline justify-between gap-4 mb-2">
+            <span class="text-amber-400/80 text-xs tracking-widest uppercase">Chapter III</span>
+            <span class="text-stone-600 text-xs">Coherence · coupling</span>
           </div>
-        </div>
-        <p class="text-zinc-400 mb-4">Spectral coherence &amp; music-specific decoupling in MDD.</p>
-        <div class="flex items-center text-emerald-400 text-sm font-medium">Open chapter <i class="fa-solid fa-arrow-right ml-2"></i></div>
-      </a>
-
-      <a href="wasm/04_feature_engineering/" class="card group block bg-zinc-900 border border-zinc-800 hover:border-rose-500/50 rounded-3xl p-6">
-        <div class="flex items-center gap-4 mb-4">
-          <div class="w-11 h-11 bg-rose-500/10 text-rose-400 rounded-2xl flex items-center justify-center font-bold">04</div>
-          <div>
-            <div class="font-semibold text-2xl tracking-tight">Features &amp; Clusters</div>
-            <div class="text-sm text-zinc-500">Responder subtypes</div>
+          <h2 class="serif text-2xl md:text-3xl text-stone-50 mb-2">Network Timing</h2>
+          <p class="text-stone-400 text-sm leading-relaxed">Magnitude-squared coherence as a language for coupling. A transparent early/late proxy on real mean BOLD — with limits stated plainly.</p>
+        </a>
+      </li>
+      <li>
+        <a href="wasm/04_feature_engineering/" class="card block rounded-2xl border border-stone-800 bg-gradient-to-br from-rose-950/40 to-stone-900/80 p-6 hover:border-rose-700/50">
+          <div class="flex items-baseline justify-between gap-4 mb-2">
+            <span class="text-rose-400/80 text-xs tracking-widest uppercase">Chapter IV</span>
+            <span class="text-stone-600 text-xs">Clusters · RecSys path</span>
           </div>
-        </div>
-        <p class="text-zinc-400 mb-4">Fingerprints, GMM / spectral clustering → RecSys features.</p>
-        <div class="flex items-center text-emerald-400 text-sm font-medium">Open chapter <i class="fa-solid fa-arrow-right ml-2"></i></div>
-      </a>
-    </div>
+          <h2 class="serif text-2xl md:text-3xl text-stone-50 mb-2">Responder Maps</h2>
+          <p class="text-stone-400 text-sm leading-relaxed">Fingerprints from real Welch features, GMM subtypes on music runs, and a sketch of physiology-aware playlist priors.</p>
+        </a>
+      </li>
+    </ol>
 
-    <div class="bg-zinc-900 border border-zinc-800 rounded-3xl p-8 mb-8 text-sm text-zinc-300">
-      <h2 class="font-semibold text-xl mb-3 text-zinc-100">Canonical workflow</h2>
-      <pre class="bg-zinc-950 rounded-xl p-4 overflow-x-auto text-xs text-zinc-400"><code>marimo edit marimo_notebooks/01_pre_flight.py   # develop
-python marimo_notebooks/02_eda_univariate.py     # run as script
-python marimo_exports/export_wasm.py --sync-docs # build Pages book
-python marimo_exports/serve.py                   # preview locally</code></pre>
-      <p class="mt-4 text-zinc-500">Chapter 06 (TensorFlow) is local-only and not part of the WASM book.</p>
-    </div>
+    <footer class="border-t border-stone-800 pt-8 text-xs text-stone-600 space-y-2">
+      <p>Local development: <code class="text-stone-500">marimo edit marimo_notebooks/01_pre_flight.py</code></p>
+      <p>Rebuild Pages book: <code class="text-stone-500">python marimo_exports/export_wasm.py --sync-docs</code></p>
+      <p>Chapter V (TensorFlow spectrograms) is local-only and not part of the WASM book.</p>
+    </footer>
   </div>
 </body>
 </html>

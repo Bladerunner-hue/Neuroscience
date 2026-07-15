@@ -6,10 +6,13 @@ __pycache__/
 .mypy_cache/
 .ruff_cache/
 
-# Data (large / LFS)
+# Data (large NIfTI stay local; processed tables are committed for the book)
 data/raw/
 data/*
+!data/processed/
+!data/processed/**
 !data/.gitkeep
+*.nii.gz
 
 # ML / notebooks clutter
 figures/

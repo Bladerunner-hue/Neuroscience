@@ -1,20 +1,14 @@
-"""02 — Spectral Power (Welch PSD). Canonical marimo notebook."""
+"""Chapter II — Spectral power on real BOLD (public book)."""
 
 # /// script
 # requires-python = ">=3.11"
-# dependencies = [
-#     "marimo",
-#     "numpy",
-#     "pandas",
-#     "matplotlib",
-#     "scipy",
-# ]
+# dependencies = ["marimo", "numpy", "pandas", "matplotlib", "scipy"]
 # ///
 
 import marimo
 
 __generated_with = "0.23.10"
-app = marimo.App(width="medium", app_title="02 — Spectral Power")
+app = marimo.App(width="medium", app_title="II · Spectral Power")
 
 
 @app.cell
@@ -23,208 +17,150 @@ def _():
     import numpy as np
     import pandas as pd
     import matplotlib.pyplot as plt
-    from scipy.signal import welch, stft
-
+    import json
     from helpers import (
-        CONTROL_COLOR,
-        HIGHLIGHT,
-        MDD_COLOR,
-        band_power,
-        book_nav,
-        clinical_relevance_card,
-        hypothesis_card,
-        key_insight_card,
-        make_synthetic_bold_dataset,
-        set_global_style,
+        CONTROL_COLOR, HIGHLIGHT, MDD_COLOR, book_nav,
+        clinical_relevance_card, data_provenance_md, hypothesis_card,
+        key_insight_card, load_spectral_features, set_global_style,
     )
-
     set_global_style()
     return (
-        CONTROL_COLOR,
-        HIGHLIGHT,
-        MDD_COLOR,
-        band_power,
-        book_nav,
-        clinical_relevance_card,
-        hypothesis_card,
-        key_insight_card,
-        make_synthetic_bold_dataset,
-        mo,
-        np,
-        pd,
-        plt,
-        stft,
-        welch,
+        CONTROL_COLOR, HIGHLIGHT, MDD_COLOR, book_nav,
+        clinical_relevance_card, data_provenance_md, hypothesis_card,
+        json, key_insight_card, load_spectral_features, mo, np, pd, plt,
     )
 
 
 @app.cell
-def _(mo):
-    _title = mo.md(
-        r"""
-# 02 — Spectral Power (Welch PSD)
+def _(data_provenance_md, hypothesis_card, mo):
+    mo.md(r"""
+# II · Spectral Power
 
-**Chapter 2** · Univariate spectral biomarkers of anhedonia during positive music.
-"""
-    )
-    _title
+### Welch PSD as a language for rhythmic BOLD energy
+
+The power spectral density asks: *how much energy lives in each frequency of the BOLD fluctuation?* Welch’s method segments, windows, and averages periodograms for stable short-run estimates.
+""")
+    mo.md(data_provenance_md())
+    mo.md(hypothesis_card(
+        "MDD shows reduced high-frequency BOLD power during music.",
+        "Controls should carry more mid/high-band power during music; non-music should shrink the group gap.",
+    ))
+    mo.md(r"""
+## Method
+
+| Step | Choice |
+|------|--------|
+| TR | 3 s → fs ≈ 0.33 Hz |
+| Estimator | `scipy.signal.welch` |
+| Bands | low 0.01–0.04 · mid 0.04–0.08 · high 0.08–0.15 Hz |
+| Features | band fractions + spectral centroid |
+
+All PSDs below come from **real whole-brain mean BOLD**.
+""")
     return
 
 
 @app.cell
-def _(hypothesis_card, mo):
-    _hypo = mo.md(
-        hypothesis_card(
-            "MDD shows reduced high-frequency power to positive music — anhedonia biomarker.",
-            "Controls have higher power in the target band during positive music; tones show little group difference.",
-        )
-    )
-    _hypo
-    return
+def _(CONTROL_COLOR, HIGHLIGHT, MDD_COLOR, json, load_spectral_features, mo, np, plt):
+    feats = load_spectral_features()
+    mo.md("## Real PSDs by group and task")
+    if feats.empty:
+        mo.md("*No spectral features.*")
+    else:
+        fig_psd, axes_psd = plt.subplots(1, 2, figsize=(11, 4.2), sharey=True)
+        for _ax, _task in zip(axes_psd, ["music", "nonmusic"]):
+            for _g, _c, _ls in [("Control", CONTROL_COLOR, "-"), ("MDD", MDD_COLOR, "--")]:
+                sub = feats[(feats.group == _g) & (feats.task == _task)]
+                curves = []
+                f_ref = None
+                for _, _row in sub.iterrows():
+                    try:
+                        _f = np.array(json.loads(_row["psd_f"]))
+                        _p = np.array(json.loads(_row["psd_pxx"]))
+                    except Exception:
+                        continue
+                    if f_ref is None:
+                        f_ref = _f
+                    curves.append(_p if len(_f) == len(f_ref) else np.interp(f_ref, _f, _p))
+                if curves and f_ref is not None:
+                    _ax.semilogy(f_ref, np.mean(curves, axis=0), color=_c, ls=_ls, lw=2.2, label=_g)
+            _ax.axvspan(0.08, 0.15, color=HIGHLIGHT, alpha=0.12)
+            _ax.set_title(f"Task: {_task}")
+            _ax.set_xlabel("Frequency (Hz)")
+            _ax.grid(True, which="both", alpha=0.3)
+            _ax.legend(frameon=False, fontsize=9)
+        axes_psd[0].set_ylabel("Power (Welch, log)")
+        fig_psd.suptitle("Mean PSD across processed real runs", y=1.02)
+        fig_psd.tight_layout()
+        fig_psd
+    return (feats,)
 
 
 @app.cell
-def _(mo):
-    n_subj = mo.ui.slider(6, 18, value=10, step=2, label="Subjects")
-    tr = mo.ui.number(start=2.5, stop=3.5, value=3.0, step=0.25, label="TR (s)")
-    band_low = mo.ui.slider(0.01, 0.12, value=0.03, step=0.01, label="Band low (Hz)")
-    band_high = mo.ui.slider(0.06, 0.18, value=0.10, step=0.01, label="Band high (Hz)")
-    nper = mo.ui.slider(16, 48, value=32, step=8, label="Welch nperseg")
-    _controls = mo.vstack(
-        [
-            mo.md("## Reactive controls"),
-            mo.hstack([n_subj, tr, nper], justify="start"),
-            mo.hstack([band_low, band_high], justify="start"),
-        ]
-    )
-    _controls
-    return band_high, band_low, n_subj, nper, tr
+def _(CONTROL_COLOR, MDD_COLOR, feats, key_insight_card, mo, np, plt):
+    mo.md("## Band summaries on real runs")
+    if feats is None or getattr(feats, "empty", True):
+        mo.md("*No features.*")
+    else:
+        agg = feats.groupby(["group", "task"], as_index=False)[
+            ["power_low", "power_mid", "power_high", "spectral_centroid"]
+        ].mean()
+        fig_b, axes_b = plt.subplots(1, 2, figsize=(10, 4))
+        _tasks = ["music", "nonmusic"]
+        _x = np.arange(2)
+        _w = 0.35
+        for _ax, _metric, _title in zip(
+            axes_b, ["power_high", "spectral_centroid"],
+            ["High-band power fraction", "Spectral centroid (Hz)"],
+        ):
+            for _i, (_g, _c) in enumerate([("Control", CONTROL_COLOR), ("MDD", MDD_COLOR)]):
+                _vals = []
+                for _t in _tasks:
+                    _row = agg[(agg.group == _g) & (agg.task == _t)]
+                    _vals.append(float(_row[_metric].iloc[0]) if len(_row) else np.nan)
+                _ax.bar(_x + (_i - 0.5) * _w, _vals, _w, label=_g, color=_c, edgecolor="white")
+            _ax.set_xticks(_x)
+            _ax.set_xticklabels(_tasks)
+            _ax.set_title(_title)
+            _ax.legend(frameon=False, fontsize=9)
+            _ax.grid(True, axis="y", alpha=0.3)
+        fig_b.tight_layout()
 
+        def _mm(_g, _t, _m="power_high"):
+            _row = agg[(agg.group == _g) & (agg.task == _t)]
+            return float(_row[_m].iloc[0]) if len(_row) else np.nan
 
-@app.cell
-def _(
-    CONTROL_COLOR,
-    HIGHLIGHT,
-    MDD_COLOR,
-    band_high,
-    band_low,
-    band_power,
-    key_insight_card,
-    make_synthetic_bold_dataset,
-    mo,
-    n_subj,
-    nper,
-    plt,
-    tr,
-    welch,
-):
-    synth = make_synthetic_bold_dataset(int(n_subj.value), 105, float(tr.value))
-    fs = 1.0 / float(tr.value)
-
-    def get_psd(grp, cond="positive_music"):
-        sig = synth[(synth.group == grp) & (synth.trial_type == cond)]["bold"].values
-        if len(sig) < 20:
-            sig = synth[synth.group == grp]["bold"].values
-        nperseg = min(int(nper.value), max(8, len(sig) // 2))
-        f, pxx = welch(sig, fs=fs, nperseg=nperseg)
-        return f, pxx
-
-    f_c, pxx_c = get_psd("Control")
-    f_m, pxx_m = get_psd("MDD")
-    f_c_nm, pxx_c_nm = get_psd("Control", "tones")
-    f_m_nm, pxx_m_nm = get_psd("MDD", "tones")
-
-    fig, axes = plt.subplots(1, 2, figsize=(12, 4.5), sharey=True)
-    axes[0].semilogy(f_c, pxx_c, label="Control", color=CONTROL_COLOR, lw=2.5)
-    axes[0].semilogy(f_m, pxx_m, label="MDD", color=MDD_COLOR, lw=2.5, ls="--")
-    axes[0].axvspan(float(band_low.value), float(band_high.value), alpha=0.15, color=HIGHLIGHT)
-    axes[0].set_title("Positive music")
-    axes[0].set_xlabel("Frequency (Hz)")
-    axes[0].set_ylabel("Power (log)")
-    axes[0].legend()
-    axes[0].grid(True, alpha=0.3)
-
-    axes[1].semilogy(f_c_nm, pxx_c_nm, label="Control", color=CONTROL_COLOR, lw=2.5)
-    axes[1].semilogy(f_m_nm, pxx_m_nm, label="MDD", color=MDD_COLOR, lw=2.5, ls="--")
-    axes[1].axvspan(float(band_low.value), float(band_high.value), alpha=0.15, color=HIGHLIGHT)
-    axes[1].set_title("Non-music (tones)")
-    axes[1].set_xlabel("Frequency (Hz)")
-    axes[1].legend()
-    axes[1].grid(True, alpha=0.3)
-    fig.suptitle("Welch PSD: stimulus-specific group difference", y=1.02)
-
-    bp_c = band_power(f_c, pxx_c, float(band_low.value), float(band_high.value))
-    bp_m = band_power(f_m, pxx_m, float(band_low.value), float(band_high.value))
-    bp_c_nm = band_power(f_c_nm, pxx_c_nm, float(band_low.value), float(band_high.value))
-    bp_m_nm = band_power(f_m_nm, pxx_m_nm, float(band_low.value), float(band_high.value))
-    ratio = bp_c / max(bp_m, 1e-12)
-
-    # Bar chart via matplotlib (no plotly — avoids micropip hang on Pages)
-    fig_bar, axb = plt.subplots(figsize=(7, 3.5))
-    x = np.arange(2)
-    w = 0.35
-    axb.bar(x - w / 2, [bp_c, bp_c_nm], w, label="Control", color=CONTROL_COLOR)
-    axb.bar(x + w / 2, [bp_m, bp_m_nm], w, label="MDD", color=MDD_COLOR)
-    axb.set_xticks(x)
-    axb.set_xticklabels(["music", "tones"])
-    axb.set_ylabel("Band power")
-    axb.set_title("Band power by group × condition")
-    axb.legend()
-    axb.grid(True, axis="y", alpha=0.3)
-
-    _spectra = mo.vstack(
-        [
-            fig,
-            mo.md(
-                f"""
-**Band power [{float(band_low.value):.2f}–{float(band_high.value):.2f} Hz]**
-
-| Condition | Control | MDD |
-|---|---:|---:|
-| Positive music | {bp_c:.4f} | {bp_m:.4f} |
-| Tones | {bp_c_nm:.4f} | {bp_m_nm:.4f} |
-"""
-            ),
-            fig_bar,
-            mo.md(
-                key_insight_card(
-                    "MDD shows reduced high-frequency power to positive music.",
-                    "Dissociation is stimulus-specific (little group difference on tones).",
-                    effect_size=f"~{ratio:.1f}× higher band power in Controls (music)",
-                )
-            ),
-        ]
-    )
-    _spectra
-    return (synth,)
-
-
-@app.cell
-def _(np, plt, stft, synth):
-    sig = synth.groupby("time")["bold"].mean().values.astype("float64")
-    _f, _t, Zxx = stft(sig, fs=1 / 3.0, nperseg=16)
-    fig2, ax2 = plt.subplots(figsize=(9, 3.5))
-    ax2.imshow(np.abs(Zxx), aspect="auto", origin="lower", cmap="viridis")
-    ax2.set_title("SciPy STFT spectrogram")
-    ax2.set_xlabel("Time frames")
-    ax2.set_ylabel("Frequency bins")
-    fig2
+        c_m, d_m = _mm("Control", "music"), _mm("MDD", "music")
+        c_n, d_n = _mm("Control", "nonmusic"), _mm("MDD", "nonmusic")
+        ratio = c_m / d_m if d_m and d_m > 0 else np.nan
+        mo.vstack([
+            fig_b,
+            mo.ui.table(agg.round(4)),
+            mo.md(key_insight_card(
+                "Music separates groups more than non-music in this subset.",
+                f"High-band — music: Control {c_m:.3f} vs MDD {d_m:.3f}; non-music: {c_n:.3f} vs {d_n:.3f}.",
+                effect_size=f"Control/MDD high-band (music) ≈ {ratio:.2f}×" if ratio == ratio else "n/a",
+            )),
+        ])
     return
 
 
 @app.cell
 def _(book_nav, clinical_relevance_card, mo):
-    _wrap = mo.vstack(
-        [
-            mo.md(
-                clinical_relevance_card(
-                    "Spectral power during positive music is an objective anhedonia biomarker and a RecSys feature."
-                )
-            ),
-            mo.md(book_nav("02_eda_univariate")),
-        ]
-    )
-    _wrap
+    mo.vstack([
+        mo.md(r"""
+## How to read a PSD
+
+- Not EEG “brain waves” — BOLD is sluggish.
+- Relative bands matter more than absolute power.
+- Stimulus specificity is the scientific hinge.
+- This is a processed subset; treat effect sizes as directional.
+"""),
+        mo.md(clinical_relevance_card(
+            "A music-selective drop in high-frequency BOLD energy is a candidate digital biomarker of anhedonia."
+        )),
+        mo.md(book_nav("02_eda_univariate")),
+    ])
     return
 
 

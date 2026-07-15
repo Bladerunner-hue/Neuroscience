@@ -1,0 +1,40 @@
+participant_id,sex,age,group,group_short
+sub-control01,F,19,Never-Depressed Control,Control
+sub-control02,M,22,Never-Depressed Control,Control
+sub-control03,F,18,Never-Depressed Control,Control
+sub-control04,M,19,Never-Depressed Control,Control
+sub-control05,M,27,Never-Depressed Control,Control
+sub-control06,M,31,Never-Depressed Control,Control
+sub-control07,F,31,Never-Depressed Control,Control
+sub-control08,M,18,Never-Depressed Control,Control
+sub-control09,F,24,Never-Depressed Control,Control
+sub-control10,F,23,Never-Depressed Control,Control
+sub-control11,F,29,Never-Depressed Control,Control
+sub-control12,F,27,Never-Depressed Control,Control
+sub-control13,F,22,Never-Depressed Control,Control
+sub-control14,M,25,Never-Depressed Control,Control
+sub-control15,F,25,Never-Depressed Control,Control
+sub-control16,F,37,Never-Depressed Control,Control
+sub-control17,M,52,Never-Depressed Control,Control
+sub-control18,F,59,Never-Depressed Control,Control
+sub-control19,M,39,Never-Depressed Control,Control
+sub-control20,M,42,Never-Depressed Control,Control
+sub-mdd01,F,29,Major Depressive Disorder,MDD
+sub-mdd02,F,19,Major Depressive Disorder,MDD
+sub-mdd03,F,21,Major Depressive Disorder,MDD
+sub-mdd04,M,30,Major Depressive Disorder,MDD
+sub-mdd05,M,19,Major Depressive Disorder,MDD
+sub-mdd06,F,27,Major Depressive Disorder,MDD
+sub-mdd07,F,26,Major Depressive Disorder,MDD
+sub-mdd08,F,24,Major Depressive Disorder,MDD
+sub-mdd09,M,30,Major Depressive Disorder,MDD
+sub-mdd10,F,19,Major Depressive Disorder,MDD
+sub-mdd11,F,18,Major Depressive Disorder,MDD
+sub-mdd12,M,26,Major Depressive Disorder,MDD
+sub-mdd13,M,44,Major Depressive Disorder,MDD
+sub-mdd14,F,52,Major Depressive Disorder,MDD
+sub-mdd15,F,46,Major Depressive Disorder,MDD
+sub-mdd16,M,54,Major Depressive Disorder,MDD
+sub-mdd17,F,42,Major Depressive Disorder,MDD
+sub-mdd18,M,56,Major Depressive Disorder,MDD
+sub-mdd19,M,55,Major Depressive Disorder,MDD

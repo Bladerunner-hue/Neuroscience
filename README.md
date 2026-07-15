@@ -83,10 +83,17 @@ docs/                      ← GitHub Pages artifact
 - MDD: blunted, **stimulus-specific** (tones ≈ controls).
 - Spectral “responder” clusters → playlist RecSys features.
 
-## Data & deps
+## Data (real OpenNeuro ds000171)
 
-- Optional real data: `data/raw/ds000171/` (gitignored). Notebooks use high-quality synthetic BOLD when data is absent (WASM / CI).
-- See `requirements.txt`. Browser chapters use Pyodide-friendly stack (numpy, scipy, pandas, matplotlib, plotly, scikit-learn).
+1. Download subset (or full) BOLD under `data/raw/ds000171/` via `openneuro-py` (see `download_and_prepare.sh`).
+2. Build the feature store:
+   ```bash
+   python scripts/prepare_real_features.py
+   python scripts/gen_book_data.py
+   ```
+3. Notebooks prefer `data/processed/*.csv` / `book_bundle.json`. The WASM book embeds the same tables via `marimo_notebooks/book_data.py` (not mock oscillators).
+
+Raw `*.nii.gz` stay gitignored. Processed CSV/JSON and `book_data.py` are committed so Pages stays reproducible.
 
 ## One-time Pages setup
 

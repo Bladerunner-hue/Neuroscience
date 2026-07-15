@@ -32,6 +32,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 NOTEBOOK_DIR = ROOT / "marimo_notebooks"
 HELPERS = NOTEBOOK_DIR / "helpers.py"
+BOOK_DATA = NOTEBOOK_DIR / "book_data.py"
 EXPORT_DIR = ROOT / "marimo_exports" / "wasm"
 DOCS_DIR = ROOT / "docs"
 DOCS_WASM = DOCS_DIR / "wasm"
@@ -45,33 +46,44 @@ CANDIDATES = [
 ]
 
 
-def _inject_helpers(notebook_src: str, helpers_src: str) -> str:
-    """Register helpers in sys.modules inside the first cell (WASM-safe)."""
-    b64 = base64.b64encode(helpers_src.encode("utf-8")).decode("ascii")
-    # Split b64 into chunks so the cell stays readable and under line limits
+def _b64_chunks(src: str) -> str:
+    b64 = base64.b64encode(src.encode("utf-8")).decode("ascii")
     chunks = [b64[i : i + 80] for i in range(0, len(b64), 80)]
-    b64_literal = "(\n" + "".join(f'        "{c}"\n' for c in chunks) + "    )"
+    return "(\n" + "".join(f'        "{c}"\n' for c in chunks) + "    )"
 
-    bootstrap = f'''
-    # --- injected by export_wasm.py: helpers for WASM/Pyodide (base64) ---
+
+def _inject_modules(notebook_src: str, modules: dict[str, str]) -> str:
+    """Register local modules (helpers, book_data) in sys.modules for Pyodide."""
+    loads = []
+    for name, src in modules.items():
+        lit = _b64_chunks(src)
+        loads.append(
+            f'''
+    if "{name}" not in _sys.modules:
+        _{name}_b64 = {lit}
+        _{name}_src = _b64.b64decode("".join(_{name}_b64)).decode("utf-8")
+        _{name}_mod = _types.ModuleType("{name}")
+        exec(compile(_{name}_src, "{name}.py", "exec"), _{name}_mod.__dict__)
+        _sys.modules["{name}"] = _{name}_mod
+'''
+        )
+    bootstrap = (
+        '''
+    # --- injected by export_wasm.py: local modules for WASM/Pyodide (base64) ---
     import base64 as _b64
     import sys as _sys
     import types as _types
-    if "helpers" not in _sys.modules:
-        _helpers_b64 = {b64_literal}
-        _helpers_src = _b64.b64decode("".join(_helpers_b64)).decode("utf-8")
-        _helpers = _types.ModuleType("helpers")
-        exec(compile(_helpers_src, "helpers.py", "exec"), _helpers.__dict__)
-        _sys.modules["helpers"] = _helpers
-    # --- end helpers injection ---
 '''
+        + "".join(loads)
+        + "    # --- end module injection ---\n"
+    )
     m = re.search(
         r"(@app\.cell(?:\([^)]*\))?\s*\n"
         r"def\s+\w+\s*\([^)]*\)\s*:\s*\n)",
         notebook_src,
     )
     if not m:
-        raise RuntimeError("Could not find first @app.cell to inject helpers")
+        raise RuntimeError("Could not find first @app.cell to inject modules")
     return notebook_src[: m.end()] + bootstrap + notebook_src[m.end() :]
 
 
@@ -89,9 +101,11 @@ def export_one(notebook: Path, mode: str, tmp_dir: Path) -> bool:
         shutil.rmtree(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    helpers_src = HELPERS.read_text(encoding="utf-8")
+    modules = {"helpers": HELPERS.read_text(encoding="utf-8")}
+    if BOOK_DATA.exists():
+        modules["book_data"] = BOOK_DATA.read_text(encoding="utf-8")
     nb_src = notebook.read_text(encoding="utf-8")
-    packed = _inject_helpers(nb_src, helpers_src)
+    packed = _inject_modules(nb_src, modules)
     _validate_packed(packed, notebook)
 
     tmp_nb = tmp_dir / notebook.name
@@ -140,13 +154,16 @@ def export_one(notebook: Path, mode: str, tmp_dir: Path) -> bool:
     # Guard against the triple-quote breakage pattern
     html = index.read_text(encoding="utf-8", errors="replace")
     if "injected by export_wasm" not in html:
-        print("   ❌ export missing helpers injection marker")
+        print("   ❌ export missing module injection marker")
         return False
     if 'exec(compile("""' in html or "exec(compile(\\\"\\\"\\\"" in html:
-        print("   ❌ unsafe triple-quote helpers embedding detected")
+        print("   ❌ unsafe triple-quote embedding detected")
         return False
     if "b64decode" not in html:
-        print("   ❌ base64 helpers loader missing from export")
+        print("   ❌ base64 module loader missing from export")
+        return False
+    if BOOK_DATA.exists() and "book_data" not in html:
+        print("   ❌ book_data module missing from export")
         return False
 
     (out_dir / ".nojekyll").touch(exist_ok=True)

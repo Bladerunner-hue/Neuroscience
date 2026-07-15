@@ -1,20 +1,14 @@
-"""01 — Pre-flight + Event Alignment. Canonical marimo notebook."""
+"""Chapter I — Cohort, paradigm, real BOLD (public book)."""
 
 # /// script
 # requires-python = ">=3.11"
-# dependencies = [
-#     "marimo",
-#     "numpy",
-#     "pandas",
-#     "matplotlib",
-#     "scipy",
-# ]
+# dependencies = ["marimo", "numpy", "pandas", "matplotlib", "scipy"]
 # ///
 
 import marimo
 
 __generated_with = "0.23.10"
-app = marimo.App(width="medium", app_title="01 — Pre-flight")
+app = marimo.App(width="medium", app_title="I · Cohort & Design")
 
 
 @app.cell
@@ -24,169 +18,179 @@ def _():
     import pandas as pd
     import matplotlib.pyplot as plt
     import scipy  # noqa: F401
-
     from helpers import (
-        CONTROL_COLOR,
-        HIGHLIGHT,
-        MDD_COLOR,
-        MUSIC_COLOR,
-        book_nav,
-        clinical_relevance_card,
-        hypothesis_card,
-        key_insight_card,
-        make_synthetic_bold_dataset,
-        set_global_style,
+        CONTROL_COLOR, MDD_COLOR, MUSIC_COLOR, book_nav,
+        clinical_relevance_card, data_provenance_md, hypothesis_card,
+        key_insight_card, load_bold_timeseries, load_events_summary,
+        load_participants_df, load_spectral_features, set_global_style,
     )
-
     set_global_style()
     return (
-        CONTROL_COLOR,
-        HIGHLIGHT,
-        MDD_COLOR,
-        MUSIC_COLOR,
-        book_nav,
-        clinical_relevance_card,
-        hypothesis_card,
-        key_insight_card,
-        make_synthetic_bold_dataset,
-        mo,
-        np,
-        pd,
-        plt,
+        CONTROL_COLOR, MDD_COLOR, MUSIC_COLOR, book_nav,
+        clinical_relevance_card, data_provenance_md, hypothesis_card,
+        key_insight_card, load_bold_timeseries, load_events_summary,
+        load_participants_df, load_spectral_features, mo, np, pd, plt,
     )
 
 
 @app.cell
-def _(mo):
-    _title = mo.md(
-        r"""
-# 01 — Pre-flight + Event Alignment
+def _(data_provenance_md, hypothesis_card, mo):
+    mo.md(r"""
+# I · Cohort & Design
 
-**Chapter 1** · Music vs non-musical emotional auditory processing in depression.
+### Music, reward, and depression — reading real BOLD against a clinical question
 
-Runs on synthetic BOLD that mirrors the OpenNeuro ds000171 design (Control vs MDD × tones / music).
-"""
-    )
-    _title
+OpenNeuro **ds000171** (Lepping et al.): never-depressed controls and participants with major depressive disorder listening to emotional **music** and **non-musical** auditory material.
+""")
+    mo.md(data_provenance_md())
+    mo.md(r"""
+## Scientific framing
+
+**Anhedonia** is reduced capacity for pleasure. Music is a strong reward cue engaging auditory and limbic circuits. If depression dulls reward *specifically* for structured music (more than for simple tones), differences should be **stimulus-specific**.
+""")
+    mo.md(hypothesis_card(
+        "Positive music elicits a delayed or blunted BOLD peak in MDD.",
+        "Controls should show earlier, sharper mean BOLD rises after music-related onsets; MDD responses are slower or lower — especially for music, not tones.",
+    ))
     return
 
 
 @app.cell
-def _(hypothesis_card, mo):
-    _hypo = mo.md(
-        hypothesis_card(
-            "Positive music shows delayed peak in MDD — possible reward anticipation deficit.",
-            "Controls have sharper earlier BOLD response after music onsets; MDD is blunted/delayed.",
-        )
-    )
-    _hypo
+def _(CONTROL_COLOR, MDD_COLOR, load_participants_df, mo, plt):
+    parts = load_participants_df()
+    n = len(parts)
+    counts = parts["group_short"].value_counts()
+    age_g = parts.groupby("group_short")["age"].agg(["mean", "std", "count"])
+    fig_demo, axes_demo = plt.subplots(1, 2, figsize=(10, 4))
+    colors = [CONTROL_COLOR if _g == "Control" else MDD_COLOR for _g in counts.index]
+    axes_demo[0].bar(counts.index.astype(str), counts.values, color=colors, edgecolor="white")
+    axes_demo[0].set_title(f"Full cohort (n = {n})")
+    axes_demo[0].set_ylabel("Participants")
+    for _i, _v in enumerate(counts.values):
+        axes_demo[0].text(_i, _v + 0.3, str(int(_v)), ha="center", fontweight="semibold")
+    for _g, _c in [("Control", CONTROL_COLOR), ("MDD", MDD_COLOR)]:
+        _ages = parts.loc[parts.group_short == _g, "age"]
+        axes_demo[1].hist(_ages, bins=8, alpha=0.55, label=_g, color=_c, edgecolor="white")
+    axes_demo[1].set_title("Age distribution")
+    axes_demo[1].set_xlabel("Age (years)")
+    axes_demo[1].legend(frameon=False)
+    mo.md("## Who is in the study?\n\nDemographics from the **full published cohort** in `participants.tsv`.")
+    mo.vstack([fig_demo, mo.md("**Age by group**"), mo.ui.table(age_g.reset_index().round(2)), mo.ui.table(parts.head(12))])
+    return (parts,)
+
+
+@app.cell
+def _(load_events_summary, mo):
+    ev = load_events_summary()
+    mo.md(r"""
+## The listening paradigm
+
+Each subject completed **music** and **non-music** runs. Event files mark trial onsets — essential so later chapters can test *stimulus specificity*.
+""")
+    if ev.empty:
+        mo.md("*No events summary available.*")
+    else:
+        by_task = ev.groupby("task").agg(n_files=("subject", "count"), subjects=("subject", "nunique")).reset_index()
+        mo.vstack([
+            mo.md(f"**Event files inventoried:** {len(ev)}"),
+            mo.ui.table(by_task),
+            mo.ui.table(ev.head(8)),
+        ])
+    return (ev,)
+
+
+@app.cell
+def _(load_bold_timeseries, mo):
+    ts = load_bold_timeseries()
+    mo.md(r"""
+## Real BOLD: whole-brain mean traces
+
+For each downloaded NIfTI we compute the spatial mean BOLD per TR (3 s), then z-score within run. Grounded in **actual scans**, not mock oscillators.
+""")
+    subjects = sorted(ts["subject"].unique()) if not ts.empty else []
+    sub_ui = mo.ui.dropdown(options=subjects or ["(no data)"], value=subjects[0] if subjects else "(no data)", label="Subject")
+    sub_ui
+    return sub_ui, ts
+
+
+@app.cell
+def _(CONTROL_COLOR, MDD_COLOR, MUSIC_COLOR, key_insight_card, mo, plt, sub_ui, ts):
+    if ts.empty or sub_ui.value == "(no data)":
+        mo.md("**No real timeseries.** Run `python scripts/prepare_real_features.py`.")
+    else:
+        _sub = sub_ui.value
+        sdf = ts[ts.subject == _sub]
+        _group = sdf["group"].iloc[0]
+        fig_ts, axes_ts = plt.subplots(2, 1, figsize=(10, 5.5))
+        for _ax, _task, _col in zip(axes_ts, ["music", "nonmusic"], [MUSIC_COLOR, "#B9770E"]):
+            gdf = sdf[sdf.task == _task].sort_values("time")
+            if gdf.empty:
+                _ax.set_title(f"{_task}: not available")
+                continue
+            _ax.plot(gdf["time"], gdf["bold_z"], color=_col, lw=1.4)
+            _ax.axhline(0, color="#999", lw=0.8)
+            _ax.set_ylabel("BOLD (z)")
+            _ax.set_title(f"{_sub} · {_group} · {_task}")
+            _ax.grid(True, alpha=0.3)
+        axes_ts[-1].set_xlabel("Time (s)")
+        fig_ts.tight_layout()
+        mo.vstack([
+            fig_ts,
+            mo.md(key_insight_card(
+                "Music and non-music runs are not interchangeable.",
+                "Even whole-brain means show structured fluctuations; Chapter II turns these series into frequency-domain biomarkers.",
+            )),
+        ])
     return
 
 
 @app.cell
-def _(mo):
-    n_sub = mo.ui.slider(6, 16, value=8, step=1, label="Synthetic subjects")
-    _controls = mo.vstack([mo.md("## Reactive controls"), n_sub])
-    _controls
-    return (n_sub,)
+def _(CONTROL_COLOR, MDD_COLOR, load_spectral_features, mo, np, plt):
+    feats = load_spectral_features()
+    mo.md(r"""
+## Peak latency on real runs
+
+Peri-stimulus windows after music-related onsets; time of maximum mean BOLD.
+""")
+    if feats.empty:
+        mo.md("*Spectral features not available.*")
+    else:
+        agg = feats.dropna(subset=["peak_latency_s"]).groupby(["group", "task"], as_index=False)["peak_latency_s"].mean()
+        fig_pk, ax_pk = plt.subplots(figsize=(7.5, 4))
+        _tasks = ["music", "nonmusic"]
+        _x = np.arange(len(_tasks))
+        _w = 0.35
+        for _i, (_g, _c) in enumerate([("Control", CONTROL_COLOR), ("MDD", MDD_COLOR)]):
+            _vals = []
+            for _t in _tasks:
+                _row = agg[(agg.group == _g) & (agg.task == _t)]
+                _vals.append(float(_row.peak_latency_s.iloc[0]) if len(_row) else float("nan"))
+            ax_pk.bar(_x + (_i - 0.5) * _w, _vals, _w, label=_g, color=_c, edgecolor="white")
+        ax_pk.set_xticks(_x)
+        ax_pk.set_xticklabels(_tasks)
+        ax_pk.set_ylabel("Mean peak latency (s)")
+        ax_pk.set_title("Event-aligned peak latency (processed real runs)")
+        ax_pk.legend(frameon=False)
+        _cols = [c for c in ["subject", "group", "task", "run", "peak_latency_s", "peak_amp", "power_high"] if c in feats.columns]
+        mo.vstack([fig_pk, mo.ui.table(agg.round(2)), mo.ui.table(feats[_cols].round(3))])
+    return (feats,)
 
 
 @app.cell
-def _(make_synthetic_bold_dataset, mo, n_sub):
-    synth = make_synthetic_bold_dataset(int(n_sub.value), n_timepoints=105, tr=3.0)
-    summary = (
-        synth.groupby(["group", "condition"], as_index=False)
-        .agg(n_rows=("bold", "size"), mean_bold=("bold", "mean"))
-        .round(3)
-    )
-    _cohort = mo.vstack(
-        [
-            mo.md("## Cohort summary"),
-            mo.ui.table(summary),
-            mo.ui.table(synth.head(8)),
-        ]
-    )
-    _cohort
-    return (synth,)
+def _(book_nav, clinical_relevance_card, mo):
+    mo.vstack([
+        mo.md(r"""
+## Concepts to carry forward
 
-
-@app.cell
-def _(CONTROL_COLOR, MDD_COLOR, MUSIC_COLOR, mo, np, plt, synth):
-    def mean_trace(group: str, trial: str):
-        sub = (
-            synth[(synth["group"] == group) & (synth["trial_type"] == trial)]
-            .groupby("time", as_index=False)["bold"]
-            .mean()
-        )
-        return sub["time"].values, sub["bold"].values
-
-    t_c, b_c = mean_trace("Control", "positive_music")
-    t_m, b_m = mean_trace("MDD", "positive_music")
-
-    fig, ax = plt.subplots(figsize=(10, 4.5))
-    ax.plot(t_c, b_c, color=CONTROL_COLOR, lw=2.5, label="Control · positive music")
-    ax.plot(t_m, b_m, color=MDD_COLOR, lw=2.5, ls="--", label="MDD · positive music")
-    for _onset, _label in [(0, "tones"), (31.5, "neg music"), (63, "pos music")]:
-        color = MUSIC_COLOR if "music" in _label else "#FF9800"
-        ax.axvline(_onset, color=color, ls=":", alpha=0.7)
-    ax.set_title("Event alignment: mean BOLD during positive music")
-    ax.set_xlabel("Time (s)")
-    ax.set_ylabel("BOLD (a.u.)")
-    ax.legend()
-    ax.grid(True, alpha=0.3)
-
-    peak_c = float(t_c[int(np.argmax(b_c))]) if len(b_c) else float("nan")
-    peak_m = float(t_m[int(np.argmax(b_m))]) if len(b_m) else float("nan")
-
-    _align = mo.vstack(
-        [
-            fig,
-            mo.md(
-                f"**Peak latency proxy** — Control: **{peak_c:.1f}s** · MDD: **{peak_m:.1f}s**"
-            ),
-        ]
-    )
-    _align
-    return
-
-
-@app.cell
-def _(HIGHLIGHT, MUSIC_COLOR, plt, synth):
-    subj = sorted(synth["subject"].unique())[0]
-    s = synth[(synth["subject"] == subj) & (synth["condition"] == "music")].sort_values(
-        "time"
-    )
-    fig2, ax2 = plt.subplots(figsize=(10, 3.5))
-    ax2.plot(s["time"], s["bold"], color=HIGHLIGHT, lw=1.8)
-    for _t0 in (0, 31.5, 63, 94.5):
-        ax2.axvline(_t0, color=MUSIC_COLOR, ls="--", alpha=0.55)
-    ax2.set_title(f"Single-subject music run: {subj}")
-    ax2.set_xlabel("Time (s)")
-    ax2.grid(True, alpha=0.3)
-    fig2
-    return
-
-
-@app.cell
-def _(book_nav, clinical_relevance_card, key_insight_card, mo):
-    _wrap = mo.vstack(
-        [
-            mo.md(
-                key_insight_card(
-                    "Positive music shows delayed / blunted peak in MDD.",
-                    "Temporal misalignment seeds spectral analysis in chapter 02.",
-                    "Controls: earlier, higher-amplitude response.",
-                )
-            ),
-            mo.md(
-                clinical_relevance_card(
-                    "Event alignment reveals reward-processing dynamics used downstream as spectral biomarker features."
-                )
-            ),
-            mo.md(book_nav("01_pre_flight")),
-        ]
-    )
-    _wrap
+1. **Stimulus specificity** — always contrast music vs non-music.
+2. **Temporal locking** — event files turn continuous BOLD into trial-aware features.
+3. **Provenance** — browser builds use the same processed tables extracted from real NIfTI.
+"""),
+        mo.md(clinical_relevance_card(
+            "A delayed music-evoked BOLD peak is a candidate correlate of blunted anticipatory pleasure — relevant to music therapy and engagement-aware playlists."
+        )),
+        mo.md(book_nav("01_pre_flight")),
+    ])
     return
 
 
