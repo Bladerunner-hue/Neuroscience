@@ -1,101 +1,81 @@
-# Bladerunner-Hue Neuroscience — Music, Reward & Depression (Spectral Biomarkers)
+# Music, Reward & Depression — Spectral Biomarkers (OpenNeuro ds000171)
 
-**Focus:** Frequency-domain analysis of emotional music vs non-musical auditory processing in Major Depressive Disorder (OpenNeuro **ds000171** design).
+Interactive methods book on emotional music processing in MDD: **real BOLD** features, classical ML bake-off, and optional **TensorFlow** neural nets.
 
 ## Canonical source: `marimo_notebooks/`
 
-Everything interactive is driven by these marimo apps + shared `helpers.py`:
+| Notebook | Chapter | GitHub Pages |
+|----------|---------|--------------|
+| `01_pre_flight.py` | I · Cohort & Design | ✅ WASM |
+| `02_eda_univariate.py` | II · Spectral Power | ✅ WASM |
+| `03_eda_multivariate.py` | III · Algorithm Lab | ✅ WASM |
+| `04_feature_engineering.py` | IV · Features & Music Effects | ✅ WASM |
+| `06_tf_spectrogram_model.py` | V · TensorFlow Neural Nets | ❌ **local only** (TF + GPU) |
+| `helpers.py` / `book_data.py` | Shared loaders + embedded tables | — |
 
-| Notebook | Chapter | WASM book |
-|----------|---------|-----------|
-| `01_pre_flight.py` | Event alignment | ✅ |
-| `02_eda_univariate.py` | Welch PSD / spectral power | ✅ |
-| `03_eda_multivariate.py` | Auditory–limbic coherence | ✅ |
-| `04_feature_engineering.py` | Fingerprints + clusters | ✅ |
-| `06_tf_spectrogram_model.py` | TensorFlow spectrogram CNN | ❌ local only |
-| `helpers.py` | Shared data/viz/nav | — |
+**Legacy code** (old Jupyter steps, `src/neuro`, one-off generators) lives under `archives/` and is **not** used by the active book.
 
-Legacy Jupyter / old `src/neuro` live under `archives/` and are **not** used by the active notebooks.
+## Live book (GitHub Pages)
 
-## Live interactive book (GitHub Pages)
-
-Built **from** `marimo_notebooks/` → WASM → `docs/` → Pages.
-
-- **Book home:** https://bladerunner-hue.github.io/Neuroscience/
-- **Ch 1:** https://bladerunner-hue.github.io/Neuroscience/wasm/01_pre_flight/
-- **Ch 2:** https://bladerunner-hue.github.io/Neuroscience/wasm/02_eda_univariate/
-- **Ch 3:** https://bladerunner-hue.github.io/Neuroscience/wasm/03_eda_multivariate/
-- **Ch 4:** https://bladerunner-hue.github.io/Neuroscience/wasm/04_feature_engineering/
-- **Deploy workflow:** https://github.com/Bladerunner-hue/Neuroscience/actions/workflows/deploy-pages.yml
+- **Home:** https://bladerunner-hue.github.io/Neuroscience/
+- **Ch I–IV:** `/wasm/01_pre_flight/` … `/wasm/04_feature_engineering/`
+- **Deploy:** GitHub Actions → [deploy-pages.yml](https://github.com/Bladerunner-hue/Neuroscience/actions/workflows/deploy-pages.yml)
 
 Pages source must be **GitHub Actions** (repo Settings → Pages).
 
-## Workflow (develop → run → publish)
+## Workflow
 
 ```bash
-# 1) Develop (canonical)
-marimo edit marimo_notebooks/01_pre_flight.py
+# Features from local NIfTI (data/raw/ds000171/)
+python scripts/prepare_real_features.py
+python scripts/run_ml_bakeoff.py          # sklearn LOOCV bake-off → ml_bakeoff.json
+python scripts/gen_book_data.py           # usually already called by prepare
 
-# 2) Run as scripts (CI-friendly)
+# Develop public chapters
 export PYTHONPATH=marimo_notebooks
-python marimo_notebooks/01_pre_flight.py
-python marimo_notebooks/02_eda_univariate.py
-python marimo_notebooks/03_eda_multivariate.py
-python marimo_notebooks/04_feature_engineering.py
-# optional local TF:
-# python marimo_notebooks/06_tf_spectrogram_model.py
+marimo edit marimo_notebooks/03_eda_multivariate.py
 
-# 3) Session snapshots (optional previews under __marimo__/session/)
-marimo export session marimo_notebooks --force-overwrite
+# Local TensorFlow / neural nets (real spectrograms + MLPs)
+marimo edit marimo_notebooks/06_tf_spectrogram_model.py
+# or: python marimo_notebooks/06_tf_spectrogram_model.py
 
-# 4) Build WASM book + copy into docs/ for GitHub Pages
+# Publish WASM book
 python marimo_exports/export_wasm.py --sync-docs
-
-# 5) Preview Pages locally
-python marimo_exports/serve.py
-# → http://127.0.0.1:8765/
+python marimo_exports/serve.py   # http://127.0.0.1:8765/
 ```
 
-Push to `main` (paths under `marimo_notebooks/**`, export script, or `docs/**`) triggers the same export + deploy.
+Push to `main` (paths under `marimo_notebooks/**`, `docs/**`, or the export script) redeploys Pages.
 
-## Architecture (no stale paths)
+## Architecture (what is kept)
 
 ```
-marimo_notebooks/          ← SOURCE OF TRUTH
-  helpers.py
-  01_…04_…py, 06_….py
-  __marimo__/session/      ← regenerated session JSON per notebook
-
-marimo_exports/
-  export_wasm.py           ← injects helpers for Pyodide, builds wasm/
-  serve.py                 ← local Pages preview
-
-docs/                      ← GitHub Pages artifact
-  index.html               ← book gallery
-  wasm/<chapter>/          ← generated; do not hand-edit
+marimo_notebooks/     ← SOURCE OF TRUTH (public book + local TF chapter)
+scripts/
+  prepare_real_features.py
+  run_ml_bakeoff.py
+  gen_book_data.py
+  run_notebook.sh
+data/processed/       ← committed feature store + ml_bakeoff.json
+docs/                 ← GitHub Pages (gallery + wasm/)
+marimo_exports/       ← export_wasm.py, serve.py
+archives/             ← old pipelines, legacy src/notebooks (not active)
 ```
 
-`export_wasm.py` registers `helpers.py` into `sys.modules` before export so browser runs can `from helpers import …` without a filesystem package.
+## Scientific pipeline (short)
 
-## Scientific story (short)
+1. Whole-brain + **spatial pseudo-ROI** BOLD → Welch bands, trial-type epochs  
+2. Music contrasts (`pos music − tones`, domain, anterior) + **responder score R**  
+3. **13-model LOOCV bake-off** (RF / LogReg / GBM / …) → confusion + explainability  
+4. **TensorFlow** (local): STFT Conv2D + dense MLPs; head-to-head vs bake-off winners  
+5. RecSys priors: personalise by valence + spectral engagement, not genre alone  
 
-- Controls: elevated high-frequency spectral power + auditory–limbic coherence on **positive music**.
-- MDD: blunted, **stimulus-specific** (tones ≈ controls).
-- Spectral “responder” clusters → playlist RecSys features.
+## Data
 
-## Data (real OpenNeuro ds000171)
+- OpenNeuro [ds000171](https://openneuro.org/datasets/ds000171) (Lepping et al.)  
+- Raw `*.nii.gz` gitignored; processed CSV/JSON + `book_data.py` committed for Pages  
 
-1. Download subset (or full) BOLD under `data/raw/ds000171/` via `openneuro-py` (see `download_and_prepare.sh`).
-2. Build the feature store:
-   ```bash
-   python scripts/prepare_real_features.py
-   python scripts/gen_book_data.py
-   ```
-3. Notebooks prefer `data/processed/*.csv` / `book_bundle.json`. The WASM book embeds the same tables via `marimo_notebooks/book_data.py` (not mock oscillators).
-
-Raw `*.nii.gz` stay gitignored. Processed CSV/JSON and `book_data.py` are committed so Pages stays reproducible.
-
-## One-time Pages setup
-
-1. https://github.com/Bladerunner-hue/Neuroscience/settings/pages  
-2. Build and deployment → **Source: GitHub Actions**
+```bash
+# optional: download more BOLD then re-prepare
+# see download_and_prepare.sh
+python scripts/prepare_real_features.py && python scripts/run_ml_bakeoff.py
+```

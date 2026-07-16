@@ -1,22 +1,22 @@
-tensorflow[and-cuda]==2.20
-pyspark[connect]==4.1.1
-datalad
-nibabel
-nilearn
-pandas
+# Public book (marimo WASM-compatible stack)
+marimo[recommended]>=0.10
 numpy
+pandas
 scipy
 scikit-learn
 matplotlib
 seaborn
-jupyterlab
-nbconvert
-ipykernel
-mlflow
-pyarrow
-fastparquet
-psutil
+
+# Feature extraction from NIfTI (local)
+nibabel
 openneuro-py
-marimo[recommended]
-plotly
-tensorflow-probability  # optional, for Gaussian Process / probabilistic layers
+
+# Chapter V — TensorFlow neural nets (local only; not on GitHub Pages WASM)
+tensorflow[and-cuda]==2.20
+# tensorflow-probability  # optional
+
+# Optional / research (not required for the book)
+# pyspark[connect]
+# nilearn
+# mlflow
+# jupyterlab

@@ -794,7 +794,8 @@ def _(book_nav, mo):
 2. **Bake-off → best model** is re-runnable; winners differ by target.  
 3. **Confusion matrices** show whether valence/domain collapse — that drives RecSys policy.  
 4. **RF ranks + pruned / L1 linear models** handle collinear music contrasts.  
-5. **Responder score \(R\)** turns primary contrasts into a playlist prior.
+5. **Responder score \(R\)** turns primary contrasts into a playlist prior.  
+6. **Neural nets (local TensorFlow):** STFT CNN + MLPs in `06_tf_spectrogram_model.py` — compare F1 to winners above before promoting a deep model into RecSys.
 """
             ),
             mo.md(book_nav("03_eda_multivariate")),

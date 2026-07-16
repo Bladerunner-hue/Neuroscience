@@ -80,10 +80,20 @@
       </li>
     </ol>
 
+    <div class="border border-stone-800 rounded-2xl p-5 mb-10 bg-stone-900/30">
+      <p class="text-xs tracking-widest uppercase text-emerald-500/80 mb-2">Local only · TensorFlow</p>
+      <h2 class="serif text-xl text-stone-100 mb-2">Chapter V · Neural Nets (STFT CNN + MLP)</h2>
+      <p class="text-stone-400 text-sm leading-relaxed mb-2">
+        Real BOLD spectrogram ConvNets and dense MLPs on music-effect features, compared to the sklearn bake-off winners.
+        Not shipped in WASM (TensorFlow / GPU). Run locally:
+      </p>
+      <code class="text-stone-500 text-xs">marimo edit marimo_notebooks/06_tf_spectrogram_model.py</code>
+    </div>
+
     <footer class="border-t border-stone-800 pt-8 text-xs text-stone-600 space-y-2">
       <p>Local development: <code class="text-stone-500">marimo edit marimo_notebooks/01_pre_flight.py</code></p>
       <p>Rebuild Pages book: <code class="text-stone-500">python marimo_exports/export_wasm.py --sync-docs</code></p>
-      <p>Chapter V (TensorFlow spectrograms) is local-only and not part of the WASM book.</p>
+      <p>Chapter V (TensorFlow) is local-only. Legacy pipelines live under <code class="text-stone-500">archives/</code>.</p>
     </footer>
   </div>
 </body>

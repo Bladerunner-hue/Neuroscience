@@ -1,25 +1,38 @@
-"""06 — TF spectrogram model. Local-only (not WASM). Canonical marimo notebook."""
+"""Chapter V — TensorFlow neural nets on real ds000171 features (local only)."""
+
+# /// script
+# requires-python = ">=3.11"
+# dependencies = ["marimo", "numpy", "pandas", "matplotlib", "scikit-learn", "tensorflow"]
+# ///
 
 import marimo
 
 __generated_with = "0.23.10"
-app = marimo.App(width="medium", app_title="06 — TF Spectrograms")
+app = marimo.App(width="medium", app_title="V · TensorFlow Neural Nets")
 
 
 @app.cell
 def _():
-    import os
+    import os as _os
 
-    # Local training: use GPU when available (do not force CPU).
-    # Override with CUDA_VISIBLE_DEVICES="" if you must run CPU-only.
-    os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "2")
+    _os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "2")
+    # Default CPU: broken host cuDNN stacks are common. Opt-in GPU with USE_GPU=1.
+    if _os.environ.get("USE_GPU", "0") not in ("1", "true", "TRUE", "yes"):
+        _os.environ["CUDA_VISIBLE_DEVICES"] = ""
 
     import marimo as mo
     import numpy as np
     import pandas as pd
     import matplotlib.pyplot as plt
-    import plotly.express as px
     import tensorflow as tf
+    from sklearn.model_selection import LeaveOneOut
+    from sklearn.preprocessing import StandardScaler
+    from sklearn.metrics import (
+        accuracy_score,
+        f1_score,
+        confusion_matrix,
+        classification_report,
+    )
 
     gpus = tf.config.list_physical_devices("GPU")
     for _gpu in gpus:
@@ -28,396 +41,828 @@ def _():
         except Exception:
             pass
     TF_DEVICE = f"GPU×{len(gpus)}" if gpus else "CPU"
-    print(f"TensorFlow {tf.__version__} · device: {TF_DEVICE}")
 
     from helpers import (
         CONTROL_COLOR,
         MDD_COLOR,
+        MUSIC_COLOR,
         book_nav,
         clinical_relevance_card,
+        data_provenance_md,
         hypothesis_card,
         key_insight_card,
-        make_synthetic_bold_dataset,
+        load_bold_timeseries,
+        load_condition_features,
+        load_ml_bakeoff,
+        load_spectral_features,
+        load_subject_features,
         set_global_style,
     )
 
     set_global_style()
-    try:
-        import tensorflow_probability  # noqa: F401
-
-        TFP_AVAILABLE = True
-    except ImportError:
-        TFP_AVAILABLE = False
-
     return (
         CONTROL_COLOR,
+        LeaveOneOut,
         MDD_COLOR,
+        MUSIC_COLOR,
         TF_DEVICE,
-        TFP_AVAILABLE,
+        accuracy_score,
         book_nav,
+        classification_report,
         clinical_relevance_card,
+        confusion_matrix,
+        data_provenance_md,
+        f1_score,
         hypothesis_card,
         key_insight_card,
-        make_synthetic_bold_dataset,
+        load_bold_timeseries,
+        load_condition_features,
+        load_ml_bakeoff,
+        load_spectral_features,
+        load_subject_features,
         mo,
         np,
         pd,
         plt,
-        px,
+        StandardScaler,
         tf,
     )
 
 
 @app.cell
-def _(TF_DEVICE, mo, tf):
+def _(TF_DEVICE, data_provenance_md, hypothesis_card, mo, tf):
     mo.md(
         f"""
-# 06 — TensorFlow: Spectrogram ConvNets
+# V · TensorFlow Neural Networks
 
-**Chapter 6 · local only** (not on GitHub Pages WASM).
+### Local GPU/CPU chapter (not WASM)
 
 TensorFlow **{tf.__version__}** · device: **{TF_DEVICE}**
 
-Predict MDD vs Control from the spectral signature of music vs tones.
+This chapter extends the classical bake-off (Ch III) with **neural nets** on **real** OpenNeuro features:
+
+| Model | Input | Target |
+|---|---|---|
+| **Conv2D + STFT** | Run-level real mean BOLD spectrograms | Control vs MDD |
+| **Dense MLP** | Subject music-effect contrasts (+ age) | Control vs MDD |
+| **Dense MLP** | Condition epoch features | Domain (music / nonmusic / tones) |
+
+We compare net metrics to the **sklearn bake-off winners** so you see when deep models help on this *n*.
 """
+    )
+    mo.md(data_provenance_md())
+    mo.md(
+        hypothesis_card(
+            "STFT ConvNets capture spectral structure that tabular models only see as summary bands.",
+            "On small *n*, regularized MLPs may match RF; spectrogram CNNs need careful LOO-style splits by subject.",
+        )
     )
     return
 
 
 @app.cell
-def _(hypothesis_card, mo):
-    mo.md(
-        hypothesis_card(
-            "A Conv2D on STFT spectrograms of BOLD is more accurate on music blocks than tones.",
-            "Music-only evaluation shows a clear lift — stimulus-specific deficit signal.",
-        )
+def _(
+    load_bold_timeseries,
+    load_condition_features,
+    load_ml_bakeoff,
+    load_spectral_features,
+    load_subject_features,
+    mo,
+    np,
+    pd,
+):
+    ts = load_bold_timeseries()
+    runs = load_spectral_features()
+    cond = load_condition_features()
+    subj = load_subject_features()
+    bake = load_ml_bakeoff()
+    mo.md("## 0. Real data inventory for TF")
+    _inv = pd.DataFrame(
+        [
+            {"layer": "bold_timeseries runs", "n": ts.groupby(["subject", "run"]).ngroups if len(ts) else 0},
+            {"layer": "spectral runs", "n": len(runs)},
+            {"layer": "condition epochs", "n": len(cond)},
+            {"layer": "subjects", "n": len(subj)},
+        ]
     )
-    return
+    _win = bake.get("winners", {}) if bake else {}
+    mo.vstack(
+        [
+            mo.ui.table(_inv),
+            mo.md(
+                "**Sklearn bake-off winners (Ch III):** "
+                + (
+                    ", ".join(f"`{k}`→**{v}**" for k, v in _win.items())
+                    if _win
+                    else "*run scripts/run_ml_bakeoff.py*"
+                )
+            ),
+        ]
+    )
+    return bake, cond, runs, subj, ts
 
 
 @app.cell
 def _(mo):
-    n_subj = mo.ui.slider(10, 28, value=14, step=2, label="# subjects")
-    tr = mo.ui.number(start=2.5, stop=3.5, value=3.0, step=0.25, label="TR (s)")
-    frame_len = mo.ui.slider(8, 32, value=16, step=4, label="STFT frame_length")
-    frame_step = mo.ui.slider(2, 8, value=4, step=1, label="STFT frame_step")
-    fft_len = mo.ui.slider(16, 64, value=32, step=8, label="FFT length")
-    use_mixed_precision = mo.ui.checkbox(False, label="Mixed precision")
-    use_strategy = mo.ui.checkbox(False, label="MirroredStrategy")
-    learning_rate = mo.ui.slider(1e-4, 5e-3, value=1e-3, step=1e-4, label="Learning rate")
-    epochs = mo.ui.slider(2, 12, value=4, step=1, label="Epochs")
-    batch_size = mo.ui.slider(4, 16, value=8, step=2, label="Batch size")
-    use_lstm = mo.ui.checkbox(False, label="LSTM head")
-    dropout = mo.ui.slider(0.0, 0.5, value=0.25, step=0.05, label="Dropout")
-    mo.md("## Controls")
-    mo.hstack([n_subj, tr, epochs, batch_size], justify="start")
-    mo.hstack([frame_len, frame_step, fft_len, learning_rate], justify="start")
-    mo.hstack([use_mixed_precision, use_strategy, use_lstm, dropout], justify="start")
-    return (
-        batch_size,
-        dropout,
-        epochs,
-        fft_len,
-        frame_len,
-        frame_step,
-        learning_rate,
-        n_subj,
-        tr,
-        use_lstm,
-        use_mixed_precision,
-        use_strategy,
-    )
-
-
-@app.cell
-def _(make_synthetic_bold_dataset, mo, n_subj, np, tr):
-    @mo.cache
-    def build_synthetic_dataset(n_subjects: int, tr_sec: float):
-        df = make_synthetic_bold_dataset(
-            n_subjects=n_subjects, n_timepoints=105, tr=tr_sec, seed=123
-        )
-        examples, labels, conditions = [], [], []
-        for (_subj, cond), g in df.groupby(["subject", "condition"]):
-            y = 1 if g["group"].iloc[0] == "MDD" else 0
-            examples.append(g.sort_values("time")["bold"].values.astype("float32"))
-            labels.append(y)
-            conditions.append(cond)
-        return np.stack(examples), np.array(labels, dtype="int32"), np.array(conditions)
-
-    bold_arr, y, conds = build_synthetic_dataset(int(n_subj.value), float(tr.value))
-    mo.md(f"**{len(bold_arr)}** blocks · class counts `{np.bincount(y).tolist()}`")
-    return bold_arr, conds, y
-
-
-@app.cell
-def _(batch_size, bold_arr, conds, fft_len, frame_len, frame_step, mo, tf, y):
-    def bold_to_spectrogram(x, frame_length, frame_step, fft_length):
-        x = tf.convert_to_tensor(x, dtype=tf.float32)
-        x = (x - tf.reduce_mean(x)) / (tf.math.reduce_std(x) + 1e-6)
-        stft = tf.signal.stft(
-            x,
-            frame_length=frame_length,
-            frame_step=frame_step,
-            fft_length=fft_length,
-            window_fn=tf.signal.hann_window,
-        )
-        return tf.expand_dims(tf.abs(stft), axis=-1)
-
-    def make_tf_dataset(bold_arr, y, conds, fl, fs, fft, batch, shuffle=True):
-        ds = tf.data.Dataset.from_tensor_slices((bold_arr, y, conds))
-
-        def _map(x, yy, c):
-            return bold_to_spectrogram(x, fl, fs, fft), yy, c
-
-        ds = ds.map(_map, num_parallel_calls=tf.data.AUTOTUNE)
-        if shuffle:
-            ds = ds.shuffle(buffer_size=len(bold_arr), reshuffle_each_iteration=True)
-        return ds.batch(batch).prefetch(tf.data.AUTOTUNE).cache()
-
-    train_ds = make_tf_dataset(
-        bold_arr,
-        y,
-        conds,
-        int(frame_len.value),
-        int(frame_step.value),
-        int(fft_len.value),
-        int(batch_size.value),
-    )
-    for spec_batch, _yb, _cb in train_ds.take(1):
-        input_shape = tuple(spec_batch.shape[1:])
-        break
-    mo.md(f"**Spectrogram shape:** `{input_shape}`")
-    return input_shape, train_ds
+    epochs_cnn = mo.ui.slider(3, 40, value=10, step=1, label="CNN epochs")
+    epochs_mlp = mo.ui.slider(10, 120, value=40, step=5, label="MLP epochs")
+    lr = mo.ui.slider(1e-4, 5e-3, value=1e-3, step=1e-4, label="Learning rate")
+    dropout = mo.ui.slider(0.0, 0.5, value=0.3, step=0.05, label="Dropout")
+    mo.md("## Training controls")
+    mo.hstack([epochs_cnn, epochs_mlp, lr, dropout], justify="start")
+    return dropout, epochs_cnn, epochs_mlp, lr
 
 
 @app.cell
 def _(
-    dropout,
-    input_shape,
-    learning_rate,
-    mo,
-    tf,
-    use_lstm,
-    use_mixed_precision,
-    use_strategy,
-):
-    if use_mixed_precision.value:
-        tf.keras.mixed_precision.set_global_policy("mixed_float16")
-    else:
-        tf.keras.mixed_precision.set_global_policy("float32")
-
-    strategy = (
-        tf.distribute.MirroredStrategy()
-        if use_strategy.value
-        else tf.distribute.get_strategy()
-    )
-    with strategy.scope():
-        inp = tf.keras.Input(shape=input_shape, name="spectrogram")
-        x = tf.keras.layers.Conv2D(16, 3, activation="relu", padding="same")(inp)
-        x = tf.keras.layers.BatchNormalization()(x)
-        x = tf.keras.layers.MaxPool2D()(x)
-        x = tf.keras.layers.Conv2D(32, 3, activation="relu", padding="same")(x)
-        x = tf.keras.layers.BatchNormalization()(x)
-        x = tf.keras.layers.MaxPool2D()(x)
-        x = tf.keras.layers.Conv2D(32, 3, activation="relu", padding="same")(x)
-        x = tf.keras.layers.GlobalAveragePooling2D()(x)
-        if use_lstm.value:
-            x = tf.keras.layers.Reshape((-1, 32))(x)
-            x = tf.keras.layers.LSTM(16, dropout=float(dropout.value))(x)
-        x = tf.keras.layers.Dropout(float(dropout.value))(x)
-        x = tf.keras.layers.Dense(32, activation="relu")(x)
-        out_class = tf.keras.layers.Dense(
-            1, activation="sigmoid", dtype="float32", name="is_mdd"
-        )(x)
-        out_unc = tf.keras.layers.Dense(
-            1, activation="softplus", dtype="float32", name="uncertainty"
-        )(x)
-        model = tf.keras.Model(inp, [out_class, out_unc], name="bold_spectrogram_model")
-        opt = tf.keras.optimizers.Adam(float(learning_rate.value))
-        if use_mixed_precision.value:
-            opt = tf.keras.mixed_precision.LossScaleOptimizer(opt)
-        model.compile(
-            optimizer=opt,
-            loss={
-                "is_mdd": "binary_crossentropy",
-                "uncertainty": lambda y_true, y_pred: tf.reduce_mean(y_pred),
-            },
-            loss_weights={"is_mdd": 1.0, "uncertainty": 0.05},
-            metrics={"is_mdd": ["accuracy", tf.keras.metrics.AUC(name="auc")]},
-        )
-    lines = []
-    model.summary(print_fn=lines.append)
-    mo.md("**Model**\n\n```\n" + "\n".join(lines) + "\n```")
-    return (model,)
-
-
-@app.cell
-def _(batch_size, epochs, mo, model, np, plt, train_ds):
-    mo.md("## Training")
-    X_specs, y_arr, cond_arr = [], [], []
-    for s, yy, cc in train_ds.unbatch():
-        X_specs.append(s.numpy())
-        y_arr.append(int(yy.numpy()))
-        c = cc.numpy()
-        cond_arr.append(c.decode() if isinstance(c, (bytes, bytearray)) else c)
-    X_specs = np.array(X_specs)
-    y_arr = np.array(y_arr)
-    cond_arr = np.array(cond_arr)
-
-    rng = np.random.RandomState(42)
-    idx = np.arange(len(X_specs))
-    rng.shuffle(idx)
-    split = max(1, int(0.75 * len(idx)))
-    train_idx, val_idx = idx[:split], idx[split:]
-    if len(val_idx) == 0:
-        val_idx = train_idx[:1]
-    X_train, y_train = X_specs[train_idx], y_arr[train_idx]
-    X_val, y_val = X_specs[val_idx], y_arr[val_idx]
-
-    try:
-        hist = model.fit(
-            X_train,
-            {"is_mdd": y_train, "uncertainty": np.zeros_like(y_train, dtype="float32")},
-            validation_data=(
-                X_val,
-                {"is_mdd": y_val, "uncertainty": np.zeros_like(y_val, dtype="float32")},
-            ),
-            epochs=int(epochs.value),
-            batch_size=int(batch_size.value),
-            verbose=0,
-        )
-    except Exception as _fit_err:
-        # Broken CUDA/cuDNN stacks: fall back to CPU for a successful local run
-        import os
-        import tensorflow as _tf
-
-        mo.md(f"⚠️ GPU training failed (`{_fit_err.__class__.__name__}`); retrying on CPU…")
-        os.environ["CUDA_VISIBLE_DEVICES"] = ""
-        try:
-            _tf.config.set_visible_devices([], "GPU")
-        except Exception:
-            pass
-        hist = model.fit(
-            X_train,
-            {"is_mdd": y_train, "uncertainty": np.zeros_like(y_train, dtype="float32")},
-            validation_data=(
-                X_val,
-                {"is_mdd": y_val, "uncertainty": np.zeros_like(y_val, dtype="float32")},
-            ),
-            epochs=int(epochs.value),
-            batch_size=int(batch_size.value),
-            verbose=0,
-        )
-
-    def _pick(keys):
-        for k in keys:
-            if k in hist.history:
-                return hist.history[k]
-        return []
-
-    train_acc = _pick(["is_mdd_accuracy", "is_mdd_is_mdd_accuracy", "accuracy"])
-    val_acc = _pick(["val_is_mdd_accuracy", "val_is_mdd_is_mdd_accuracy", "val_accuracy"])
-    if train_acc and val_acc:
-        mo.md(f"**train acc** {train_acc[-1]:.3f} · **val acc** {val_acc[-1]:.3f}")
-    fig, ax = plt.subplots(figsize=(8, 3.5))
-    if train_acc:
-        ax.plot(train_acc, label="train acc")
-    if val_acc:
-        ax.plot(val_acc, label="val acc")
-    ax.set_xlabel("Epoch")
-    ax.legend()
-    ax.grid(True, alpha=0.3)
-    mo.output.append(fig)
-    return X_val, cond_arr, val_idx, y_val
-
-
-@app.cell
-def _(
-    CONTROL_COLOR,
-    MDD_COLOR,
-    X_val,
-    cond_arr,
     key_insight_card,
     mo,
-    model,
     np,
     pd,
-    px,
-    val_idx,
-    y_val,
+    plt,
+    runs,
+    tf,
+    ts,
 ):
-    mo.md("## Accuracy by stimulus type")
-    preds, _unc = model.predict(X_val, verbose=0)
-    pred_class = (np.asarray(preds).ravel() > 0.5).astype(int)
-    eval_df = pd.DataFrame(
-        {"true": y_val, "pred": pred_class, "condition": cond_arr[val_idx]}
-    )
-
-    def acc(d):
-        return float((d["true"] == d["pred"]).mean()) if len(d) else 0.0
-
-    music_mask = eval_df["condition"] == "music"
-    music_acc = acc(eval_df[music_mask])
-    non_acc = acc(eval_df[~music_mask])
-    metrics_df = pd.DataFrame(
-        {
-            "condition": ["music", "nonmusic"],
-            "accuracy": [music_acc, non_acc],
-            "n": [int(music_mask.sum()), int((~music_mask).sum())],
-        }
-    )
-    mo.ui.table(metrics_df)
-    mo.ui.plotly(
-        px.bar(
-            metrics_df,
-            x="condition",
-            y="accuracy",
-            color="condition",
-            color_discrete_map={"music": CONTROL_COLOR, "nonmusic": MDD_COLOR},
-            range_y=[0, 1],
-            title="Accuracy by stimulus",
-        )
-    )
-    delta = music_acc - non_acc
     mo.md(
-        key_insight_card(
-            f"Music {music_acc:.1%} vs non-music {non_acc:.1%} (Δ={delta:+.1%})",
-            "Gap supports music-specific deficit rather than generic auditory confounds.",
-            effect_size=f"Δ={delta:+.2f}",
-        )
+        r"""
+## 1. STFT spectrograms from **real** run BOLD
+
+Each run → z-scored whole-brain mean → `tf.signal.stft` magnitude image.
+"""
     )
-    return X_val, pred_class, y_val
+    _specs, _ylabels, _tasks, _subjects = [], [], [], []
+    if not ts.empty:
+        for (_sid, _run), _g in ts.groupby(["subject", "run"]):
+            _sig = _g.sort_values("time")["bold_z"].values.astype("float32")
+            if len(_sig) < 24:
+                continue
+            _x = tf.convert_to_tensor(_sig)
+            _x = (_x - tf.reduce_mean(_x)) / (tf.math.reduce_std(_x) + 1e-6)
+            _stft = tf.signal.stft(
+                _x,
+                frame_length=16,
+                frame_step=4,
+                fft_length=32,
+                window_fn=tf.signal.hann_window,
+            )
+            _mag = tf.abs(_stft).numpy()
+            _specs.append(_mag)
+            _grp = str(_g["group"].iloc[0])
+            _ylabels.append(1 if _grp == "MDD" else 0)
+            _tasks.append(str(_g["task"].iloc[0]))
+            _subjects.append(_sid)
+
+    if not _specs:
+        mo.md("*No timeseries for STFT — check data/processed/bold_timeseries.csv*")
+        X_spec = np.zeros((0, 1, 1, 1), dtype="float32")
+        y_spec = np.array([], dtype="int32")
+        task_spec = np.array([])
+        subj_spec = np.array([])
+        spec_shape = (1, 1, 1)
+    else:
+        # pad/crop to common shape
+        _T = int(np.median([s.shape[0] for s in _specs]))
+        _F = int(np.median([s.shape[1] for s in _specs]))
+        _stack = []
+        for _s in _specs:
+            _out = np.zeros((_T, _F), dtype="float32")
+            _t = min(_T, _s.shape[0])
+            _f = min(_F, _s.shape[1])
+            _out[:_t, :_f] = _s[:_t, :_f]
+            _stack.append(_out)
+        X_spec = np.expand_dims(np.stack(_stack), -1)
+        y_spec = np.array(_ylabels, dtype="int32")
+        task_spec = np.array(_tasks)
+        subj_spec = np.array(_subjects)
+        spec_shape = tuple(X_spec.shape[1:])
+
+        _fig_s, _axes_s = plt.subplots(1, 2, figsize=(10, 3.8))
+        for _ax, _lab, _title in zip(
+            _axes_s, [0, 1], ["Control example", "MDD example"]
+        ):
+            _idx = np.where(y_spec == _lab)[0]
+            if len(_idx):
+                _im = _axes_s[0 if _lab == 0 else 1].imshow(
+                    X_spec[_idx[0], :, :, 0].T,
+                    aspect="auto",
+                    origin="lower",
+                    cmap="magma",
+                )
+            _ax.set_title(_title)
+            _ax.set_xlabel("Time frame")
+            _ax.set_ylabel("Freq bin")
+        _fig_s.suptitle("Real BOLD STFT spectrograms (first of each class)", y=1.02)
+        _fig_s.tight_layout()
+        mo.vstack(
+            [
+                mo.md(
+                    f"**{len(X_spec)}** run spectrograms · shape `{spec_shape}` · "
+                    f"MDD={int(y_spec.sum())} Control={int((1-y_spec).sum())}"
+                ),
+                _fig_s,
+                mo.md(
+                    key_insight_card(
+                        "Spectrograms keep time–frequency structure that band scalars compress.",
+                        "CNN can learn music-task spectral motifs without hand-built Welch bands.",
+                    )
+                ),
+            ]
+        )
+    return X_spec, spec_shape, subj_spec, task_spec, y_spec
 
 
 @app.cell
 def _(
-    TFP_AVAILABLE,
+    X_spec,
+    confusion_matrix,
+    dropout,
+    epochs_cnn,
+    f1_score,
+    key_insight_card,
+    lr,
+    mo,
+    np,
+    plt,
+    accuracy_score,
+    spec_shape,
+    subj_spec,
+    tf,
+    y_spec,
+):
+    mo.md(
+        r"""
+## 2. ConvNet on spectrograms (subject-aware holdout)
+
+We hold out **entire subjects** (not random runs) so validation is not inflated by within-subject leakage.
+"""
+    )
+    cnn_metrics = {}
+    hist_cnn = None
+    if len(X_spec) < 6 or len(np.unique(y_spec)) < 2:
+        mo.md("*Too few spectrograms for CNN training.*")
+        model_cnn = None
+        y_val_cnn = np.array([])
+        y_pred_cnn = np.array([])
+    else:
+        _subjects = np.unique(subj_spec)
+        _rng_cnn = np.random.RandomState(42)
+        _rng_cnn.shuffle(_subjects)
+        n_val_sub = max(2, len(_subjects) // 4)
+        val_subs = set(_subjects[:n_val_sub])
+        train_m = np.array([s not in val_subs for s in subj_spec])
+        val_m = ~train_m
+        if train_m.sum() < 2 or val_m.sum() < 1:
+            train_m = np.ones(len(X_spec), dtype=bool)
+            train_m[-2:] = False
+            val_m = ~train_m
+
+        X_tr, y_tr = X_spec[train_m], y_spec[train_m]
+        X_va, y_va = X_spec[val_m], y_spec[val_m]
+
+        def build_cnn(shape, drop, learning_rate):
+            inp = tf.keras.Input(shape=shape, name="spectrogram")
+            x = tf.keras.layers.Conv2D(16, 3, padding="same", activation="relu")(inp)
+            x = tf.keras.layers.BatchNormalization()(x)
+            x = tf.keras.layers.MaxPool2D()(x)
+            x = tf.keras.layers.Conv2D(32, 3, padding="same", activation="relu")(x)
+            x = tf.keras.layers.BatchNormalization()(x)
+            x = tf.keras.layers.MaxPool2D()(x)
+            x = tf.keras.layers.Conv2D(32, 3, padding="same", activation="relu")(x)
+            x = tf.keras.layers.GlobalAveragePooling2D()(x)
+            x = tf.keras.layers.Dropout(float(drop))(x)
+            x = tf.keras.layers.Dense(32, activation="relu")(x)
+            out = tf.keras.layers.Dense(1, activation="sigmoid", name="is_mdd")(x)
+            m = tf.keras.Model(inp, out, name="bold_stft_cnn")
+            m.compile(
+                optimizer=tf.keras.optimizers.Adam(float(learning_rate)),
+                loss="binary_crossentropy",
+                metrics=["accuracy", tf.keras.metrics.AUC(name="auc")],
+            )
+            return m
+
+        model_cnn = build_cnn(spec_shape, dropout.value, lr.value)
+        with tf.device("/CPU:0"):
+            hist_cnn = model_cnn.fit(
+                X_tr,
+                y_tr,
+                validation_data=(X_va, y_va),
+                epochs=int(epochs_cnn.value),
+                batch_size=min(8, max(2, len(X_tr))),
+                verbose=0,
+            )
+
+        _prob = model_cnn.predict(X_va, verbose=0).ravel()
+        y_pred_cnn = (_prob >= 0.5).astype(int)
+        y_val_cnn = y_va
+        cnn_metrics = {
+            "val_acc": round(float(accuracy_score(y_va, y_pred_cnn)), 3),
+            "val_f1": round(
+                float(f1_score(y_va, y_pred_cnn, average="macro", zero_division=0)),
+                3,
+            ),
+            "n_train": int(len(X_tr)),
+            "n_val": int(len(X_va)),
+            "val_subjects": sorted(val_subs),
+        }
+
+        _fig_h, _ax_h = plt.subplots(figsize=(8, 3.5))
+        if hist_cnn is not None:
+            _ax_h.plot(hist_cnn.history.get("accuracy", []), label="train acc")
+            _ax_h.plot(hist_cnn.history.get("val_accuracy", []), label="val acc")
+            if "auc" in hist_cnn.history:
+                _ax_h.plot(hist_cnn.history["auc"], label="train AUC", ls="--")
+            if "val_auc" in hist_cnn.history:
+                _ax_h.plot(hist_cnn.history["val_auc"], label="val AUC", ls="--")
+        _ax_h.set_xlabel("Epoch")
+        _ax_h.set_title("STFT CNN training curves")
+        _ax_h.legend(frameon=False, fontsize=8)
+        _ax_h.grid(True, alpha=0.3)
+        _fig_h.tight_layout()
+
+        _cm = confusion_matrix(y_va, y_pred_cnn, labels=[0, 1])
+        _fig_cm, _ax_cm = plt.subplots(figsize=(4.2, 3.8))
+        _ax_cm.imshow(_cm, cmap="Blues")
+        _ax_cm.set_xticks([0, 1])
+        _ax_cm.set_yticks([0, 1])
+        _ax_cm.set_xticklabels(["Control", "MDD"])
+        _ax_cm.set_yticklabels(["Control", "MDD"])
+        _ax_cm.set_xlabel("Predicted")
+        _ax_cm.set_ylabel("True")
+        _ax_cm.set_title("CNN subject-holdout CM")
+        for _i in range(2):
+            for _j in range(2):
+                _ax_cm.text(
+                    _j,
+                    _i,
+                    int(_cm[_i, _j]),
+                    ha="center",
+                    va="center",
+                    fontsize=14,
+                    fontweight="bold",
+                    color="white" if _cm[_i, _j] > _cm.max() / 2 else "black",
+                )
+        _fig_cm.tight_layout()
+
+        mo.vstack(
+            [
+                mo.md(f"**CNN metrics:** `{cnn_metrics}`"),
+                _fig_h,
+                _fig_cm,
+                mo.md(
+                    key_insight_card(
+                        "Subject-level holdout is the honest split for fMRI nets.",
+                        "If val F1 is near chance, the spectrogram CNN needs more runs or ROI-rich inputs — "
+                        "tabular MLPs on music contrasts may still win at this *n*.",
+                    )
+                ),
+            ]
+        )
+    return cnn_metrics, hist_cnn, model_cnn, y_pred_cnn, y_val_cnn
+
+
+@app.cell
+def _(
+    LeaveOneOut,
+    StandardScaler,
+    accuracy_score,
+    confusion_matrix,
+    dropout,
+    epochs_mlp,
+    f1_score,
+    key_insight_card,
+    lr,
+    mo,
+    np,
+    pd,
+    plt,
+    subj,
+    tf,
+):
+    mo.md(
+        r"""
+## 3. Dense MLP on subject music-effect features (LOOCV)
+
+Tabular net competing with Ch III GBM/LogReg on the same **responder / contrast** space.
+"""
+    )
+    mlp_group = {}
+    if subj.empty or subj["group"].nunique() < 2:
+        mo.md("*Need subject_features with both groups.*")
+        loo_true_g = np.array([])
+        loo_pred_g = np.array([])
+    else:
+        _feat_cols = [
+            c
+            for c in [
+                "pos_music_vs_tones_bold",
+                "neg_music_vs_tones_bold",
+                "pos_music_vs_neg_music_bold",
+                "music_vs_nonmusic_bold",
+                "pos_music_vs_tones_power_high",
+                "pos_music_vs_tones_anterior",
+                "responder_score",
+                "run_power_high_mean",
+                "coh_ant_post_mean",
+                "coh_left_right_mean",
+                "ant_minus_post_mean",
+                "music_task_vs_nonmusic_power_high",
+                "age",
+            ]
+            if c in subj.columns
+        ]
+        _Xdf = subj[_feat_cols].apply(pd.to_numeric, errors="coerce")
+        _Xdf = _Xdf.fillna(_Xdf.mean())
+        _X = StandardScaler().fit_transform(_Xdf.values.astype("float32"))
+        _y = (subj["group"].astype(str).values == "MDD").astype("int32")
+
+        def build_mlp(n_in, drop, learning_rate):
+            m = tf.keras.Sequential(
+                [
+                    tf.keras.layers.Input(shape=(n_in,)),
+                    tf.keras.layers.Dense(32, activation="relu"),
+                    tf.keras.layers.BatchNormalization(),
+                    tf.keras.layers.Dropout(float(drop)),
+                    tf.keras.layers.Dense(16, activation="relu"),
+                    tf.keras.layers.Dropout(float(drop) * 0.5),
+                    tf.keras.layers.Dense(1, activation="sigmoid"),
+                ],
+                name="subject_mlp",
+            )
+            m.compile(
+                optimizer=tf.keras.optimizers.Adam(float(learning_rate)),
+                loss="binary_crossentropy",
+                metrics=["accuracy"],
+            )
+            return m
+
+        _preds = []
+        _trues = []
+        for _tr, _te in LeaveOneOut().split(_X):
+            _m = build_mlp(_X.shape[1], dropout.value, lr.value)
+            _m.fit(
+                _X[_tr],
+                _y[_tr],
+                epochs=int(epochs_mlp.value),
+                batch_size=min(8, max(2, len(_tr))),
+                verbose=0,
+            )
+            _p = float(_m.predict(_X[_te], verbose=0).ravel()[0])
+            _preds.append(1 if _p >= 0.5 else 0)
+            _trues.append(int(_y[_te][0]))
+
+        loo_true_g = np.array(_trues)
+        loo_pred_g = np.array(_preds)
+        mlp_group = {
+            "acc": round(float(accuracy_score(loo_true_g, loo_pred_g)), 3),
+            "f1_macro": round(
+                float(
+                    f1_score(loo_true_g, loo_pred_g, average="macro", zero_division=0)
+                ),
+                3,
+            ),
+            "n": int(len(loo_true_g)),
+            "features": _feat_cols,
+        }
+        _cm = confusion_matrix(loo_true_g, loo_pred_g, labels=[0, 1])
+        _fig, _ax = plt.subplots(figsize=(4.2, 3.8))
+        _ax.imshow(_cm, cmap="Blues")
+        _ax.set_xticks([0, 1])
+        _ax.set_yticks([0, 1])
+        _ax.set_xticklabels(["Control", "MDD"])
+        _ax.set_yticklabels(["Control", "MDD"])
+        _ax.set_title("MLP LOOCV · group")
+        _ax.set_xlabel("Predicted")
+        _ax.set_ylabel("True")
+        for _i in range(2):
+            for _j in range(2):
+                _ax.text(
+                    _j,
+                    _i,
+                    int(_cm[_i, _j]),
+                    ha="center",
+                    va="center",
+                    fontsize=14,
+                    fontweight="bold",
+                    color="white" if _cm[_i, _j] > _cm.max() / 2 else "black",
+                )
+        _fig.tight_layout()
+        mo.vstack(
+            [
+                mo.md(f"**Subject MLP LOOCV:** `{mlp_group}`"),
+                mo.md(f"Features: `{_feat_cols}`"),
+                _fig,
+                mo.md(
+                    key_insight_card(
+                        "MLP LOOCV is the deep analogue of Ch III group models.",
+                        "Compare F1 to GBM/LogReg winners — nets win only if they beat that bar without leakage.",
+                    )
+                ),
+            ]
+        )
+    return loo_pred_g, loo_true_g, mlp_group
+
+
+@app.cell
+def _(
+    StandardScaler,
+    accuracy_score,
+    cond,
+    confusion_matrix,
+    dropout,
+    epochs_mlp,
+    f1_score,
+    key_insight_card,
+    lr,
+    mo,
+    np,
+    pd,
+    plt,
+    tf,
+):
+    mo.md(
+        r"""
+## 4. MLP for stimulus **domain** (music / nonmusic / tones)
+
+Multi-class softmax on condition epoch features — same grain as the RF domain winner.
+"""
+    )
+    mlp_domain = {}
+    if cond.empty or "domain" not in cond.columns:
+        mo.md("*No condition features.*")
+    else:
+        _cfeats = [
+            c
+            for c in [
+                "mean_bold",
+                "std_bold",
+                "peak_amp",
+                "peak_latency_s",
+                "power_high",
+                "power_mid",
+                "power_low",
+                "spectral_centroid",
+                "anterior_mean_bold",
+            ]
+            if c in cond.columns
+        ]
+        _Xdf = cond[_cfeats].apply(pd.to_numeric, errors="coerce").fillna(0.0)
+        _X = StandardScaler().fit_transform(_Xdf.values.astype("float32"))
+        _domains = cond["domain"].astype(str).values
+        _classes = sorted(np.unique(_domains))
+        _lab_map = {c: i for i, c in enumerate(_classes)}
+        _y = np.array([_lab_map[c] for c in _domains], dtype="int32")
+        _n_cls = len(_classes)
+
+        # subject-grouped split if subject present
+        if "subject" in cond.columns:
+            _subs = cond["subject"].astype(str).values
+            _uniq = np.unique(_subs)
+            _rng_dom = np.random.RandomState(0)
+            _rng_dom.shuffle(_uniq)
+            _n_val = max(2, len(_uniq) // 4)
+            _val_set = set(_uniq[:_n_val])
+            _tr = np.array([s not in _val_set for s in _subs])
+            _va = ~_tr
+        else:
+            _idx = np.arange(len(_X))
+            _rng_dom = np.random.RandomState(0)
+            _rng_dom.shuffle(_idx)
+            _split = int(0.75 * len(_idx))
+            _tr = np.zeros(len(_X), dtype=bool)
+            _tr[_idx[:_split]] = True
+            _va = ~_tr
+
+        def build_domain_mlp(n_in, n_cls, drop, learning_rate):
+            m = tf.keras.Sequential(
+                [
+                    tf.keras.layers.Input(shape=(n_in,)),
+                    tf.keras.layers.Dense(48, activation="relu"),
+                    tf.keras.layers.BatchNormalization(),
+                    tf.keras.layers.Dropout(float(drop)),
+                    tf.keras.layers.Dense(24, activation="relu"),
+                    tf.keras.layers.Dense(n_cls, activation="softmax"),
+                ],
+                name="domain_mlp",
+            )
+            m.compile(
+                optimizer=tf.keras.optimizers.Adam(float(learning_rate)),
+                loss="sparse_categorical_crossentropy",
+                metrics=["accuracy"],
+            )
+            return m
+
+        _m = build_domain_mlp(_X.shape[1], _n_cls, dropout.value, lr.value)
+        _hist = _m.fit(
+            _X[_tr],
+            _y[_tr],
+            validation_data=(_X[_va], _y[_va]),
+            epochs=int(epochs_mlp.value),
+            batch_size=min(16, max(4, int(_tr.sum()))),
+            verbose=0,
+        )
+        _yp = np.argmax(_m.predict(_X[_va], verbose=0), axis=1)
+        _yt = _y[_va]
+        mlp_domain = {
+            "acc": round(float(accuracy_score(_yt, _yp)), 3),
+            "f1_macro": round(
+                float(f1_score(_yt, _yp, average="macro", zero_division=0)), 3
+            ),
+            "n_val": int(_va.sum()),
+            "classes": _classes,
+        }
+        _cm = confusion_matrix(_yt, _yp, labels=list(range(_n_cls)))
+        _fig_c, _axes = plt.subplots(1, 2, figsize=(10, 3.8))
+        _axes[0].plot(_hist.history.get("accuracy", []), label="train")
+        _axes[0].plot(_hist.history.get("val_accuracy", []), label="val")
+        _axes[0].set_title("Domain MLP accuracy")
+        _axes[0].legend(frameon=False)
+        _axes[0].grid(True, alpha=0.3)
+        _axes[1].imshow(_cm, cmap="Blues")
+        _axes[1].set_xticks(range(_n_cls))
+        _axes[1].set_yticks(range(_n_cls))
+        _axes[1].set_xticklabels(_classes, fontsize=8)
+        _axes[1].set_yticklabels(_classes, fontsize=8)
+        _axes[1].set_title("Domain MLP confusion")
+        for _i in range(_n_cls):
+            for _j in range(_n_cls):
+                _axes[1].text(
+                    _j,
+                    _i,
+                    int(_cm[_i, _j]),
+                    ha="center",
+                    va="center",
+                    fontsize=11,
+                    fontweight="bold",
+                    color="white" if _cm[_i, _j] > _cm.max() / 2 else "black",
+                )
+        _fig_c.tight_layout()
+        mo.vstack(
+            [
+                mo.md(f"**Domain MLP:** `{mlp_domain}`"),
+                _fig_c,
+                mo.md(
+                    key_insight_card(
+                        "Domain MLP should be judged against RandomForest (Ch III winner).",
+                        "If RF F1 > MLP F1, keep RF for RecSys tabular pipelines and reserve nets for spectrogram inputs.",
+                    )
+                ),
+            ]
+        )
+    return (mlp_domain,)
+
+
+@app.cell
+def _(
+    MUSIC_COLOR,
+    bake,
+    cnn_metrics,
+    key_insight_card,
+    mlp_domain,
+    mlp_group,
+    mo,
+    np,
+    pd,
+    plt,
+):
+    mo.md(
+        r"""
+## 5. Classical vs neural — which solver wins?
+
+Head-to-head on comparable targets (higher macro-F1 / acc is better; small-*n* caveat applies).
+"""
+    )
+    _rows = []
+    if bake and bake.get("tasks"):
+        for _t in ["group", "domain"]:
+            _td = bake["tasks"].get(_t, {})
+            _lb = _td.get("leaderboard") or []
+            if _lb:
+                _rows.append(
+                    {
+                        "target": _t,
+                        "family": "sklearn bake-off",
+                        "model": _td.get("best", _lb[0].get("model")),
+                        "metric": "f1_macro",
+                        "value": _lb[0].get("f1_macro"),
+                    }
+                )
+    if mlp_group:
+        _rows.append(
+            {
+                "target": "group",
+                "family": "TensorFlow MLP",
+                "model": "Dense MLP LOOCV",
+                "metric": "f1_macro",
+                "value": mlp_group.get("f1_macro"),
+            }
+        )
+    if cnn_metrics:
+        _rows.append(
+            {
+                "target": "group",
+                "family": "TensorFlow CNN",
+                "model": "STFT Conv2D (subj holdout)",
+                "metric": "f1_macro",
+                "value": cnn_metrics.get("val_f1"),
+            }
+        )
+    if mlp_domain:
+        _rows.append(
+            {
+                "target": "domain",
+                "family": "TensorFlow MLP",
+                "model": "Dense MLP (subj holdout)",
+                "metric": "f1_macro",
+                "value": mlp_domain.get("f1_macro"),
+            }
+        )
+    cmp_df = pd.DataFrame(_rows)
+    if len(cmp_df):
+        _fig, _ax = plt.subplots(figsize=(9, 4))
+        _cols = [
+            MUSIC_COLOR if "TensorFlow" in f else "#5D6D7E"
+            for f in cmp_df["family"]
+        ]
+        _labels = [f"{r.target} · {r.model}" for r in cmp_df.itertuples()]
+        _ax.barh(
+            _labels[::-1],
+            cmp_df["value"].values[::-1],
+            color=_cols[::-1],
+            edgecolor="white",
+        )
+        _ax.set_xlabel("Score (F1 macro where available)")
+        _ax.set_xlim(0, 1.05)
+        _ax.set_title("Sklearn bake-off vs TensorFlow nets")
+        _ax.grid(True, axis="x", alpha=0.3)
+        _fig.tight_layout()
+        _best_lines = []
+        for _t in cmp_df["target"].unique():
+            _sub = cmp_df[cmp_df.target == _t].dropna(subset=["value"])
+            if len(_sub):
+                _b = _sub.sort_values("value", ascending=False).iloc[0]
+                _best_lines.append(
+                    f"- **{_t}**: `{_b['model']}` ({_b['family']}) = **{_b['value']}**"
+                )
+        mo.vstack(
+            [
+                mo.ui.table(cmp_df),
+                _fig,
+                mo.md("### Recommended solver\n\n" + "\n".join(_best_lines)),
+                mo.md(
+                    key_insight_card(
+                        "Use the best family per target — not “always deep learning”.",
+                        "RecSys tabular fingerprints often stay with RF/GBM/LogReg; STFT CNNs are the right tool when "
+                        "raw temporal–spectral structure is the signal.",
+                    )
+                ),
+            ]
+        )
+    else:
+        mo.md("*No comparison rows — train sections above first.*")
+    return (cmp_df,)
+
+
+@app.cell
+def _(
     book_nav,
     clinical_relevance_card,
     mo,
-    use_mixed_precision,
-    use_strategy,
+    cmp_df,
 ):
-    mo.md(
-        f"""
-## TF stack
+    mo.vstack(
+        [
+            mo.md(
+                r"""
+## TF takeaways
 
-- Mixed precision: {'✅' if use_mixed_precision.value else '☐'}
-- MirroredStrategy: {'✅' if use_strategy.value else '☐'}
-- tf.data AUTOTUNE cache/prefetch
-- `tf.signal.stft`
-- TFP: {'✅' if TFP_AVAILABLE else 'not installed'}
+1. **Real BOLD spectrograms** (not mock oscillators) feed the ConvNet.  
+2. **Subject-aware splits** prevent run leakage.  
+3. **MLP LOOCV** on music-effect contrasts is the deep peer of Ch III.  
+4. **Pick the winner per target** from sklearn vs TF comparison.  
+5. This chapter is **local-only** (TensorFlow is not in the WASM Pages stack).
+
+```bash
+# Local
+export PYTHONPATH=marimo_notebooks
+marimo edit marimo_notebooks/06_tf_spectrogram_model.py
+# or
+python marimo_notebooks/06_tf_spectrogram_model.py
+```
 """
-    )
-    mo.md(
-        clinical_relevance_card(
-            "Music-specific classification supports spectral biomarkers for anhedonia and therapy selection."
-        )
-    )
-    mo.md(book_nav("06_tf_spectrogram_model"))
-    mo.md(
-        "> Not exported to GitHub Pages WASM. Run locally: "
-        "`marimo edit marimo_notebooks/06_tf_spectrogram_model.py`"
+            ),
+            mo.md(
+                clinical_relevance_card(
+                    "When tabular models already rank pos-music−tones and anterior power, a net must beat that baseline "
+                    "before it enters a clinical RecSys pipeline. Prefer interpretable winners for playlist priors."
+                )
+            ),
+            mo.md(
+                "← Public book: [Algorithm Lab](../03_eda_multivariate/) · "
+                "[Features](../04_feature_engineering/) · **Home** [Gallery](../../)"
+            ),
+            mo.md(book_nav("04_feature_engineering")),
+        ]
     )
     return
 

@@ -43,7 +43,11 @@ BOOK_CHAPTERS: list[tuple[str, str, str]] = [
     ("04_feature_engineering", "IV · Features & Music Effects", "Inventory, harmonization, spatial proxies, PCA."),
 ]
 BOOK_LOCAL_ONLY = [
-    ("06_tf_spectrogram_model", "V · Deep Spectrograms (local TF)", "ConvNets on STFT — GPU optional."),
+    (
+        "06_tf_spectrogram_model",
+        "V · TensorFlow Neural Nets (local)",
+        "STFT CNN + MLP on real BOLD/features — GPU optional, not on WASM Pages.",
+    ),
 ]
 
 
