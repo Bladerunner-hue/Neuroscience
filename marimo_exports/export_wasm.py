@@ -325,8 +325,111 @@ def export_one(notebook: Path, mode: str, tmp_dir: Path) -> bool:
         p = out_dir / junk
         if p.exists():
             p.unlink()
+
+    # Explicit base for nested GH Pages paths (helps relative dynamic imports)
+    html2 = index.read_text(encoding="utf-8", errors="replace")
+    if "<base " not in html2.lower():
+        html2 = html2.replace("<head>", '<head>\n    <base href="./" />', 1)
+        index.write_text(html2, encoding="utf-8")
+
+    # Verify every dynamic import from the entry chunk exists on disk
+    if not _verify_chapter_assets(out_dir):
+        return False
+
     print(f"   ✅ {index} ({index.stat().st_size} bytes)")
     return True
+
+
+def _verify_chapter_assets(chapter_dir: Path, assets_dir: Path | None = None) -> bool:
+    """Ensure index.html entry + its dynamic import() targets exist."""
+    index = chapter_dir / "index.html"
+    if not index.exists():
+        print(f"   ❌ missing {index}")
+        return False
+    html = index.read_text(encoding="utf-8", errors="replace")
+    m = re.search(r"""src=["']([^"']*assets/index-[^"']+\.js)["']""", html)
+    if not m:
+        print(f"   ❌ {chapter_dir.name}: no assets/index-*.js entry in index.html")
+        return False
+    entry_rel = m.group(1)
+    # Resolve relative to chapter_dir (./assets/... or ../shared-assets/...)
+    entry = (chapter_dir / entry_rel).resolve()
+    if assets_dir is None:
+        assets_dir = entry.parent
+    if not entry.exists():
+        print(f"   ❌ {chapter_dir.name}: missing entry {entry}")
+        return False
+    js = entry.read_text(encoding="utf-8", errors="replace")
+    dyn = re.findall(r"""import\(\s*["']\./([^"']+)["']\s*\)""", js)
+    missing = [d for d in dyn if not (assets_dir / d).exists()]
+    if missing:
+        print(f"   ❌ {chapter_dir.name}: missing dynamic chunks: {missing[:8]}")
+        return False
+    # run-page is required for public "run" mode
+    run_pages = list(assets_dir.glob("run-page-*.js"))
+    if not run_pages:
+        print(f"   ❌ {chapter_dir.name}: no run-page-*.js in {assets_dir}")
+        return False
+    return True
+
+
+def share_wasm_assets(root: Path) -> bool:
+    """Collapse per-chapter marimo frontend into one shared-assets/ folder.
+
+    Each chapter duplicates ~680 hashed Vite chunks (~29MB). On GitHub Pages that
+    multiplies deploy surface and can leave index.html pointing at a chunk hash
+    that never landed → "Failed to fetch dynamically imported module".
+
+    Dynamic imports resolve relative to the *script URL*, so pointing every
+    chapter at ``../shared-assets/index-*.js`` keeps chunks coherent.
+    """
+    chapters = [
+        root / Path(name).stem
+        for name in CANDIDATES
+        if (root / Path(name).stem / "index.html").exists()
+    ]
+    if not chapters:
+        print("   ⚠️  no chapters to share assets for")
+        return False
+
+    # Prefer a chapter that still has a local assets/ dir
+    donor = next((c for c in chapters if (c / "assets").is_dir()), None)
+    if donor is None:
+        # Already shared?
+        shared = root / "shared-assets"
+        if shared.is_dir() and any(shared.glob("run-page-*.js")):
+            print(f"   ✅ shared-assets already present ({shared})")
+            return True
+        print("   ❌ no chapter assets/ to promote to shared-assets")
+        return False
+
+    shared = root / "shared-assets"
+    if shared.exists():
+        shutil.rmtree(shared)
+    shutil.copytree(donor / "assets", shared)
+    print(f"   ↺ shared-assets ← {donor.name}/assets ({len(list(shared.iterdir()))} files)")
+
+    ok = True
+    for ch in chapters:
+        index = ch / "index.html"
+        html = index.read_text(encoding="utf-8", errors="replace")
+        # Rewrite asset URLs to the shared pool (one level up from chapter/)
+        new_html = html.replace("./assets/", "../shared-assets/")
+        new_html = new_html.replace('"/assets/', '"../shared-assets/')
+        new_html = new_html.replace("'/assets/", "'../shared-assets/")
+        # base stays ./ so relative navigation within the chapter works
+        if new_html == html and "shared-assets" not in html:
+            print(f"   ⚠️  {ch.name}: no ./assets/ paths rewritten")
+        index.write_text(new_html, encoding="utf-8")
+        assets = ch / "assets"
+        if assets.is_dir():
+            shutil.rmtree(assets)
+        if not _verify_chapter_assets(ch, assets_dir=shared):
+            ok = False
+        else:
+            print(f"   ✅ {ch.name} → ../shared-assets/")
+    (shared / ".nojekyll").touch(exist_ok=True)
+    return ok
 
 
 def sync_docs() -> None:
@@ -334,6 +437,9 @@ def sync_docs() -> None:
     if DOCS_WASM.exists():
         for child in list(DOCS_WASM.iterdir()):
             if child.is_dir() and not (EXPORT_DIR / child.name).exists():
+                # keep shared-assets if present under export
+                if child.name == "shared-assets" and (EXPORT_DIR / "shared-assets").exists():
+                    continue
                 shutil.rmtree(child)
                 print(f"   removed stale docs/wasm/{child.name}")
     for child in EXPORT_DIR.iterdir():
@@ -392,6 +498,13 @@ def verify_exports(docs: bool = True) -> bool:
 
     base = DOCS_WASM if docs else EXPORT_DIR
     print(f"\n=== HTML export checks under {base} ===")
+    shared = base / "shared-assets"
+    if not shared.is_dir() or not any(shared.glob("run-page-*.js")):
+        print(f"  ❌ missing shared-assets with run-page-*.js under {base}")
+        ok = False
+    else:
+        print(f"  ✅ shared-assets ({len(list(shared.iterdir()))} files)")
+
     for name in CANDIDATES:
         stem = Path(name).stem
         idx = base / stem / "index.html"
@@ -407,11 +520,15 @@ def verify_exports(docs: bool = True) -> bool:
             ("_spectral_b64", "spectral"),
             ("_book_json_b64", "book_json"),
             ('"auto_instantiate": true', "auto_instantiate"),
+            ("shared-assets", "shared-assets path"),
         ]
         missing = [lab for tok, lab in need if tok not in html]
         size = idx.stat().st_size
         if missing:
             print(f"  ❌ {stem}: missing {missing} ({size} B)")
+            ok = False
+        elif not _verify_chapter_assets(base / stem, assets_dir=shared):
+            print(f"  ❌ {stem}: asset graph broken")
             ok = False
         else:
             print(f"  ✅ {stem} ({size} B)")
@@ -475,6 +592,11 @@ def main() -> int:
                 continue
             if not export_one(nb, mode, tmp):
                 ok = False
+
+        # One coherent Vite asset pool for all chapters (GitHub Pages-safe)
+        print("Sharing marimo frontend assets across chapters …")
+        if not share_wasm_assets(EXPORT_DIR):
+            ok = False
 
     if args.sync_docs:
         print("Syncing docs/wasm …")

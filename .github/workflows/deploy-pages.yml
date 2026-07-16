@@ -35,7 +35,9 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install "marimo[recommended]" numpy pandas polars scipy matplotlib plotly scikit-learn seaborn
+          # Pin marimo so Vite chunk hashes match a known-good frontend (avoids
+          # "Failed to fetch dynamically imported module" after partial deploys).
+          pip install "marimo[recommended]==0.23.10" numpy pandas polars scipy matplotlib plotly scikit-learn seaborn
 
       - name: Export notebooks to WASM book chapters
         run: |
@@ -47,13 +49,25 @@ jobs:
           find marimo_exports/wasm -name index.html -print
           echo "=== docs/wasm ==="
           find docs/wasm -name index.html -print
+          # Shared Vite pool (one run-page for all chapters)
+          test -d docs/wasm/shared-assets || { echo "FATAL: missing docs/wasm/shared-assets"; exit 1; }
+          ls docs/wasm/shared-assets/run-page-*.js >/dev/null || { echo "FATAL: no run-page in shared-assets"; exit 1; }
           # Require public book chapters
           for ch in 00_qc_dashboard 01_pre_flight 02_eda_univariate 03_eda_multivariate 04_feature_engineering 05_tf_results; do
             test -f "docs/wasm/$ch/index.html" || { echo "Missing docs/wasm/$ch/index.html"; exit 1; }
+            # Must NOT keep a private assets/ tree (would drift from shared pool)
+            if [ -d "docs/wasm/$ch/assets" ]; then
+              echo "FATAL: $ch still has private assets/ (should use shared-assets)"
+              exit 1
+            fi
             # Full injection set required for adaptive multitaper + QC stack
-            for tok in injected\ by\ export_wasm _helpers_b64 _spectral_b64 _book_json_b64 '"auto_instantiate": true'; do
+            for tok in injected\ by\ export_wasm _helpers_b64 _spectral_b64 _book_json_b64 '"auto_instantiate": true' shared-assets; do
               grep -q "$tok" "docs/wasm/$ch/index.html" || { echo "FATAL: $ch missing $tok"; exit 1; }
             done
+            # Entry script must resolve under shared-assets
+            entry=$(grep -oE 'shared-assets/index-[^"]+\.js' "docs/wasm/$ch/index.html" | head -1)
+            test -n "$entry" || { echo "FATAL: $ch has no shared-assets index entry"; exit 1; }
+            test -f "docs/wasm/$entry" || { echo "FATAL: missing docs/wasm/$entry"; exit 1; }
           done
           # Guard: never ship JSON-as-Python book_data (true/false NameError)
           if grep -q 'BOOK_BUNDLE = {' docs/wasm/01_pre_flight/index.html 2>/dev/null; then
