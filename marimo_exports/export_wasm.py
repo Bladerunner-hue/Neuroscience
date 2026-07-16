@@ -47,27 +47,47 @@ CANDIDATES = [
 ]
 
 
-def _b64_chunks(src: str) -> str:
-    b64 = base64.b64encode(src.encode("utf-8")).decode("ascii")
+def _b64_chunks(data: bytes | str) -> str:
+    if isinstance(data, str):
+        data = data.encode("utf-8")
+    b64 = base64.b64encode(data).decode("ascii")
     chunks = [b64[i : i + 80] for i in range(0, len(b64), 80)]
     return "(\n" + "".join(f'        "{c}"\n' for c in chunks) + "    )"
 
 
-def _inject_modules(notebook_src: str, modules: dict[str, str]) -> str:
-    """Register local modules (helpers, book_data) in sys.modules for Pyodide."""
-    loads = []
-    for name, src in modules.items():
-        lit = _b64_chunks(src)
-        loads.append(
-            f'''
-    if "{name}" not in _sys.modules:
-        _{name}_b64 = {lit}
-        _{name}_src = _b64.b64decode("".join(_{name}_b64)).decode("utf-8")
-        _{name}_mod = _types.ModuleType("{name}")
-        exec(compile(_{name}_src, "{name}.py", "exec"), _{name}_mod.__dict__)
-        _sys.modules["{name}"] = _{name}_mod
+def _inject_modules(
+    notebook_src: str,
+    *,
+    helpers_src: str,
+    book_bundle_json: str | None,
+) -> str:
+    """Register helpers + book_data in sys.modules for Pyodide.
+
+    helpers: exec Python source (must be valid Python).
+    book_data: NEVER exec a dict literal — load JSON via base64 + json.loads
+    so JSON true/false/null cannot become NameErrors.
+    """
+    helpers_lit = _b64_chunks(helpers_src)
+    loads = f'''
+    if "helpers" not in _sys.modules:
+        _helpers_b64 = {helpers_lit}
+        _helpers_src = _b64.b64decode("".join(_helpers_b64)).decode("utf-8")
+        _helpers_mod = _types.ModuleType("helpers")
+        exec(compile(_helpers_src, "helpers.py", "exec"), _helpers_mod.__dict__)
+        _sys.modules["helpers"] = _helpers_mod
 '''
-        )
+    if book_bundle_json:
+        # Prefer compact JSON bytes from book_bundle.json (canonical feature store)
+        bundle_lit = _b64_chunks(book_bundle_json.encode("utf-8"))
+        loads += f'''
+    if "book_data" not in _sys.modules:
+        import json as _json
+        _book_json_b64 = {bundle_lit}
+        _book_json = _b64.b64decode("".join(_book_json_b64)).decode("utf-8")
+        _book_mod = _types.ModuleType("book_data")
+        _book_mod.BOOK_BUNDLE = _json.loads(_book_json)
+        _sys.modules["book_data"] = _book_mod
+'''
     bootstrap = (
         '''
     # --- injected by export_wasm.py: local modules for WASM/Pyodide (base64) ---
@@ -75,7 +95,7 @@ def _inject_modules(notebook_src: str, modules: dict[str, str]) -> str:
     import sys as _sys
     import types as _types
 '''
-        + "".join(loads)
+        + loads
         + "    # --- end module injection ---\n"
     )
     m = re.search(
@@ -102,12 +122,34 @@ def export_one(notebook: Path, mode: str, tmp_dir: Path) -> bool:
         shutil.rmtree(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    modules = {"helpers": HELPERS.read_text(encoding="utf-8")}
-    if BOOK_DATA.exists():
-        modules["book_data"] = BOOK_DATA.read_text(encoding="utf-8")
+    helpers_src = HELPERS.read_text(encoding="utf-8")
+    # Canonical JSON for book_data (never exec Python dict with true/false)
+    bundle_json_path = ROOT / "data" / "processed" / "book_bundle.json"
+    if bundle_json_path.exists():
+        book_bundle_json = bundle_json_path.read_text(encoding="utf-8")
+    elif BOOK_DATA.exists():
+        # fallback: import local book_data safely and re-serialize
+        ns: dict = {}
+        exec(
+            compile(BOOK_DATA.read_text(encoding="utf-8"), "book_data.py", "exec"),
+            ns,
+        )
+        import json as _json
+
+        book_bundle_json = _json.dumps(ns["BOOK_BUNDLE"], separators=(",", ":"))
+    else:
+        book_bundle_json = None
+
     nb_src = notebook.read_text(encoding="utf-8")
-    packed = _inject_modules(nb_src, modules)
+    packed = _inject_modules(
+        nb_src, helpers_src=helpers_src, book_bundle_json=book_bundle_json
+    )
     _validate_packed(packed, notebook)
+    # Fail closed: injected source must not contain JSON-as-Python booleans
+    if re.search(r'BOOK_BUNDLE\s*=\s*\{[^}]*\btrue\b', packed):
+        raise RuntimeError(
+            f"Refusing to export {notebook.name}: BOOK_BUNDLE still has JSON true/false"
+        )
 
     tmp_nb = tmp_dir / notebook.name
     tmp_nb.write_text(packed, encoding="utf-8")
@@ -163,8 +205,14 @@ def export_one(notebook: Path, mode: str, tmp_dir: Path) -> bool:
     if "b64decode" not in html:
         print("   ❌ base64 module loader missing from export")
         return False
-    if BOOK_DATA.exists() and "book_data" not in html:
-        print("   ❌ book_data module missing from export")
+    if book_bundle_json is not None and (
+        "book_data" not in html and "_book_json_b64" not in html
+    ):
+        print("   ❌ book_data JSON injection missing from export")
+        return False
+    # Old bug marker: JSON true inside exec'd book_data.py source
+    if re.search(r"has_bold.{0,5}true", html) and "json.loads" not in html:
+        print("   ❌ suspicious JSON true in export without json.loads path")
         return False
 
     # marimo 0.23 html-wasm embeds auto_instantiate=false → blank Pages until Run.

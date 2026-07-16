@@ -44,10 +44,19 @@ jobs:
           find marimo_exports/wasm -name index.html -print
           echo "=== docs/wasm ==="
           find docs/wasm -name index.html -print
-          # Require all four book chapters
-          for ch in 01_pre_flight 02_eda_univariate 03_eda_multivariate 04_feature_engineering; do
+          # Require public book chapters
+          for ch in 01_pre_flight 02_eda_univariate 03_eda_multivariate 04_feature_engineering 05_tf_results; do
             test -f "docs/wasm/$ch/index.html" || { echo "Missing docs/wasm/$ch/index.html"; exit 1; }
           done
+          # Guard: never ship JSON-as-Python book_data (true/false NameError)
+          if grep -q 'BOOK_BUNDLE = {' docs/wasm/01_pre_flight/index.html 2>/dev/null; then
+            echo "FATAL: old BOOK_BUNDLE dict embed detected in WASM HTML"
+            exit 1
+          fi
+          if ! grep -q '_book_json_b64\|json.loads' docs/wasm/01_pre_flight/index.html; then
+            echo "FATAL: book_data JSON injection missing"
+            exit 1
+          fi
 
       - name: Ensure Pages metadata
         run: |
