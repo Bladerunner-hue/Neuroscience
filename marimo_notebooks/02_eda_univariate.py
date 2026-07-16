@@ -58,8 +58,10 @@ def _():
 
 @app.cell
 def _(data_provenance_md, hypothesis_card, mo):
-    mo.md(
-        r"""
+    mo.vstack(
+        [
+            mo.md(
+                r"""
 # II · Univariate Spectral Analysis
 
 ### Welch power, band structure, and music valence
@@ -70,13 +72,15 @@ Univariate analysis treats **one series / one feature at a time**. We ask:
 2. How do **positive music**, **negative music**, and **tones** differ in amplitude and high-band power?  
 3. Is any group difference **music-specific** (vs non-music / tones)?
 """
-    )
-    mo.md(data_provenance_md())
-    mo.md(
-        hypothesis_card(
-            "MDD shows reduced high-frequency BOLD power and weaker positive-music lift vs tones.",
-            "Controls should show clearer spectral separation between positive music and tones.",
-        )
+            ),
+            mo.md(data_provenance_md()),
+            mo.md(
+                hypothesis_card(
+                    "MDD shows reduced high-frequency BOLD power and weaker positive-music lift vs tones.",
+                    "Controls should show clearer spectral separation between positive music and tones.",
+                )
+            ),
+        ]
     )
     return
 
@@ -94,9 +98,9 @@ def _(
     plt,
 ):
     runs = load_spectral_features()
-    mo.md("## 1. Run-level Welch PSDs (real BOLD means)")
+    _blocks = [mo.md("## 1. Run-level Welch PSDs (real BOLD means)")]
     if runs.empty:
-        mo.md("*No run-level spectral features.*")
+        _blocks.append(mo.md("*No run-level spectral features.*"))
     else:
         fig_psd, axes_psd = plt.subplots(1, 2, figsize=(11, 4.2), sharey=True)
         for _ax, _task in zip(axes_psd, ["music", "nonmusic"]):
@@ -136,15 +140,16 @@ def _(
         axes_psd[0].set_ylabel("Power (log)")
         fig_psd.suptitle("Mean Welch PSD by group × task (processed real runs)", y=1.02)
         fig_psd.tight_layout()
-        fig_psd
+        _blocks.append(fig_psd)
+    mo.vstack(_blocks)
     return (runs,)
 
 
 @app.cell
 def _(CONTROL_COLOR, MDD_COLOR, key_insight_card, mo, np, pd, plt, runs):
-    mo.md("## 2. Univariate band features")
+    _blocks = [mo.md("## 2. Univariate band features")]
     if runs is None or getattr(runs, "empty", True):
-        mo.md("*No runs.*")
+        _blocks.append(mo.md("*No runs.*"))
     else:
         agg = runs.groupby(["group", "task"], as_index=False)[
             ["power_low", "power_mid", "power_high", "spectral_centroid", "peak_amp"]
@@ -186,7 +191,7 @@ def _(CONTROL_COLOR, MDD_COLOR, key_insight_card, mo, np, pd, plt, runs):
             return float(_row[_col].iloc[0]) if len(_row) else np.nan
 
         ratio = _m("Control", "music") / max(_m("MDD", "music"), 1e-9)
-        mo.vstack(
+        _blocks.extend(
             [
                 fig_b,
                 mo.ui.table(agg.round(4)),
@@ -200,6 +205,7 @@ def _(CONTROL_COLOR, MDD_COLOR, key_insight_card, mo, np, pd, plt, runs):
                 ),
             ]
         )
+    mo.vstack(_blocks)
     return
 
 
@@ -215,16 +221,18 @@ def _(
     key_insight_card,
 ):
     cond = load_condition_features()
-    mo.md(
-        r"""
+    _blocks = [
+        mo.md(
+            r"""
 ## 3. Music valence & domain (trial-type univariate)
 
 This is the clearest answer to *“what music has what effect?”*  
 Each bar is mean **epoch BOLD (z)** or **high-band power** for a stimulus class averaged within group.
 """
-    )
+        )
+    ]
     if cond.empty:
-        mo.md("*No trial-type features.*")
+        _blocks.append(mo.md("*No trial-type features.*"))
     else:
         order = [
             "positive_music",
@@ -272,7 +280,7 @@ Each bar is mean **epoch BOLD (z)** or **high-band power** for a stimulus class 
             .round(3)
             .reset_index()
         )
-        # narrative bullets from data
+
         def gm(g, t, c="mean_bold"):
             s = cond[(cond.group == g) & (cond.trial_type == t)]
             return float(s[c].mean()) if len(s) else np.nan
@@ -294,7 +302,7 @@ Control Δ = {gm('Control','positive_music')-gm('Control','tones'):+.3f},
 MDD Δ = {gm('MDD','positive_music')-gm('MDD','tones'):+.3f}.
 """
         )
-        mo.vstack(
+        _blocks.extend(
             [
                 fig_v,
                 mo.ui.table(pivot),
@@ -308,14 +316,15 @@ MDD Δ = {gm('MDD','positive_music')-gm('MDD','tones'):+.3f}.
                 ),
             ]
         )
+    mo.vstack(_blocks)
     return (cond,)
 
 
 @app.cell
 def _(CONTROL_COLOR, MDD_COLOR, cond, json, mo, np, plt):
-    mo.md("## 4. Peri-stimulus waveforms by music valence")
+    _blocks = [mo.md("## 4. Peri-stimulus waveforms by music valence")]
     if cond is None or getattr(cond, "empty", True) or "peri_stim" not in cond.columns:
-        mo.md("*No peri-stimulus series stored.*")
+        _blocks.append(mo.md("*No peri-stimulus series stored.*"))
     else:
         fig_w, axes_w = plt.subplots(1, 2, figsize=(11, 3.8), sharey=True)
         for _ax, _trial, _title in zip(
@@ -362,7 +371,8 @@ def _(CONTROL_COLOR, MDD_COLOR, cond, json, mo, np, plt):
         axes_w[0].set_ylabel("BOLD (z)")
         fig_w.suptitle("Mean peri-stimulus ± SEM (real epochs)", y=1.02)
         fig_w.tight_layout()
-        fig_w
+        _blocks.append(fig_w)
+    mo.vstack(_blocks)
     return
 
 

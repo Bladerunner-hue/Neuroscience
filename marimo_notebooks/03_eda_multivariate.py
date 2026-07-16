@@ -316,8 +316,9 @@ Correlated contrasts inflate logistic coefficient variance. We inspect the core 
         ]
         if c in subj.columns
     ]
+    _blocks = []
     if subj.empty or len(_core) < 2:
-        mo.md("*Need subject features.*")
+        _blocks.append(mo.md("*Need subject features.*"))
     else:
         _X = subj[_core].apply(pd.to_numeric, errors="coerce")
         _corr = _X.corr()
@@ -346,7 +347,7 @@ Correlated contrasts inflate logistic coefficient variance. We inspect the core 
                     )
         _fig_c.colorbar(_im, ax=_ax_c, fraction=0.046)
         _fig_c.tight_layout()
-        mo.vstack(
+        _blocks.extend(
             [
                 _fig_c,
                 mo.md(
@@ -357,23 +358,30 @@ Correlated contrasts inflate logistic coefficient variance. We inspect the core 
                 ),
             ]
         )
+    mo.vstack(_blocks)
     return
 
 
 @app.cell
 def _(MUSIC_COLOR, bake, key_insight_card, mo, pd, plt):
-    mo.md(
-        r"""
+    _blocks = [
+        mo.md(
+            r"""
 ## 3. Algorithm bake-off — winners by LOOCV macro-F1
 
 **Zoo:** LogReg L2 / L1 / Elastic-Net · Ridge · Linear SVM · RBF SVM · RandomForest · ExtraTrees · GBM · kNN · GaussianNB · LDA · DecisionTree  
 
 **Ranking:** macro-F1 → balanced accuracy → accuracy (leave-one-out).
 """
-    )
+        )
+    ]
+    best_summary = pd.DataFrame()
     if not bake or "tasks" not in bake:
-        mo.md("*No precomputed bake-off — run the offline bake-off script / prepare pipeline.*")
-        best_summary = pd.DataFrame()
+        _blocks.append(
+            mo.md(
+                "*No precomputed bake-off — run the offline bake-off script / prepare pipeline.*"
+            )
+        )
     else:
         _figs = []
         _sum = []
@@ -419,7 +427,7 @@ def _(MUSIC_COLOR, bake, key_insight_card, mo, pd, plt):
         _group_lb = pd.DataFrame(
             bake["tasks"].get("group", {}).get("leaderboard", [])
         )
-        mo.vstack(
+        _blocks.extend(
             _figs
             + [
                 mo.md("### Winners"),
@@ -436,20 +444,23 @@ def _(MUSIC_COLOR, bake, key_insight_card, mo, pd, plt):
                 ),
             ]
         )
+    mo.vstack(_blocks)
     return (best_summary,)
 
 
 @app.cell
 def _(bake, key_insight_card, mo, np, plt):
-    mo.md(
-        r"""
+    _blocks = [
+        mo.md(
+            r"""
 ## 4. Confusion matrices for winning models
 
 Off-diagonals answer: *does the brain fingerprint collapse valence or domain?*
 """
-    )
+        )
+    ]
     if not bake or "tasks" not in bake:
-        mo.md("*No bake-off confusion matrices.*")
+        _blocks.append(mo.md("*No bake-off confusion matrices.*"))
     else:
         _tasks = [
             t
@@ -458,7 +469,7 @@ Off-diagonals answer: *does the brain fingerprint collapse valence or domain?*
         ]
         _n = len(_tasks)
         if _n == 0:
-            mo.md("*No confusion matrices stored.*")
+            _blocks.append(mo.md("*No confusion matrices stored.*"))
         else:
             _fig_all, _axes = plt.subplots(1, _n, figsize=(4.3 * _n, 4.2))
             if _n == 1:
@@ -498,7 +509,7 @@ Off-diagonals answer: *does the brain fingerprint collapse valence or domain?*
                 )
             _fig_all.suptitle("Confusion matrices — bake-off winners", y=1.02)
             _fig_all.tight_layout()
-            mo.vstack(
+            _blocks.extend(
                 [
                     _fig_all,
                     mo.md("\n".join(_reports)),
@@ -511,21 +522,24 @@ Off-diagonals answer: *does the brain fingerprint collapse valence or domain?*
                     ),
                 ]
             )
+    mo.vstack(_blocks)
     return
 
 
 @app.cell
 def _(MUSIC_COLOR, bake, key_insight_card, mo, np, pd, plt):
-    mo.md(
-        r"""
+    _blocks = [
+        mo.md(
+            r"""
 ## 5. Explainability — RF ranks (collinearity-robust)
 
 Reference **Random Forest importances** for each target (always shown, even when the winner is linear).
 Align top features with univariate maps: high-band power, anterior means, peaks.
 """
-    )
+        )
+    ]
     if not bake or "tasks" not in bake:
-        mo.md("*No importances.*")
+        _blocks.append(mo.md("*No importances.*"))
     else:
         _expl = []
         for _task in ["domain", "valence", "task", "group"]:
@@ -581,7 +595,8 @@ Align top features with univariate maps: high-band power, anterior means, peaks.
                 )
             )
         )
-        mo.vstack(_expl)
+        _blocks.extend(_expl)
+    mo.vstack(_blocks)
     return
 
 
@@ -596,8 +611,9 @@ def _(
     plt,
     subj,
 ):
-    mo.md(
-        r"""
+    _blocks = [
+        mo.md(
+            r"""
 ## 6. RecSys responder fingerprints
 
 \[
@@ -609,9 +625,12 @@ R = \mathrm{mean}\big(\text{pos music} - \text{tones},\;
 High \(R\) → prioritise **positive, high-engagement** playlists.  
 Low \(R\) → do **not** treat music as a uniform therapy — explore valence and non-music carefully.
 """
-    )
+        )
+    ]
     if subj.empty or "responder_score" not in subj.columns:
-        mo.md("*No responder_score — re-run prepare_real_features.py.*")
+        _blocks.append(
+            mo.md("*No responder_score — re-run prepare_real_features.py.*")
+        )
     else:
         _s = subj.dropna(subset=["responder_score"]).sort_values(
             "responder_score"
@@ -689,7 +708,7 @@ Low \(R\) → do **not** treat music as a uniform therapy — explore valence an
                 if c in _s2.columns
             ]
         ].round(3)
-        mo.vstack(
+        _blocks.extend(
             [
                 _fig_r,
                 mo.ui.table(_show),
@@ -713,6 +732,7 @@ Spectral **responder fingerprints** inform personalised playlists that target re
                 ),
             ]
         )
+    mo.vstack(_blocks)
     return
 
 

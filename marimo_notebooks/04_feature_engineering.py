@@ -226,16 +226,20 @@ def _(
     pd,
     plt,
 ):
-    mo.md(
-        r"""
+    _blocks = [
+        mo.md(
+            r"""
 ## 3. What each music condition does (trial-type map)
 
 Event files define **positive_music**, **negative_music**, **tones**, and non-music analogues.
 For each epoch we take the mean whole-brain BOLD (z) and peak amplitude of the mean peri-stimulus waveform.
 """
-    )
+        )
+    ]
     if cond.empty:
-        mo.md("*No condition features — re-run prepare_real_features.py*")
+        _blocks.append(
+            mo.md("*No condition features — re-run prepare_real_features.py*")
+        )
     else:
         order = [
             "positive_music",
@@ -319,7 +323,7 @@ For each epoch we take the mean whole-brain BOLD (z) and peak amplitude of the m
             f"**Tones** — Control {_mean('Control','tones'):+.3f}, "
             f"MDD {_mean('MDD','tones'):+.3f}."
         )
-        mo.vstack(
+        _blocks.extend(
             [
                 fig_m,
                 mo.ui.table(heat.round(3).reset_index()),
@@ -334,13 +338,15 @@ For each epoch we take the mean whole-brain BOLD (z) and peak amplitude of the m
                 ),
             ]
         )
+    mo.vstack(_blocks)
     return
 
 
 @app.cell
 def _(CONTROL_COLOR, MDD_COLOR, key_insight_card, mo, np, pd, plt, subj):
-    mo.md(
-        r"""
+    _blocks = [
+        mo.md(
+            r"""
 ## 4. Subject-level music-effect contrasts
 
 | Contrast | Interpretation |
@@ -350,9 +356,10 @@ def _(CONTROL_COLOR, MDD_COLOR, key_insight_card, mo, np, pd, plt, subj):
 | `music_vs_nonmusic_bold` | Music domain vs non-music domain (avg valence) |
 | `pos_music_vs_pos_nonmusic_bold` | Is the lift music-specific at matched positive valence? |
 """
-    )
+        )
+    ]
     if subj.empty:
-        mo.md("*No subject features.*")
+        _blocks.append(mo.md("*No subject features.*"))
     else:
         contrast_cols = [
             c
@@ -390,7 +397,7 @@ def _(CONTROL_COLOR, MDD_COLOR, key_insight_card, mo, np, pd, plt, subj):
             ax_c.set_xlabel("Positive music − tones (mean BOLD z)")
             ax_c.set_title("Individual music effect (positive music vs tones)")
         fig_c.tight_layout()
-        mo.vstack(
+        _blocks.extend(
             [
                 mo.ui.table(show),
                 fig_c,
@@ -404,21 +411,24 @@ def _(CONTROL_COLOR, MDD_COLOR, key_insight_card, mo, np, pd, plt, subj):
                 ),
             ]
         )
+    mo.vstack(_blocks)
     return
 
 
 @app.cell
 def _(PCA, StandardScaler, mo, np, pd, plt, subj, CONTROL_COLOR, MDD_COLOR):
-    mo.md(
-        r"""
+    _blocks = [
+        mo.md(
+            r"""
 ## 5. Feature space after scaling (PCA view)
 
 Continuous music-effect features are **StandardScaler**-normalized (zero mean, unit variance) before PCA / ML.
 That is the main numeric harmonization step for comparability across feature units.
 """
-    )
+        )
+    ]
     if subj.empty:
-        mo.md("*No subject features for PCA.*")
+        _blocks.append(mo.md("*No subject features for PCA.*"))
     else:
         feat_cols = [
             c
@@ -428,12 +438,10 @@ That is the main numeric harmonization step for comparability across feature uni
             and pd.api.types.is_numeric_dtype(subj[c])
         ]
         Xdf = subj[feat_cols].apply(pd.to_numeric, errors="coerce")
-        # drop all-nan columns
         Xdf = Xdf.dropna(axis=1, how="all")
-        # impute column means for remaining nans (small-n pragmatic)
         Xdf = Xdf.fillna(Xdf.mean())
         if Xdf.shape[1] < 2 or len(Xdf) < 2:
-            mo.md("*Not enough complete features for PCA.*")
+            _blocks.append(mo.md("*Not enough complete features for PCA.*"))
         else:
             Xs = StandardScaler().fit_transform(Xdf.values)
             pca = PCA(n_components=min(2, Xs.shape[1], Xs.shape[0]))
@@ -441,7 +449,14 @@ That is the main numeric harmonization step for comparability across feature uni
             fig_p, ax_p = plt.subplots(figsize=(6.5, 5))
             for _g, _c in [("Control", CONTROL_COLOR), ("MDD", MDD_COLOR)]:
                 m = (subj["group"].values == _g)[: len(Z)]
-                ax_p.scatter(Z[m, 0], Z[m, 1] if Z.shape[1] > 1 else np.zeros(m.sum()), s=90, c=_c, label=_g, edgecolors="white")
+                ax_p.scatter(
+                    Z[m, 0],
+                    Z[m, 1] if Z.shape[1] > 1 else np.zeros(m.sum()),
+                    s=90,
+                    c=_c,
+                    label=_g,
+                    edgecolors="white",
+                )
             for _i, _row in subj.reset_index(drop=True).iterrows():
                 if _i < len(Z):
                     ax_p.annotate(
@@ -449,25 +464,35 @@ That is the main numeric harmonization step for comparability across feature uni
                         (Z[_i, 0], Z[_i, 1] if Z.shape[1] > 1 else 0),
                         fontsize=8,
                     )
-            ax_p.set_xlabel(f"PC1 ({100*pca.explained_variance_ratio_[0]:.0f}% var)")
+            ax_p.set_xlabel(
+                f"PC1 ({100 * pca.explained_variance_ratio_[0]:.0f}% var)"
+            )
             if Z.shape[1] > 1:
-                ax_p.set_ylabel(f"PC2 ({100*pca.explained_variance_ratio_[1]:.0f}% var)")
+                ax_p.set_ylabel(
+                    f"PC2 ({100 * pca.explained_variance_ratio_[1]:.0f}% var)"
+                )
             ax_p.set_title("Subject feature space (scaled music effects)")
             ax_p.legend(frameon=False)
             ax_p.grid(True, alpha=0.3)
-            # loadings
             load = pd.DataFrame(
                 pca.components_.T,
                 index=Xdf.columns,
-                columns=[f"PC{i+1}" for i in range(pca.n_components_)],
+                columns=[f"PC{i + 1}" for i in range(pca.n_components_)],
             )
-            mo.vstack(
+            _blocks.extend(
                 [
                     fig_p,
-                    mo.md("**PCA loadings** (which music-effect features drive the axes)"),
-                    mo.ui.table(load.round(3).reset_index().rename(columns={"index": "feature"})),
+                    mo.md(
+                        "**PCA loadings** (which music-effect features drive the axes)"
+                    ),
+                    mo.ui.table(
+                        load.round(3)
+                        .reset_index()
+                        .rename(columns={"index": "feature"})
+                    ),
                 ]
             )
+    mo.vstack(_blocks)
     return
 
 
