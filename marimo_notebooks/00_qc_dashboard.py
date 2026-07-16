@@ -1,11 +1,11 @@
-"""Chapter 0 — QC dashboard: tSNR, spectral quality, IsolationForest, cleaned features.
+"""Chapter 0 — QC dashboard: tSNR, multitaper PSD, IsolationForest, cleaned features.
 
-Reactive marimo + Polars + @mo.cache. Public WASM chapter (no TensorFlow).
+Reactive marimo + Polars + @mo.cache. Public WASM chapter (no TensorFlow / MNE).
 """
 
 # /// script
 # requires-python = ">=3.11"
-# dependencies = ["marimo", "numpy", "pandas", "polars", "matplotlib", "scikit-learn"]
+# dependencies = ["marimo", "numpy", "pandas", "polars", "matplotlib", "scikit-learn", "scipy"]
 # ///
 
 import marimo
@@ -32,8 +32,19 @@ def _():
         data_provenance_md,
         key_insight_card,
         load_book_bundle,
+        load_bold_timeseries,
+        load_cleaned_spectral_features,
         load_spectral_features,
+        load_spectral_features_polars,
         set_global_style,
+    )
+    from spectral_methods import (
+        adaptive_multitaper_psd,
+        compare_psd_methods,
+        compute_tsnr,
+        multitaper_psd,
+        spectral_feats,
+        welch_psd,
     )
 
     set_global_style()
@@ -43,17 +54,26 @@ def _():
         MDD_COLOR,
         MUSIC_COLOR,
         StandardScaler,
+        adaptive_multitaper_psd,
         book_nav,
         clinical_relevance_card,
+        compare_psd_methods,
+        compute_tsnr,
         data_provenance_md,
         key_insight_card,
         load_book_bundle,
+        load_bold_timeseries,
+        load_cleaned_spectral_features,
         load_spectral_features,
+        load_spectral_features_polars,
         mo,
+        multitaper_psd,
         np,
         pd,
         pl,
         plt,
+        spectral_feats,
+        welch_psd,
     )
 
 
@@ -67,20 +87,28 @@ def _(data_provenance_md, mo):
 
 ### Clean runs before claiming biomarkers
 
-This chapter closes the QC gap: **tSNR**, **spectral flatness / entropy / band-SNR**,
-**spike fraction**, and **IsolationForest** outliers — with reactive thresholds.
+This chapter closes the QC gap: **tSNR**, **DPSS multitaper** (uniform + adaptive),
+**spectral flatness / entropy / band-SNR**, **spike fraction**, and
+**IsolationForest** outliers — with reactive thresholds.
 
 | Metric | Meaning |
 |---|---|
 | `tsnr` | mean / std of raw slab mean BOLD (higher = cleaner) |
+| `psd_method` | `welch` · `uniform` multitaper · `adaptive` Thomson weights |
 | `spectral_flatness` | Wiener entropy of PSD (high = noise-like) |
 | `spectral_entropy` | normalized Shannon entropy of PSD |
 | `band_snr_high` | high-band power vs out-of-band floor |
 | `ts_spike_frac` | fraction of large frame-to-frame jumps |
-| `qc_outlier` | IsolationForest flag (−1 → 1) |
+| `qc_outlier` | IsolationForest flag |
 
-**Architecture note.** Heavy TensorFlow stays offline (`run_tf_offline.py` → Ch V).
-This QC layer is pure sklearn + Polars and ships on GitHub Pages WASM.
+**Why multitaper + tSNR?** BOLD epochs are short (TR=3 s). Welch alone is high-variance
+in the high band (0.08–0.15 Hz). DPSS multitaper lowers variance; **adaptive** weights
+down leaky high-order tapers on 1/f-like spectra. Low tSNR runs inject noise into both
+the classical bake-off and the TF spectrogram model — gate them here.
+
+**Architecture.** Pure scipy + sklearn + Polars → ships on GitHub Pages WASM.
+MNE `adaptive=True` is optional offline (`prepare_real_features.py --psd mne`).
+TF stays offline (`run_tf_offline.py` → Ch V).
 """
             ),
             mo.md(data_provenance_md()),
@@ -115,22 +143,27 @@ def _(mo):
 
 
 @app.cell
-def _(load_book_bundle, load_spectral_features, mo, pl):
+def _(load_book_bundle, load_spectral_features_polars, load_spectral_features, mo, pl):
     @mo.cache
     def load_runs_pl():
+        pl_df = load_spectral_features_polars()
+        if pl_df is not None and getattr(pl_df, "height", 0):
+            drop = [c for c in ("psd_f", "psd_pxx") if c in pl_df.columns]
+            return pl_df.drop(drop) if drop else pl_df
         df = load_spectral_features()
         if df is None or getattr(df, "empty", True):
             return pl.DataFrame()
-        # drop huge PSD columns for interactive work
         drop = [c for c in ("psd_f", "psd_pxx") if c in df.columns]
         return pl.from_pandas(df.drop(columns=drop, errors="ignore"))
 
     runs_pl = load_runs_pl()
     bundle = load_book_bundle()
+    _psd = bundle.get("psd_method", "welch (legacy embed)")
     mo.md(
-        f"**Loaded runs:** {runs_pl.height} · columns: `{runs_pl.columns[:12]}…`"
+        f"**Loaded runs:** {runs_pl.height} · PSD method in store: **`{_psd}`**  \n"
+        f"columns: `{runs_pl.columns[:12]}…`"
         if runs_pl.height
-        else "*No spectral features — run `python scripts/prepare_real_features.py`.*"
+        else "*No spectral features — run `python scripts/prepare_real_features.py --psd adaptive`.*"
     )
     return bundle, runs_pl
 
@@ -447,32 +480,153 @@ def _(clean_pl, mo, pl, qc_pl):
     if clean_pl.height == 0:
         _blocks.append(mo.md("*Nothing to export.*"))
     else:
-        keep = [
-            c
-            for c in clean_pl.columns
-            if c not in ("psd_f", "psd_pxx")
-        ]
+        keep = [c for c in clean_pl.columns if c not in ("psd_f", "psd_pxx")]
         export_df = clean_pl.select(keep)
+        _csv = export_df.write_csv()
         _blocks.extend(
             [
                 mo.md(
                     f"**Rows:** {export_df.height} · **Cols:** {len(export_df.columns)}  \n"
-                    "Save locally for ML: write from prepare, or copy from this table."
+                    "Download for bake-off / TF offline retrain, or re-run prepare to write "
+                    "`data/processed/cleaned_spectral_features.csv`."
+                ),
+                mo.download(
+                    data=_csv.encode("utf-8") if isinstance(_csv, str) else _csv,
+                    filename="cleaned_spectral_features_qc.csv",
+                    mimetype="text/csv",
+                    label="Download cleaned + QC'd features (CSV)",
                 ),
                 mo.ui.table(export_df.head(20).to_pandas().round(4)),
                 mo.md(
                     "```bash\n"
-                    "# After adjusting prepare QC thresholds, refresh store:\n"
-                    "python scripts/prepare_real_features.py\n"
+                    "# Adaptive multitaper + tSNR + IsolationForest (default):\n"
+                    "python scripts/prepare_real_features.py --psd adaptive\n"
+                    "# Fast recompute from stored timeseries (no NIfTI I/O):\n"
+                    "python scripts/prepare_real_features.py --from-timeseries --psd adaptive\n"
+                    "# Production MNE adaptive (optional):\n"
+                    "pip install mne && python scripts/prepare_real_features.py --psd mne\n"
                     "python scripts/run_ml_bakeoff.py\n"
                     "python scripts/run_tf_offline.py   # optional\n"
                     "python marimo_exports/export_wasm.py --sync-docs\n"
+                    "# Local book + API:\n"
+                    "uvicorn marimo_exports.fastapi_app:app --reload --port 8765\n"
                     "```"
                 ),
             ]
         )
     mo.vstack(_blocks)
     return (export_df,)
+
+
+@app.cell
+def _(bundle, load_bold_timeseries, np):
+    """Provide one real BOLD series for the multitaper demo cell."""
+
+    def load_bold_ts():
+        try:
+            ts_df = load_bold_timeseries()
+            if ts_df is not None and not getattr(ts_df, "empty", True):
+                g = ts_df.sort_values("volume").groupby(
+                    ["subject", "task", "run"], sort=False
+                )
+                (sub, task, run), first = next(iter(g))
+                return first["bold_z"].to_numpy(dtype=float), {
+                    "subject": sub,
+                    "task": task,
+                    "run": int(run),
+                }
+        except Exception:
+            pass
+        ex = (bundle or {}).get("timeseries_examples") or {}
+        if not ex:
+            return None, {}
+        key = next(iter(ex))
+        row = ex[key]
+        return np.asarray(row["bold_z"], dtype=float), {
+            "subject": row.get("subject", key),
+            "task": row.get("task", "?"),
+            "run": 1,
+        }
+
+    return (load_bold_ts,)
+
+
+@app.cell
+def _(
+    adaptive_multitaper_psd,
+    compare_psd_methods,
+    load_bold_ts,
+    mo,
+    multitaper_psd,
+    np,
+    pd,
+    plt,
+    welch_psd,
+):
+    """Live comparison: Welch vs uniform vs adaptive multitaper on one BOLD run."""
+    _blocks = [
+        mo.md(
+            r"""
+## 5. Multitaper methods — uniform vs adaptive (live demo)
+
+DPSS (Slepian) tapers solve the spectral concentration problem. The first
+$K \approx 2NW - 1$ tapers concentrate energy inside $[-W, W]$.
+
+| Method | Weights | Bias on 1/f BOLD | Cost |
+|---|---|---|---|
+| **Welch** | single Hann window | medium | cheap |
+| **Uniform multitaper** | equal $1/K$ | higher leakage in valleys | cheap |
+| **Adaptive (Thomson)** | $w_k(f) \propto \lambda_k^2 / (\lambda_k^2 \hat S(f) + (1-\lambda_k)\hat N)$ | lower | iterative |
+
+Production offline can also use **MNE** `psd_array_multitaper(adaptive=True, low_bias=True)`.
+"""
+        )
+    ]
+    ts, meta = load_bold_ts()
+    if ts is None or len(ts) < 16:
+        _blocks.append(
+            mo.md("*No example time series in bundle — run prepare to embed examples.*")
+        )
+    else:
+        tr = 3.0
+        fs = 1.0 / tr
+        f_w, p_w = welch_psd(ts, fs)
+        f_u, p_u = multitaper_psd(ts, fs, nw=3.5)
+        f_a, p_a, w_a = adaptive_multitaper_psd(ts, fs, nw=3.5)
+        feats = compare_psd_methods(ts, tr=tr, nw=3.5)
+        _fig, _ax = plt.subplots(figsize=(8.5, 4.2))
+        _ax.semilogy(f_w, p_w, label="Welch", alpha=0.75, lw=1.6)
+        _ax.semilogy(f_u, p_u, label="Uniform MT", alpha=0.85, lw=1.8)
+        _ax.semilogy(f_a, p_a, label="Adaptive MT", lw=2.2)
+        _ax.axvspan(0.08, 0.15, color="#6C3483", alpha=0.12, label="high band")
+        _ax.set_xlabel("Frequency (Hz)")
+        _ax.set_ylabel("Power")
+        _ax.set_title(
+            f"PSD methods on {meta.get('subject', '?')} · {meta.get('task', '?')}"
+        )
+        _ax.legend(frameon=False, fontsize=8)
+        _ax.grid(True, which="both", alpha=0.3)
+        _fig.tight_layout()
+        _cmp = {
+            "method": list(feats.keys()),
+            "power_high": [round(feats[m]["power_high"], 4) for m in feats],
+            "flatness": [round(feats[m]["spectral_flatness"], 4) for m in feats],
+            "band_snr_high": [round(feats[m]["band_snr_high"], 4) for m in feats],
+            "centroid": [round(feats[m]["spectral_centroid"], 4) for m in feats],
+        }
+        _blocks.extend(
+            [
+                _fig,
+                mo.md(
+                    f"**Effective adaptive weight range** (taper × freq): "
+                    f"min={float(np.min(w_a)):.3f} · max={float(np.max(w_a)):.3f} · "
+                    f"mean={float(np.mean(w_a)):.3f}"
+                ),
+                mo.ui.table(pd.DataFrame(_cmp)),
+            ]
+        )
+    mo.vstack(_blocks)
+    return
 
 
 @app.cell
@@ -483,11 +637,12 @@ def _(book_nav, clinical_relevance_card, mo):
                 r"""
 ## Takeaways
 
-1. **tSNR + spectral flatness** catch many bad mean-BOLD runs without ROI masks.  
-2. **IsolationForest** is a multivariate QC gate — re-tune contamination with the slider.  
-3. **Collinearity prune** on the clean set protects LogReg coefficients (Ch III).  
-4. **TF stays offline**; QC + classical ML stay WASM-friendly.  
-5. Re-run prepare after code changes so `run_qc.csv` and book embeds stay in sync.
+1. **tSNR + spectral flatness** catch many bad mean-BOLD runs without ROI masks.
+2. **Adaptive multitaper** is the default production PSD; uniform is fine for prototypes; MNE is optional offline.
+3. **IsolationForest** is a multivariate QC gate — re-tune contamination with the slider.
+4. **Collinearity prune** on the clean set protects LogReg coefficients (Ch III).
+5. **TF stays offline**; QC + classical ML stay WASM-friendly (FastAPI serves the same static WASM book).
+6. Re-run prepare after code changes so `cleaned_spectral_features.csv` and book embeds stay in sync.
 """
             ),
             mo.md(

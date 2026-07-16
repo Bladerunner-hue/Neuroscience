@@ -8,6 +8,10 @@ scikit-learn
 matplotlib
 seaborn
 
+# Local gateway: static WASM book + JSON feature API
+fastapi
+uvicorn[standard]
+
 # Feature extraction from NIfTI (local)
 nibabel
 openneuro-py
@@ -17,6 +21,7 @@ tensorflow[and-cuda]==2.20
 # tensorflow-probability  # optional
 
 # Optional / research (not required for the book)
+# mne  # production adaptive multitaper: prepare_real_features.py --psd mne
 # pyspark[connect]
 # nilearn
 # mlflow

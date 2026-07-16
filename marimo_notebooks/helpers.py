@@ -37,9 +37,17 @@ DATA_DIR = Path("data/raw/ds000171")
 PROCESSED_DIR = Path("data/processed")
 
 BOOK_CHAPTERS: list[tuple[str, str, str]] = [
-    ("00_qc_dashboard", "0 · QC Dashboard", "tSNR, spectral quality, IsolationForest, clean-run export."),
+    (
+        "00_qc_dashboard",
+        "0 · QC Dashboard",
+        "tSNR, multitaper PSD, IsolationForest, clean-run export.",
+    ),
     ("01_pre_flight", "I · Cohort & Design", "Who was studied, what was heard, and how BOLD meets music."),
-    ("02_eda_univariate", "II · Spectral Power", "Welch PSD as a window onto rhythmic BOLD energy."),
+    (
+        "02_eda_univariate",
+        "II · Spectral Power",
+        "Multitaper/Welch PSD as a window onto rhythmic BOLD energy.",
+    ),
     ("03_eda_multivariate", "III · Algorithm Lab", "Bake-off, best model, confusion, explainability, RecSys."),
     ("04_feature_engineering", "IV · Features & Music Effects", "Inventory, harmonization, spatial proxies, PCA."),
     ("05_tf_results", "V · Neural Net Results", "Precomputed TensorFlow CNN/MLP metrics (trained offline)."),
@@ -207,14 +215,109 @@ def load_participants_df() -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
+def _normalize_psd_columns(df: pd.DataFrame) -> pd.DataFrame:
+    """Ensure psd_f / psd_pxx are JSON strings when present (CSV vs WASM list)."""
+    if df is None or getattr(df, "empty", True):
+        return df if df is not None else pd.DataFrame()
+    out = df.copy()
+    for col in ("psd_f", "psd_pxx"):
+        if col not in out.columns:
+            continue
+
+        def _as_jsonable(v):
+            if v is None or (isinstance(v, float) and np.isnan(v)):
+                return v
+            if isinstance(v, str):
+                return v
+            if isinstance(v, (list, tuple)):
+                return json.dumps(list(v))
+            return v
+
+        out[col] = out[col].map(_as_jsonable)
+    return out
+
+
 def load_spectral_features() -> pd.DataFrame:
+    """Run-level spectral table. Disk first; WASM uses injected ``book_data`` bundle."""
     proc = _find_processed()
     if proc and (proc / "spectral_features.csv").exists():
-        return pd.read_csv(proc / "spectral_features.csv")
+        return _normalize_psd_columns(pd.read_csv(proc / "spectral_features.csv"))
     bundle = load_book_bundle()
     if bundle.get("spectral_features"):
-        return pd.DataFrame(bundle["spectral_features"])
+        return _normalize_psd_columns(pd.DataFrame(bundle["spectral_features"]))
     return pd.DataFrame()
+
+
+def load_cleaned_spectral_features() -> pd.DataFrame:
+    """QC-gated runs (no IsolationForest outliers). WASM-safe via embedded bundle."""
+    proc = _find_processed()
+    if proc and (proc / "cleaned_spectral_features.csv").exists():
+        return _normalize_psd_columns(pd.read_csv(proc / "cleaned_spectral_features.csv"))
+    bundle = load_book_bundle()
+    if bundle.get("cleaned_spectral_features"):
+        return _normalize_psd_columns(pd.DataFrame(bundle["cleaned_spectral_features"]))
+    sf = load_spectral_features()
+    if sf.empty:
+        return sf
+    if "qc_outlier" in sf.columns:
+        return sf.loc[sf["qc_outlier"].astype(int) == 0].copy()
+    if "qc_flag_any" in sf.columns:
+        return sf.loc[sf["qc_flag_any"].astype(int) == 0].copy()
+    return sf
+
+
+def filter_clean_runs(
+    df: pd.DataFrame,
+    *,
+    drop_outliers: bool = True,
+    drop_any_flag: bool = False,
+) -> pd.DataFrame:
+    """Filter a run-level table using QC columns when present."""
+    if df is None or getattr(df, "empty", True):
+        return df if df is not None else pd.DataFrame()
+    out = df
+    if drop_outliers and "qc_outlier" in out.columns:
+        out = out.loc[out["qc_outlier"] == 0]
+    if drop_any_flag and "qc_flag_any" in out.columns:
+        out = out.loc[out["qc_flag_any"] == 0]
+    return out.copy()
+
+
+def load_spectral_features_polars():
+    """Polars loader for reactive QC / EDA (falls back to empty frame)."""
+    try:
+        import polars as pl
+    except ImportError:  # pragma: no cover
+        return None
+    proc = _find_processed()
+    if proc and (proc / "spectral_features.csv").exists():
+        return pl.read_csv(proc / "spectral_features.csv")
+    pdf = load_spectral_features()
+    return pl.from_pandas(pdf) if not pdf.empty else pl.DataFrame()
+
+
+def load_condition_features_polars():
+    try:
+        import polars as pl
+    except ImportError:  # pragma: no cover
+        return None
+    proc = _find_processed()
+    if proc and (proc / "condition_features.csv").exists():
+        return pl.read_csv(proc / "condition_features.csv")
+    pdf = load_condition_features()
+    return pl.from_pandas(pdf) if not pdf.empty else pl.DataFrame()
+
+
+def load_subject_features_polars():
+    try:
+        import polars as pl
+    except ImportError:  # pragma: no cover
+        return None
+    proc = _find_processed()
+    if proc and (proc / "subject_features.csv").exists():
+        return pl.read_csv(proc / "subject_features.csv")
+    pdf = load_subject_features()
+    return pl.from_pandas(pdf) if not pdf.empty else pl.DataFrame()
 
 
 def load_bold_timeseries() -> pd.DataFrame:
@@ -300,6 +403,11 @@ def load_tf_results() -> dict:
     return bundle.get("tf_results") or {}
 
 
+def load_psd_examples() -> dict:
+    """Group×task example PSDs for WASM fallbacks (when per-run PSD columns missing)."""
+    return load_book_bundle().get("psd_examples") or {}
+
+
 def load_run_qc() -> pd.DataFrame:
     """Run-level QC table (tSNR, flatness, IsolationForest flags)."""
     proc = _find_processed()
@@ -365,7 +473,9 @@ def data_provenance_md() -> str:
 | **Subjects with BOLD in this book** | **{n_subj}** |
 | **BOLD runs processed** | **{n_runs}** |
 | **Spatial proxies** | Anterior/posterior, L/R, S/I slabs + A–P coherence |
-| **Feature store** | `data/processed/` · WASM embed `book_data.py` |
+| **PSD** | Multitaper (adaptive default) + Welch baseline · tSNR QC · method=`{b.get("psd_method", "?")}` |
+| **Cleaned runs** | **{b.get("n_cleaned_runs", "—")}** (IsolationForest-gated) |
+| **Feature store** | `data/processed/` · WASM embed (helpers + spectral_methods + book_bundle JSON) |
 | **Source** | `{src}` |
 
 {data_dictionary_md()}

@@ -39,17 +39,17 @@
 
     <ol class="space-y-4 mb-14">
       <li>
-        <a href="wasm/00_qc_dashboard/?v=20260716c" class="card block rounded-2xl border border-stone-800 bg-gradient-to-br from-teal-950/40 to-stone-900/80 p-6 hover:border-teal-700/50">
+        <a href="wasm/00_qc_dashboard/?v=20260716d" class="card block rounded-2xl border border-stone-800 bg-gradient-to-br from-teal-950/40 to-stone-900/80 p-6 hover:border-teal-700/50">
           <div class="flex items-baseline justify-between gap-4 mb-2">
             <span class="text-teal-400/80 text-xs tracking-widest uppercase">Chapter 0</span>
-            <span class="text-stone-600 text-xs">tSNR · flatness · IsolationForest</span>
+            <span class="text-stone-600 text-xs">tSNR · multitaper · IsolationForest</span>
           </div>
           <h2 class="serif text-2xl md:text-3xl text-stone-50 mb-2">QC Dashboard</h2>
-          <p class="text-stone-400 text-sm leading-relaxed">Run-level quality: tSNR, spectral flatness/entropy/SNR, spike fraction, IsolationForest outliers, collinearity, and a clean-run table for ML.</p>
+          <p class="text-stone-400 text-sm leading-relaxed">Run-level quality: tSNR, adaptive multitaper PSD, spectral flatness/entropy/SNR, spike fraction, IsolationForest outliers, collinearity, and a clean-run export for ML.</p>
         </a>
       </li>
       <li>
-        <a href="wasm/01_pre_flight/?v=20260716c" class="card block rounded-2xl border border-stone-800 bg-gradient-to-br from-sky-950/40 to-stone-900/80 p-6 hover:border-sky-700/50">
+        <a href="wasm/01_pre_flight/?v=20260716d" class="card block rounded-2xl border border-stone-800 bg-gradient-to-br from-sky-950/40 to-stone-900/80 p-6 hover:border-sky-700/50">
           <div class="flex items-baseline justify-between gap-4 mb-2">
             <span class="text-sky-400/80 text-xs tracking-widest uppercase">Chapter I</span>
             <span class="text-stone-600 text-xs">Cohort · paradigm · real BOLD</span>
@@ -59,7 +59,7 @@
         </a>
       </li>
       <li>
-        <a href="wasm/02_eda_univariate/?v=20260716c" class="card block rounded-2xl border border-stone-800 bg-gradient-to-br from-violet-950/40 to-stone-900/80 p-6 hover:border-violet-700/50">
+        <a href="wasm/02_eda_univariate/?v=20260716d" class="card block rounded-2xl border border-stone-800 bg-gradient-to-br from-violet-950/40 to-stone-900/80 p-6 hover:border-violet-700/50">
           <div class="flex items-baseline justify-between gap-4 mb-2">
             <span class="text-violet-400/80 text-xs tracking-widest uppercase">Chapter II</span>
             <span class="text-stone-600 text-xs">Welch PSD · valence · peri-stimulus</span>
@@ -69,7 +69,7 @@
         </a>
       </li>
       <li>
-        <a href="wasm/03_eda_multivariate/?v=20260716c" class="card block rounded-2xl border border-stone-800 bg-gradient-to-br from-amber-950/40 to-stone-900/80 p-6 hover:border-amber-700/50">
+        <a href="wasm/03_eda_multivariate/?v=20260716d" class="card block rounded-2xl border border-stone-800 bg-gradient-to-br from-amber-950/40 to-stone-900/80 p-6 hover:border-amber-700/50">
           <div class="flex items-baseline justify-between gap-4 mb-2">
             <span class="text-amber-400/80 text-xs tracking-widest uppercase">Chapter III</span>
             <span class="text-stone-600 text-xs">Bake-off · best model · RecSys</span>
@@ -79,7 +79,7 @@
         </a>
       </li>
       <li>
-        <a href="wasm/04_feature_engineering/?v=20260716c" class="card block rounded-2xl border border-stone-800 bg-gradient-to-br from-rose-950/40 to-stone-900/80 p-6 hover:border-rose-700/50">
+        <a href="wasm/04_feature_engineering/?v=20260716d" class="card block rounded-2xl border border-stone-800 bg-gradient-to-br from-rose-950/40 to-stone-900/80 p-6 hover:border-rose-700/50">
           <div class="flex items-baseline justify-between gap-4 mb-2">
             <span class="text-rose-400/80 text-xs tracking-widest uppercase">Chapter IV</span>
             <span class="text-stone-600 text-xs">Inventory · spatial · contrasts · PCA</span>
@@ -89,7 +89,7 @@
         </a>
       </li>
       <li>
-        <a href="wasm/05_tf_results/?v=20260716c" class="card block rounded-2xl border border-stone-800 bg-gradient-to-br from-emerald-950/40 to-stone-900/80 p-6 hover:border-emerald-700/50">
+        <a href="wasm/05_tf_results/?v=20260716d" class="card block rounded-2xl border border-stone-800 bg-gradient-to-br from-emerald-950/40 to-stone-900/80 p-6 hover:border-emerald-700/50">
           <div class="flex items-baseline justify-between gap-4 mb-2">
             <span class="text-emerald-400/80 text-xs tracking-widest uppercase">Chapter V</span>
             <span class="text-stone-600 text-xs">TF offline · CNN · MLP · comparison</span>
@@ -99,6 +99,30 @@
         </a>
       </li>
     </ol>
+
+    <div class="border border-stone-800 rounded-2xl p-6 mb-10 bg-gradient-to-br from-indigo-950/40 to-stone-900/80">
+      <div class="flex items-baseline justify-between gap-4 mb-2">
+        <span class="text-indigo-400/80 text-xs tracking-widest uppercase">Public API</span>
+        <span class="text-stone-600 text-xs">static FastAPI mirror · GitHub Pages</span>
+      </div>
+      <h2 class="serif text-2xl md:text-3xl text-stone-50 mb-2">
+        <a class="hover:text-indigo-300" href="api/">Feature API</a>
+      </h2>
+      <p class="text-stone-400 text-sm leading-relaxed mb-4">
+        GitHub Pages cannot run Python, so the FastAPI feature API is frozen as static JSON
+        (same payloads as local <code class="text-stone-500 text-xs">uvicorn</code>).
+        Open the explorer or fetch endpoints directly.
+      </p>
+      <ul class="text-sm text-stone-400 space-y-1.5 font-mono text-xs">
+        <li><a class="text-indigo-300 hover:underline" href="api/">api/</a> — Swagger explorer</li>
+        <li><a class="text-indigo-300 hover:underline" href="api/health.json">api/health.json</a></li>
+        <li><a class="text-indigo-300 hover:underline" href="api/meta.json">api/meta.json</a></li>
+        <li><a class="text-indigo-300 hover:underline" href="api/features/spectral_clean.json">api/features/spectral_clean.json</a></li>
+        <li><a class="text-indigo-300 hover:underline" href="api/qc.json">api/qc.json</a></li>
+        <li><a class="text-indigo-300 hover:underline" href="api/bakeoff.json">api/bakeoff.json</a></li>
+        <li><a class="text-indigo-300 hover:underline" href="api/openapi.json">api/openapi.json</a></li>
+      </ul>
+    </div>
 
     <div class="border border-stone-800 rounded-2xl p-5 mb-10 bg-stone-900/30">
       <p class="text-xs tracking-widest uppercase text-stone-500 mb-2">Optional · retrain</p>
@@ -110,7 +134,8 @@
 
     <footer class="border-t border-stone-800 pt-8 text-xs text-stone-600 space-y-2">
       <p>Local development: <code class="text-stone-500">marimo edit marimo_notebooks/01_pre_flight.py</code></p>
-      <p>Rebuild Pages book: <code class="text-stone-500">python marimo_exports/export_wasm.py --sync-docs</code></p>
+      <p>Local API + book: <code class="text-stone-500">python marimo_exports/serve.py --fastapi</code></p>
+      <p>Rebuild Pages book + static API: <code class="text-stone-500">python marimo_exports/export_wasm.py --sync-docs</code></p>
       <p>Legacy pipelines live under <code class="text-stone-500">archives/</code>.</p>
     </footer>
   </div>

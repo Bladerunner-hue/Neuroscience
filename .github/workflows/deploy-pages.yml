@@ -5,7 +5,8 @@ on:
     branches: ["main"]
     paths:
       - "marimo_notebooks/**"
-      - "marimo_exports/export_wasm.py"
+      - "marimo_exports/**"
+      - "data/processed/**"
       - ".github/workflows/deploy-pages.yml"
       - "docs/**"
   workflow_dispatch:
@@ -38,8 +39,10 @@ jobs:
 
       - name: Export notebooks to WASM book chapters
         run: |
-          echo "Running WASM export (fail on error)..."
-          python marimo_exports/export_wasm.py --sync-docs
+          echo "Running WASM export + integration verify (fail on error)..."
+          test -f data/processed/book_bundle.json || { echo "Missing book_bundle.json"; exit 1; }
+          test -f marimo_notebooks/spectral_methods.py || { echo "Missing spectral_methods.py"; exit 1; }
+          python marimo_exports/export_wasm.py --sync-docs --verify
           echo "=== WASM exports ==="
           find marimo_exports/wasm -name index.html -print
           echo "=== docs/wasm ==="
@@ -47,9 +50,11 @@ jobs:
           # Require public book chapters
           for ch in 00_qc_dashboard 01_pre_flight 02_eda_univariate 03_eda_multivariate 04_feature_engineering 05_tf_results; do
             test -f "docs/wasm/$ch/index.html" || { echo "Missing docs/wasm/$ch/index.html"; exit 1; }
+            # Full injection set required for adaptive multitaper + QC stack
+            for tok in injected\ by\ export_wasm _helpers_b64 _spectral_b64 _book_json_b64 '"auto_instantiate": true'; do
+              grep -q "$tok" "docs/wasm/$ch/index.html" || { echo "FATAL: $ch missing $tok"; exit 1; }
+            done
           done
-          # polars for QC chapter (WASM micropip)
-          # (declared in 00_qc_dashboard.py PEP 723 deps)
           # Guard: never ship JSON-as-Python book_data (true/false NameError)
           if grep -q 'BOOK_BUNDLE = {' docs/wasm/01_pre_flight/index.html 2>/dev/null; then
             echo "FATAL: old BOOK_BUNDLE dict embed detected in WASM HTML"
@@ -59,6 +64,19 @@ jobs:
             echo "FATAL: book_data JSON injection missing"
             exit 1
           fi
+          # QC chapter must mention multitaper surface (smoke that export is current)
+          grep -qi multitaper docs/wasm/00_qc_dashboard/index.html || {
+            echo "FATAL: 00_qc_dashboard export lacks multitaper content"
+            exit 1
+          }
+          # Static FastAPI mirror (GitHub Pages cannot run uvicorn)
+          for f in docs/api/index.html docs/api/health.json docs/api/meta.json \
+                   docs/api/openapi.json docs/api/features/spectral.json \
+                   docs/api/features/spectral_clean.json docs/api/qc.json \
+                   docs/api/bakeoff.json; do
+            test -f "$f" || { echo "FATAL: missing static API $f"; exit 1; }
+          done
+          python -c "import json; h=json.load(open('docs/api/health.json')); assert h.get('status')=='ok'; print('static API health ok', h.get('bundle'))"
 
       - name: Ensure Pages metadata
         run: |
@@ -66,6 +84,8 @@ jobs:
           touch docs/.nojekyll
           ls -la docs/
           ls -la docs/wasm/
+          ls -la docs/api/
+          ls -la docs/api/features/
 
       - name: Setup Pages
         uses: actions/configure-pages@v5

@@ -27,8 +27,10 @@ def _():
         book_nav,
         clinical_relevance_card,
         data_provenance_md,
+        filter_clean_runs,
         hypothesis_card,
         key_insight_card,
+        load_cleaned_spectral_features,
         load_condition_features,
         load_spectral_features,
         set_global_style,
@@ -44,9 +46,11 @@ def _():
         book_nav,
         clinical_relevance_card,
         data_provenance_md,
+        filter_clean_runs,
         hypothesis_card,
         json,
         key_insight_card,
+        load_cleaned_spectral_features,
         load_condition_features,
         load_spectral_features,
         mo,
@@ -64,13 +68,16 @@ def _(data_provenance_md, hypothesis_card, mo):
                 r"""
 # II · Univariate Spectral Analysis
 
-### Welch power, band structure, and music valence
+### Multitaper/Welch power, band structure, and music valence
 
 Univariate analysis treats **one series / one feature at a time**. We ask:
 
-1. How is spectral energy distributed across frequency bands (real runs)?  
+1. How is spectral energy distributed across frequency bands (QC-cleaned runs)?  
 2. How do **positive music**, **negative music**, and **tones** differ in amplitude and high-band power?  
 3. Is any group difference **music-specific** (vs non-music / tones)?
+
+Run-level PSDs use **adaptive multitaper** when the feature store is regenerated
+(`prepare_real_features.py --psd adaptive`); Ch 0 compares Welch / uniform / adaptive live.
 """
             ),
             mo.md(data_provenance_md()),
@@ -91,14 +98,27 @@ def _(
     HIGHLIGHT,
     MDD_COLOR,
     json,
+    filter_clean_runs,
+    load_cleaned_spectral_features,
     load_spectral_features,
     mo,
     np,
     pd,
     plt,
 ):
-    runs = load_spectral_features()
-    _blocks = [mo.md("## 1. Run-level Welch PSDs (real BOLD means)")]
+    # Prefer QC-cleaned runs for published spectral claims; fall back to full store
+    _all = load_spectral_features()
+    _clean = load_cleaned_spectral_features()
+    runs = _clean if _clean is not None and not getattr(_clean, "empty", True) else _all
+    if runs is _all and _all is not None and not getattr(_all, "empty", True):
+        runs = filter_clean_runs(_all, drop_outliers=True)
+    _blocks = [
+        mo.md(
+            f"## 1. Run-level PSDs (QC-cleaned · n={len(runs)}/{len(_all) if _all is not None else 0})  \n"
+            "Default feature store uses **adaptive multitaper** when regenerated via "
+            "`prepare_real_features.py --psd adaptive`."
+        )
+    ]
     if runs.empty:
         _blocks.append(mo.md("*No run-level spectral features.*"))
     else:
@@ -114,8 +134,13 @@ def _(
                     if "psd_f" not in _row or pd.isna(_row.get("psd_f")):
                         continue
                     try:
-                        _f = np.array(json.loads(_row["psd_f"]))
-                        _p = np.array(json.loads(_row["psd_pxx"]))
+                        _raw_f, _raw_p = _row["psd_f"], _row["psd_pxx"]
+                        _f = np.array(
+                            json.loads(_raw_f) if isinstance(_raw_f, str) else _raw_f
+                        )
+                        _p = np.array(
+                            json.loads(_raw_p) if isinstance(_raw_p, str) else _raw_p
+                        )
                     except Exception:
                         continue
                     if _f_ref is None:

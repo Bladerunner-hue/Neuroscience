@@ -5,22 +5,33 @@ Produces:
   data/processed/participants_clean.csv
   data/processed/events_summary.csv
   data/processed/bold_timeseries.csv       # global + spatial slab means
-  data/processed/spectral_features.csv     # run-level Welch + spatial
+  data/processed/spectral_features.csv     # run-level PSD + spatial
   data/processed/condition_features.csv    # trial-type / music-valence effects
   data/processed/subject_features.csv      # subject-level for ML
   data/processed/spatial_connectivity.csv  # A–P / L–R coherence proxies
+  data/processed/cleaned_spectral_features.csv  # QC-gated export for bake-off/TF
   data/processed/book_bundle.json
   + regenerates marimo_notebooks/book_data.py if gen script available
+
+PSD methods (``--psd``):
+  welch     classic Hann Welch (legacy baseline)
+  uniform   equal-weight DPSS multitaper
+  adaptive  Thomson-style adaptive multitaper (default; pure scipy)
+  mne       MNE ``psd_array_multitaper(adaptive=True)`` if mne installed
 
 Spatial note: without an atlas in the public book pipeline we define *pseudo-ROIs*
 from the native grid (anterior/posterior, left/right, superior/inferior brain mask
 by signal variance). This restores coarse spatial specificity that whole-brain means lose.
 
 Run:  python scripts/prepare_real_features.py
+      python scripts/prepare_real_features.py --psd adaptive
+      python scripts/prepare_real_features.py --from-timeseries  # skip NIfTI reload
 """
 from __future__ import annotations
 
+import argparse
 import json
+import sys
 from pathlib import Path
 
 import numpy as np
@@ -29,10 +40,19 @@ from scipy import signal
 from scipy.signal import coherence as msc_coherence
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "marimo_notebooks"))
+from spectral_methods import (  # noqa: E402
+    compute_tsnr,
+    spectral_feats as _spectral_feats_core,
+)
+
 DATA = ROOT / "data" / "raw" / "ds000171"
 OUT = ROOT / "data" / "processed"
 OUT.mkdir(parents=True, exist_ok=True)
 TR = 3.0
+# Mutated by main() from CLI
+PSD_METHOD = "adaptive"
+PSD_NW = 3.5
 
 STIM_MAP = {
     "positive_music": {"valence": "positive", "domain": "music", "label": "Positive music"},
@@ -132,59 +152,79 @@ def extract_spatial_bold(path: Path) -> dict[str, np.ndarray]:
     return out
 
 
-def spectral_feats(ts: np.ndarray, tr: float = TR) -> dict:
-    """Welch PSD with Hann window, 50% overlap, constant detrend + quality metrics.
+def _mne_multitaper_psd(ts: np.ndarray, tr: float = TR, nw: float = 3.5):
+    """MNE adaptive multitaper (production-grade). Requires ``pip install mne``."""
+    import mne
 
-    Quality metrics
-    ---------------
-    spectral_flatness : Wiener entropy (geom mean / arith mean of power).
-        Low → structured; high → noise-like.
-    spectral_entropy  : normalized Shannon entropy of PSD mass.
-    band_snr_high     : high-band power / median power outside high band.
-    """
     fs = 1.0 / tr
-    nper = min(32, max(8, len(ts) // 3))
-    nover = nper // 2
-    f, pxx = signal.welch(
-        ts,
-        fs=fs,
-        window="hann",
-        nperseg=nper,
-        noverlap=nover,
-        detrend="constant",
-        scaling="density",
+    # bandwidth ≈ 2W; MNE uses Hz full-bandwidth ≈ 2 * (nw / T) roughly
+    # Prefer explicit NW via bandwidth = 2 * nw * (fs / n) * n/2 wait:
+    # MNE docs: bandwidth is the half-bandwidth in Hz of the multi-taper window.
+    # For DPSS, half-bandwidth W = nw / (n / fs) = nw * fs / n
+    n = len(ts)
+    bandwidth = float(nw) * fs / max(n, 1)
+    bandwidth = max(bandwidth, 2.0 * fs / n)  # at least one Rayleigh bin
+    pxx, f = mne.time_frequency.psd_array_multitaper(
+        np.asarray(ts, dtype=np.float64)[None, :],
+        sfreq=fs,
+        bandwidth=bandwidth,
+        adaptive=True,
+        low_bias=True,
+        normalization="length",
+        verbose=False,
     )
-    pxx = np.maximum(pxx, 1e-20)
-    total = trapz(pxx, f) + 1e-12
-    # Spectral flatness (Wiener entropy)
-    log_mean = float(np.mean(np.log(pxx)))
-    geom = float(np.exp(log_mean))
-    arith = float(np.mean(pxx))
-    flatness = geom / (arith + 1e-20)
-    # Normalized spectral entropy
-    p_norm = pxx / (pxx.sum() + 1e-20)
-    entropy = float(-np.sum(p_norm * np.log(p_norm + 1e-20)) / np.log(len(p_norm)))
-    out = {
-        "total_power": total,
-        "spectral_centroid": float(np.sum(f * pxx) / total),
-        "spectral_flatness": flatness,
-        "spectral_entropy": entropy,
-        "psd_f": f.tolist(),
-        "psd_pxx": pxx.tolist(),
-    }
-    for name, lo, hi in [
-        ("power_low", 0.01, 0.04),
-        ("power_mid", 0.04, 0.08),
-        ("power_high", 0.08, 0.15),
-    ]:
-        m = (f >= lo) & (f <= hi)
-        out[name] = trapz(pxx[m], f[m]) / total if np.any(m) else 0.0
-    # Band SNR proxy: high-band vs median outside
-    m_hi = (f >= 0.08) & (f <= 0.15)
-    m_out = ~m_hi
-    p_hi = float(np.mean(pxx[m_hi])) if np.any(m_hi) else 0.0
-    p_out = float(np.median(pxx[m_out])) if np.any(m_out) else 1e-12
-    out["band_snr_high"] = p_hi / (p_out + 1e-12)
+    return f, np.maximum(pxx[0], 1e-20)
+
+
+def spectral_feats(ts: np.ndarray, tr: float = TR, method: str | None = None) -> dict:
+    """Run-level PSD + quality metrics.
+
+    Methods: welch | uniform | adaptive (scipy DPSS) | mne (optional adaptive).
+    Quality metrics: spectral_flatness, spectral_entropy, band_snr_high, tsnr.
+    """
+    method = (method or PSD_METHOD or "adaptive").lower()
+    if method == "mne":
+        try:
+            f, pxx = _mne_multitaper_psd(ts, tr=tr, nw=PSD_NW)
+            total = trapz(pxx, f) + 1e-12
+            geom = float(np.exp(np.mean(np.log(np.maximum(pxx, 1e-20)))))
+            arith = float(np.mean(pxx))
+            p_norm = pxx / (pxx.sum() + 1e-20)
+            entropy = float(
+                -np.sum(p_norm * np.log(p_norm + 1e-20)) / np.log(len(p_norm))
+            )
+            out = {
+                "total_power": float(total),
+                "spectral_centroid": float(trapz(f * pxx, f) / total),
+                "spectral_flatness": geom / (arith + 1e-20),
+                "spectral_entropy": entropy,
+                "psd_f": f.tolist(),
+                "psd_pxx": pxx.tolist(),
+                "psd_method": "mne",
+                "tsnr": compute_tsnr(ts),
+            }
+            for name, lo, hi in [
+                ("power_low", 0.01, 0.04),
+                ("power_mid", 0.04, 0.08),
+                ("power_high", 0.08, 0.15),
+            ]:
+                m = (f >= lo) & (f <= hi)
+                out[name] = trapz(pxx[m], f[m]) / total if np.any(m) else 0.0
+            m_hi = (f >= 0.08) & (f <= 0.15)
+            m_out = ~m_hi
+            p_hi = float(np.mean(pxx[m_hi])) if np.any(m_hi) else 0.0
+            p_out = float(np.median(pxx[m_out])) if np.any(m_out) else 1e-12
+            out["band_snr_high"] = p_hi / (p_out + 1e-12)
+            return out
+        except ImportError:
+            print("  [warn] mne not installed — falling back to adaptive multitaper")
+            method = "adaptive"
+    # welch | uniform | adaptive via shared spectral_methods
+    sm_method = "welch" if method == "welch" else method
+    if sm_method not in ("welch", "uniform", "adaptive"):
+        sm_method = "adaptive"
+    out = _spectral_feats_core(ts, tr=tr, method=sm_method, nw=PSD_NW)
+    out["psd_method"] = sm_method
     return out
 
 
@@ -281,85 +321,99 @@ def condition_metrics(ts: np.ndarray, events_path: Path) -> list[dict]:
     return rows
 
 
-def main() -> None:
-    parts = load_participants()
-    parts.to_csv(OUT / "participants_clean.csv", index=False)
-    print("participants:", len(parts))
+def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+    p = argparse.ArgumentParser(description="Extract ds000171 spectral + QC features")
+    p.add_argument(
+        "--psd",
+        choices=("welch", "uniform", "adaptive", "mne"),
+        default="adaptive",
+        help="PSD estimator (default: adaptive multitaper)",
+    )
+    p.add_argument(
+        "--nw",
+        type=float,
+        default=3.5,
+        help="DPSS time-bandwidth product for multitaper methods",
+    )
+    p.add_argument(
+        "--from-timeseries",
+        action="store_true",
+        help="Recompute spectra from bold_timeseries.csv (skip NIfTI I/O)",
+    )
+    p.add_argument(
+        "--no-clean-export",
+        action="store_true",
+        help="Skip writing cleaned_spectral_features.csv",
+    )
+    return p.parse_args(argv)
 
-    events = inventory_events()
-    events.to_csv(OUT / "events_summary.csv", index=False)
-    print("event files:", len(events), "with BOLD:", int(events["has_bold"].sum()) if "has_bold" in events else "?")
 
-    ts_rows: list[dict] = []
+def _recompute_from_timeseries(parts: pd.DataFrame) -> tuple[pd.DataFrame, list, list, list]:
+    """Refresh spectral/condition/connectivity from stored global + slab means."""
+    ts_path = OUT / "bold_timeseries.csv"
+    if not ts_path.exists():
+        raise SystemExit("Missing bold_timeseries.csv — run full prepare first.")
+    ts_df = pd.read_csv(ts_path)
     feat_rows: list[dict] = []
     cond_rows: list[dict] = []
     conn_rows: list[dict] = []
-
-    bold_files = sorted(DATA.glob("sub-*/func/*_bold.nii.gz"))
-    print("BOLD files:", len(bold_files))
-
-    for bold in bold_files:
-        name = bold.name.replace("_bold.nii.gz", "")
-        bits = name.split("_")
-        sub = bits[0]
-        task = bits[1].replace("task-", "")
-        run = int(bits[2].replace("run-", ""))
-        grp = parts.loc[parts.participant_id == sub, "group_short"]
-        group = grp.iloc[0] if len(grp) else ("MDD" if "mdd" in sub else "Control")
+    keys = [c for c in ts_df.columns if c.startswith("bold_")]
+    # group by run
+    for (sub, task, run), g in ts_df.groupby(["subject", "task", "run"], sort=False):
+        g = g.sort_values("volume")
+        group = g["group"].iloc[0]
         age = parts.loc[parts.participant_id == sub, "age"]
         sex = parts.loc[parts.participant_id == sub, "sex"]
         age_v = int(age.iloc[0]) if len(age) else np.nan
         sex_v = str(sex.iloc[0]) if len(sex) else ""
-        print(f"  {bold.relative_to(DATA)}")
-
-        spatial = extract_spatial_bold(bold)
-        ts = spatial["global"]
-
-        for t_i, val in enumerate(ts):
-            row_ts = {
-                "subject": sub,
-                "group": group,
-                "task": task,
-                "run": run,
-                "volume": t_i,
-                "time": t_i * TR,
-                "bold_z": float(val),
-            }
-            for k in SPATIAL_KEYS:
-                if k == "global":
-                    continue
-                if t_i < len(spatial[k]):
-                    row_ts[f"bold_{k}"] = float(spatial[k][t_i])
-            ts_rows.append(row_ts)
-
+        ts = g["bold_z"].to_numpy(dtype=np.float64)
+        spatial = {"global": ts}
+        for col in keys:
+            k = col.replace("bold_", "")
+            spatial[k] = g[col].to_numpy(dtype=np.float64)
+        print(f"  recompute {sub} {task} run-{run} (psd={PSD_METHOD})")
         sp = spectral_feats(ts)
         tqc = temporal_qc(ts)
-        # spatial spectral summary (high-band only, compact)
         spat_pow = {}
         for k in SPATIAL_KEYS:
-            if k == "global":
+            if k == "global" or k not in spatial:
                 continue
             sk = spectral_feats(spatial[k])
             spat_pow[f"power_high_{k}"] = sk["power_high"]
             spat_pow[f"centroid_{k}"] = sk["spectral_centroid"]
-
-        # seed-based-style coupling: anterior–posterior and left–right MSC
-        coh_ap = band_coherence(spatial["anterior"], spatial["posterior"])
-        coh_lr = band_coherence(spatial["left"], spatial["right"])
-        coh_si = band_coherence(spatial["superior"], spatial["inferior"])
+        coh_ap = (
+            band_coherence(spatial["anterior"], spatial["posterior"])
+            if "anterior" in spatial and "posterior" in spatial
+            else np.nan
+        )
+        coh_lr = (
+            band_coherence(spatial["left"], spatial["right"])
+            if "left" in spatial and "right" in spatial
+            else np.nan
+        )
+        coh_si = (
+            band_coherence(spatial["superior"], spatial["inferior"])
+            if "superior" in spatial and "inferior" in spatial
+            else np.nan
+        )
         conn_rows.append(
             {
                 "subject": sub,
                 "group": group,
                 "task": task,
-                "run": run,
+                "run": int(run),
                 "coh_ant_post": coh_ap,
                 "coh_left_right": coh_lr,
                 "coh_sup_inf": coh_si,
             }
         )
-
-        ev_path = bold.with_name(bold.name.replace("_bold.nii.gz", "_events.tsv"))
+        # events for condition metrics
+        ev_path = (
+            DATA
+            / sub
+            / "func"
+            / f"{sub}_task-{task}_run-{int(run)}_events.tsv"
+        )
         peak_lat, peak_amp = np.nan, np.nan
         if ev_path.exists():
             edf = pd.read_csv(ev_path, sep="\t")
@@ -379,11 +433,23 @@ def main() -> None:
                 mean_seg = np.mean(np.stack(segs), axis=0)
                 peak_i = int(np.argmax(mean_seg))
                 peak_lat, peak_amp = float(peak_i * TR), float(mean_seg[peak_i])
-
-        # anterior vs posterior mean during music-like epochs (spatial effect)
-        ant_mean = float(spatial["anterior"].mean())
-        post_mean = float(spatial["posterior"].mean())
-
+        ant_mean = float(spatial["anterior"].mean()) if "anterior" in spatial else 0.0
+        post_mean = float(spatial["posterior"].mean()) if "posterior" in spatial else 0.0
+        # tSNR: prefer raw-style if available; use stored ts (z-scored → tSNR~0 useless)
+        # Keep previous tsnr from spectral_features if present
+        prev = OUT / "spectral_features.csv"
+        tsnr_v = np.nan
+        if prev.exists():
+            old = pd.read_csv(prev)
+            m = (
+                (old.subject == sub)
+                & (old.task == task)
+                & (old.run == int(run))
+            )
+            if m.any() and "tsnr" in old.columns:
+                tsnr_v = float(old.loc[m, "tsnr"].iloc[0])
+        if not np.isfinite(tsnr_v):
+            tsnr_v = compute_tsnr(ts)  # on z-scored series ≈ 0; still a QC column
         feat_rows.append(
             {
                 "subject": sub,
@@ -391,7 +457,7 @@ def main() -> None:
                 "age": age_v,
                 "sex": sex_v,
                 "task": task,
-                "run": run,
+                "run": int(run),
                 "n_volumes": len(ts),
                 "power_low": sp["power_low"],
                 "power_mid": sp["power_mid"],
@@ -401,7 +467,7 @@ def main() -> None:
                 "spectral_entropy": sp["spectral_entropy"],
                 "band_snr_high": sp["band_snr_high"],
                 "total_power": sp["total_power"],
-                "tsnr": float(spatial.get("tsnr_global", np.nan)),
+                "tsnr": tsnr_v,
                 "ts_spike_frac": tqc["ts_spike_frac"],
                 "peak_latency_s": peak_lat,
                 "peak_amp": peak_amp,
@@ -409,21 +475,28 @@ def main() -> None:
                 "coh_left_right": coh_lr,
                 "coh_sup_inf": coh_si,
                 "ant_minus_post_mean": ant_mean - post_mean,
-                "left_minus_right_mean": float(spatial["left"].mean() - spatial["right"].mean()),
+                "left_minus_right_mean": (
+                    float(spatial["left"].mean() - spatial["right"].mean())
+                    if "left" in spatial and "right" in spatial
+                    else np.nan
+                ),
                 **spat_pow,
+                "psd_method": sp.get("psd_method", PSD_METHOD),
                 "psd_f": json.dumps(sp["psd_f"]),
                 "psd_pxx": json.dumps(sp["psd_pxx"]),
             }
         )
-
         for cm in condition_metrics(ts, ev_path):
-            # also condition means on anterior slab (reward-relevant anterior bias proxy)
             ant_segs = []
-            if ev_path.exists():
+            if ev_path.exists() and "anterior" in spatial:
                 edf2 = pd.read_csv(ev_path, sep="\t")
-                for _, r in edf2[edf2["trial_type"].astype(str) == cm["trial_type"]].iterrows():
+                for _, r in edf2[
+                    edf2["trial_type"].astype(str) == cm["trial_type"]
+                ].iterrows():
                     seg = segment_mean(
-                        spatial["anterior"], float(r["onset"]), float(r.get("duration", 31.5))
+                        spatial["anterior"],
+                        float(r["onset"]),
+                        float(r.get("duration", 31.5)),
                     )
                     if len(seg) >= 4:
                         ant_segs.append(seg)
@@ -435,17 +508,197 @@ def main() -> None:
                     "age": age_v,
                     "sex": sex_v,
                     "task": task,
-                    "run": run,
+                    "run": int(run),
                     **{k: v for k, v in cm.items() if k != "peri_stim"},
                     "anterior_mean_bold": ant_mean_c,
                     "peri_stim": json.dumps(cm["peri_stim"]),
                 }
             )
+    return ts_df, feat_rows, cond_rows, conn_rows
 
-    ts_df = pd.DataFrame(ts_rows)
+
+def main(argv: list[str] | None = None) -> None:
+    global PSD_METHOD, PSD_NW
+    args = _parse_args(argv)
+    PSD_METHOD = args.psd
+    PSD_NW = float(args.nw)
+    print(f"PSD method: {PSD_METHOD}  NW={PSD_NW}")
+
+    parts = load_participants()
+    parts.to_csv(OUT / "participants_clean.csv", index=False)
+    print("participants:", len(parts))
+
+    events = inventory_events()
+    events.to_csv(OUT / "events_summary.csv", index=False)
+    print("event files:", len(events), "with BOLD:", int(events["has_bold"].sum()) if "has_bold" in events else "?")
+
+    ts_rows: list[dict] = []
+    feat_rows: list[dict] = []
+    cond_rows: list[dict] = []
+    conn_rows: list[dict] = []
+
+    if args.from_timeseries:
+        ts_df, feat_rows, cond_rows, conn_rows = _recompute_from_timeseries(parts)
+    else:
+        bold_files = sorted(DATA.glob("sub-*/func/*_bold.nii.gz"))
+        print("BOLD files:", len(bold_files))
+
+        for bold in bold_files:
+            name = bold.name.replace("_bold.nii.gz", "")
+            bits = name.split("_")
+            sub = bits[0]
+            task = bits[1].replace("task-", "")
+            run = int(bits[2].replace("run-", ""))
+            grp = parts.loc[parts.participant_id == sub, "group_short"]
+            group = grp.iloc[0] if len(grp) else ("MDD" if "mdd" in sub else "Control")
+            age = parts.loc[parts.participant_id == sub, "age"]
+            sex = parts.loc[parts.participant_id == sub, "sex"]
+            age_v = int(age.iloc[0]) if len(age) else np.nan
+            sex_v = str(sex.iloc[0]) if len(sex) else ""
+            print(f"  {bold.relative_to(DATA)}")
+
+            spatial = extract_spatial_bold(bold)
+            ts = spatial["global"]
+
+            for t_i, val in enumerate(ts):
+                row_ts = {
+                    "subject": sub,
+                    "group": group,
+                    "task": task,
+                    "run": run,
+                    "volume": t_i,
+                    "time": t_i * TR,
+                    "bold_z": float(val),
+                }
+                for k in SPATIAL_KEYS:
+                    if k == "global":
+                        continue
+                    if t_i < len(spatial[k]):
+                        row_ts[f"bold_{k}"] = float(spatial[k][t_i])
+                ts_rows.append(row_ts)
+
+            sp = spectral_feats(ts)
+            tqc = temporal_qc(ts)
+            spat_pow = {}
+            for k in SPATIAL_KEYS:
+                if k == "global":
+                    continue
+                sk = spectral_feats(spatial[k])
+                spat_pow[f"power_high_{k}"] = sk["power_high"]
+                spat_pow[f"centroid_{k}"] = sk["spectral_centroid"]
+
+            coh_ap = band_coherence(spatial["anterior"], spatial["posterior"])
+            coh_lr = band_coherence(spatial["left"], spatial["right"])
+            coh_si = band_coherence(spatial["superior"], spatial["inferior"])
+            conn_rows.append(
+                {
+                    "subject": sub,
+                    "group": group,
+                    "task": task,
+                    "run": run,
+                    "coh_ant_post": coh_ap,
+                    "coh_left_right": coh_lr,
+                    "coh_sup_inf": coh_si,
+                }
+            )
+
+            ev_path = bold.with_name(bold.name.replace("_bold.nii.gz", "_events.tsv"))
+            peak_lat, peak_amp = np.nan, np.nan
+            if ev_path.exists():
+                edf = pd.read_csv(ev_path, sep="\t")
+                mask = edf["trial_type"].astype(str).str.contains(
+                    "positive_music|negative_music|positive_nonmusic|negative_nonmusic",
+                    case=False,
+                    na=False,
+                )
+                onsets = edf.loc[mask, "onset"].astype(float).values
+                segs = []
+                for o in onsets:
+                    i0 = int(round(o / TR))
+                    win = int(30 / TR)
+                    if 0 <= i0 and i0 + win <= len(ts):
+                        segs.append(ts[i0 : i0 + win])
+                if segs:
+                    mean_seg = np.mean(np.stack(segs), axis=0)
+                    peak_i = int(np.argmax(mean_seg))
+                    peak_lat, peak_amp = float(peak_i * TR), float(mean_seg[peak_i])
+
+            ant_mean = float(spatial["anterior"].mean())
+            post_mean = float(spatial["posterior"].mean())
+
+            feat_rows.append(
+                {
+                    "subject": sub,
+                    "group": group,
+                    "age": age_v,
+                    "sex": sex_v,
+                    "task": task,
+                    "run": run,
+                    "n_volumes": len(ts),
+                    "power_low": sp["power_low"],
+                    "power_mid": sp["power_mid"],
+                    "power_high": sp["power_high"],
+                    "spectral_centroid": sp["spectral_centroid"],
+                    "spectral_flatness": sp["spectral_flatness"],
+                    "spectral_entropy": sp["spectral_entropy"],
+                    "band_snr_high": sp["band_snr_high"],
+                    "total_power": sp["total_power"],
+                    "tsnr": float(spatial.get("tsnr_global", np.nan)),
+                    "ts_spike_frac": tqc["ts_spike_frac"],
+                    "peak_latency_s": peak_lat,
+                    "peak_amp": peak_amp,
+                    "coh_ant_post": coh_ap,
+                    "coh_left_right": coh_lr,
+                    "coh_sup_inf": coh_si,
+                    "ant_minus_post_mean": ant_mean - post_mean,
+                    "left_minus_right_mean": float(
+                        spatial["left"].mean() - spatial["right"].mean()
+                    ),
+                    **spat_pow,
+                    "psd_method": sp.get("psd_method", PSD_METHOD),
+                    "psd_f": json.dumps(sp["psd_f"]),
+                    "psd_pxx": json.dumps(sp["psd_pxx"]),
+                }
+            )
+
+            for cm in condition_metrics(ts, ev_path):
+                ant_segs = []
+                if ev_path.exists():
+                    edf2 = pd.read_csv(ev_path, sep="\t")
+                    for _, r in edf2[
+                        edf2["trial_type"].astype(str) == cm["trial_type"]
+                    ].iterrows():
+                        seg = segment_mean(
+                            spatial["anterior"],
+                            float(r["onset"]),
+                            float(r.get("duration", 31.5)),
+                        )
+                        if len(seg) >= 4:
+                            ant_segs.append(seg)
+                ant_mean_c = (
+                    float(np.concatenate(ant_segs).mean()) if ant_segs else np.nan
+                )
+                cond_rows.append(
+                    {
+                        "subject": sub,
+                        "group": group,
+                        "age": age_v,
+                        "sex": sex_v,
+                        "task": task,
+                        "run": run,
+                        **{k: v for k, v in cm.items() if k != "peri_stim"},
+                        "anterior_mean_bold": ant_mean_c,
+                        "peri_stim": json.dumps(cm["peri_stim"]),
+                    }
+                )
+
+        ts_df = pd.DataFrame(ts_rows)
+
     feat_df = pd.DataFrame(feat_rows)
     cond_df = pd.DataFrame(cond_rows)
     conn_df = pd.DataFrame(conn_rows)
+    if not isinstance(ts_df, pd.DataFrame):
+        ts_df = pd.DataFrame(ts_rows)
 
     # --- Run-level QC: IsolationForest + rule flags ---
     qc_cols = [
@@ -525,10 +778,26 @@ def main() -> None:
     else:
         qc_df = pd.DataFrame()
 
-    ts_df.to_csv(OUT / "bold_timeseries.csv", index=False)
+    if not args.from_timeseries:
+        ts_df.to_csv(OUT / "bold_timeseries.csv", index=False)
     feat_df.to_csv(OUT / "spectral_features.csv", index=False)
     cond_df.to_csv(OUT / "condition_features.csv", index=False)
     conn_df.to_csv(OUT / "spatial_connectivity.csv", index=False)
+
+    # Cleaned export for bake-off / TF (drop IsolationForest outliers by default)
+    if not args.no_clean_export and len(feat_df) and "qc_outlier" in feat_df.columns:
+        clean = feat_df[feat_df["qc_outlier"] == 0].drop(
+            columns=["psd_f", "psd_pxx"], errors="ignore"
+        )
+        clean.to_csv(OUT / "cleaned_spectral_features.csv", index=False)
+        print(
+            "Cleaned features:",
+            len(clean),
+            "/",
+            len(feat_df),
+            "→",
+            OUT / "cleaned_spectral_features.csv",
+        )
 
     # Subject-level wide features for ML
     subj_rows = []
@@ -622,25 +891,62 @@ def main() -> None:
     subj_df = pd.DataFrame(subj_rows)
     subj_df.to_csv(OUT / "subject_features.csv", index=False)
 
+    # Keep per-run PSD arrays in the bundle so WASM chapters (esp. Ch II) can
+    # plot multitaper spectra without disk CSVs. Size is modest (~100KB).
+    feat_for_bundle = feat_df.copy()
+    for col in ("psd_f", "psd_pxx"):
+        if col in feat_for_bundle.columns:
+            feat_for_bundle[col] = feat_for_bundle[col].apply(
+                lambda v: json.loads(v) if isinstance(v, str) else v
+            )
+    clean_for_bundle = (
+        feat_for_bundle[feat_for_bundle["qc_outlier"] == 0]
+        if "qc_outlier" in feat_for_bundle.columns and len(feat_for_bundle)
+        else feat_for_bundle
+    )
+    # drop bulky PSD from cleaned table (tabular only); full PSDs stay on spectral_features
+    clean_records = clean_for_bundle.drop(
+        columns=["psd_f", "psd_pxx"], errors="ignore"
+    ).to_dict(orient="records")
+
+    ml_bakeoff = {}
+    if (OUT / "ml_bakeoff.json").exists():
+        try:
+            ml_bakeoff = json.loads((OUT / "ml_bakeoff.json").read_text())
+        except Exception:
+            ml_bakeoff = {}
+    tf_results = {}
+    if (OUT / "tf_results.json").exists():
+        try:
+            tf_results = json.loads((OUT / "tf_results.json").read_text())
+        except Exception:
+            tf_results = {}
+
     bundle = {
         "source": "OpenNeuro ds000171 — expanded BOLD + spatial pseudo-ROIs + trial-type features",
         "tr_sec": TR,
+        "psd_method": PSD_METHOD,
+        "psd_nw": PSD_NW,
         "n_participants_full": int(len(parts)),
         "n_bold_runs": int(len(feat_df)),
         "n_subjects_with_bold": int(feat_df["subject"].nunique()) if len(feat_df) else 0,
+        "n_cleaned_runs": int(len(clean_records)),
         "stim_map": STIM_MAP,
         "spatial_keys": list(SPATIAL_KEYS),
         "participants": parts.to_dict(orient="records"),
         "events_summary": events.to_dict(orient="records"),
-        "spectral_features": feat_df.drop(
-            columns=["psd_f", "psd_pxx"], errors="ignore"
-        ).to_dict(orient="records"),
+        # Full run table WITH psd_f / psd_pxx lists (WASM Ch 0/II)
+        "spectral_features": feat_for_bundle.to_dict(orient="records"),
+        # QC-gated tabular export (WASM Ch II–IV, bake-off consumers)
+        "cleaned_spectral_features": clean_records,
         "condition_features": cond_df.drop(columns=["peri_stim"], errors="ignore").to_dict(
             orient="records"
         ),
         "subject_features": subj_df.to_dict(orient="records"),
         "spatial_connectivity": conn_df.to_dict(orient="records"),
         "run_qc": qc_df.to_dict(orient="records") if len(qc_df) else [],
+        "ml_bakeoff": ml_bakeoff,
+        "tf_results": tf_results,
         "psd_examples": {},
         "peri_examples": {},
         "timeseries_examples": {},
@@ -649,10 +955,17 @@ def main() -> None:
     for _, row in feat_df.iterrows():
         key = f"{row['group']}_{row['task']}"
         if key not in bundle["psd_examples"] and "psd_f" in row and pd.notna(row.get("psd_f")):
+            pf = row["psd_f"]
+            pp = row["psd_pxx"]
+            if isinstance(pf, str):
+                pf = json.loads(pf)
+            if isinstance(pp, str):
+                pp = json.loads(pp)
             bundle["psd_examples"][key] = {
                 "subject": row["subject"],
-                "f": json.loads(row["psd_f"]),
-                "pxx": json.loads(row["psd_pxx"]),
+                "f": pf,
+                "pxx": pp,
+                "psd_method": row.get("psd_method", PSD_METHOD),
             }
     for _, row in cond_df.iterrows():
         key = f"{row['group']}_{row['trial_type']}"

@@ -2,7 +2,7 @@
 
 # /// script
 # requires-python = ">=3.11"
-# dependencies = ["marimo", "numpy", "pandas", "matplotlib", "scipy"]
+# dependencies = ["marimo", "numpy", "pandas", "matplotlib", "scipy", "scikit-learn"]
 # ///
 
 import marimo
@@ -26,8 +26,10 @@ def _():
         book_nav,
         clinical_relevance_card,
         data_provenance_md,
+        filter_clean_runs,
         hypothesis_card,
         key_insight_card,
+        load_cleaned_spectral_features,
         load_condition_features,
         load_ml_bakeoff,
         load_spatial_connectivity,
@@ -46,8 +48,10 @@ def _():
         book_nav,
         clinical_relevance_card,
         data_provenance_md,
+        filter_clean_runs,
         hypothesis_card,
         key_insight_card,
+        load_cleaned_spectral_features,
         load_condition_features,
         load_ml_bakeoff,
         load_spatial_connectivity,
@@ -91,6 +95,8 @@ Primary clinical / RecSys contrast: **positive music − tones**.
 
 @app.cell
 def _(
+    filter_clean_runs,
+    load_cleaned_spectral_features,
     load_condition_features,
     load_ml_bakeoff,
     load_spatial_connectivity,
@@ -99,16 +105,28 @@ def _(
     mo,
     pd,
 ):
-    runs = load_spectral_features()
+    _all_runs = load_spectral_features()
+    _clean = load_cleaned_spectral_features()
+    runs = (
+        _clean
+        if _clean is not None and not getattr(_clean, "empty", True)
+        else filter_clean_runs(_all_runs, drop_outliers=True)
+    )
     cond = load_condition_features()
     subj = load_subject_features()
     conn = load_spatial_connectivity()
     bake = load_ml_bakeoff()
-    mo.md("## 0. Expanded feature store + precomputed bake-off")
+    mo.md(
+        "## 0. Expanded feature store + precomputed bake-off  \n"
+        f"Using **QC-cleaned** spectral runs: **{len(runs)}** / {len(_all_runs)} "
+        "(IsolationForest outliers dropped · Ch 0).  \n"
+        "Regenerate with adaptive multitaper: "
+        "`python scripts/prepare_real_features.py --psd adaptive --from-timeseries`"
+    )
     _inv = pd.DataFrame(
         [
             {
-                "table": "spectral_features",
+                "table": "spectral_features (clean)",
                 "n": len(runs),
                 "subjects": int(runs.subject.nunique()) if len(runs) else 0,
             },

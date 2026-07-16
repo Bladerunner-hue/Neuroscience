@@ -3,8 +3,8 @@
 Build the GitHub Pages book from canonical marimo_notebooks/.
 
 Pipeline:
-  marimo_notebooks/*.py  (+ helpers.py)
-       →  inject helpers (base64, first cell) for Pyodide
+  marimo_notebooks/*.py  (+ helpers.py + spectral_methods.py)
+       →  inject helpers + spectral_methods + book_bundle JSON (base64)
        →  marimo export html-wasm
        →  marimo_exports/wasm/<chapter>/
        →  docs/wasm/<chapter>/   (--sync-docs)
@@ -16,22 +16,26 @@ all quote/indent issues.
 
 Usage (repo root):
   python marimo_exports/export_wasm.py --sync-docs
+  python marimo_exports/export_wasm.py --sync-docs --verify
 """
 from __future__ import annotations
 
 import argparse
 import ast
 import base64
+import json
 import re
 import shutil
 import subprocess
 import sys
 import tempfile
+import types
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 NOTEBOOK_DIR = ROOT / "marimo_notebooks"
 HELPERS = NOTEBOOK_DIR / "helpers.py"
+SPECTRAL = NOTEBOOK_DIR / "spectral_methods.py"
 BOOK_DATA = NOTEBOOK_DIR / "book_data.py"
 EXPORT_DIR = ROOT / "marimo_exports" / "wasm"
 DOCS_DIR = ROOT / "docs"
@@ -56,15 +60,30 @@ def _b64_chunks(data: bytes | str) -> str:
     return "(\n" + "".join(f'        "{c}"\n' for c in chunks) + "    )"
 
 
+def _load_book_bundle_json() -> str | None:
+    bundle_json_path = ROOT / "data" / "processed" / "book_bundle.json"
+    if bundle_json_path.exists():
+        return bundle_json_path.read_text(encoding="utf-8")
+    if BOOK_DATA.exists():
+        ns: dict = {}
+        exec(
+            compile(BOOK_DATA.read_text(encoding="utf-8"), "book_data.py", "exec"),
+            ns,
+        )
+        return json.dumps(ns["BOOK_BUNDLE"], separators=(",", ":"))
+    return None
+
+
 def _inject_modules(
     notebook_src: str,
     *,
     helpers_src: str,
     book_bundle_json: str | None,
+    spectral_src: str | None = None,
 ) -> str:
-    """Register helpers + book_data in sys.modules for Pyodide.
+    """Register helpers + spectral_methods + book_data in sys.modules for Pyodide.
 
-    helpers: exec Python source (must be valid Python).
+    helpers/spectral_methods: exec Python source (must be valid Python).
     book_data: NEVER exec a dict literal — load JSON via base64 + json.loads
     so JSON true/false/null cannot become NameErrors.
     """
@@ -77,8 +96,17 @@ def _inject_modules(
         exec(compile(_helpers_src, "helpers.py", "exec"), _helpers_mod.__dict__)
         _sys.modules["helpers"] = _helpers_mod
 '''
+    if spectral_src:
+        spectral_lit = _b64_chunks(spectral_src)
+        loads += f'''
+    if "spectral_methods" not in _sys.modules:
+        _spectral_b64 = {spectral_lit}
+        _spectral_src = _b64.b64decode("".join(_spectral_b64)).decode("utf-8")
+        _spectral_mod = _types.ModuleType("spectral_methods")
+        exec(compile(_spectral_src, "spectral_methods.py", "exec"), _spectral_mod.__dict__)
+        _sys.modules["spectral_methods"] = _spectral_mod
+'''
     if book_bundle_json:
-        # Prefer compact JSON bytes from book_bundle.json (canonical feature store)
         bundle_lit = _b64_chunks(book_bundle_json.encode("utf-8"))
         loads += f'''
     if "book_data" not in _sys.modules:
@@ -117,6 +145,89 @@ def _validate_packed(packed: str, path: Path) -> None:
         raise RuntimeError(f"Injected notebook is not valid Python: {path}: {e}") from e
 
 
+def _simulate_wasm_modules(
+    helpers_src: str,
+    spectral_src: str | None,
+    book_bundle_json: str | None,
+) -> dict:
+    """Execute the same base64→sys.modules path Pyodide uses; return load stats."""
+    # Isolate from any pre-imported workspace modules
+    saved = {
+        k: sys.modules.pop(k)
+        for k in ("helpers", "spectral_methods", "book_data")
+        if k in sys.modules
+    }
+    stats: dict = {"ok": True, "errors": []}
+    try:
+        helpers_mod = types.ModuleType("helpers")
+        exec(compile(helpers_src, "helpers.py", "exec"), helpers_mod.__dict__)
+        sys.modules["helpers"] = helpers_mod
+
+        if spectral_src:
+            spectral_mod = types.ModuleType("spectral_methods")
+            exec(compile(spectral_src, "spectral_methods.py", "exec"), spectral_mod.__dict__)
+            sys.modules["spectral_methods"] = spectral_mod
+            stats["spectral"] = True
+        else:
+            stats["spectral"] = False
+
+        if book_bundle_json:
+            book_mod = types.ModuleType("book_data")
+            book_mod.BOOK_BUNDLE = json.loads(book_bundle_json)
+            sys.modules["book_data"] = book_mod
+            b = book_mod.BOOK_BUNDLE
+            stats["bundle_keys"] = sorted(b.keys())
+            stats["psd_method"] = b.get("psd_method")
+            stats["n_spectral"] = len(b.get("spectral_features") or [])
+            stats["n_cleaned"] = len(b.get("cleaned_spectral_features") or [])
+            stats["has_psd_arrays"] = bool(
+                (b.get("spectral_features") or [{}])[0].get("psd_f")
+                if b.get("spectral_features")
+                else False
+            )
+            stats["has_ml_bakeoff"] = bool(b.get("ml_bakeoff"))
+            stats["has_tf_results"] = bool(b.get("tf_results"))
+            stats["n_ts_examples"] = len(b.get("timeseries_examples") or {})
+
+        # Call loaders as notebooks do (no disk → pure bundle)
+        # Temporarily hide processed dir by monkeypatching _find_processed
+        helpers = sys.modules["helpers"]
+        orig_find = helpers._find_processed
+        helpers._find_processed = lambda: None  # type: ignore
+        try:
+            sf = helpers.load_spectral_features()
+            cl = helpers.load_cleaned_spectral_features()
+            bake = helpers.load_ml_bakeoff()
+            tf = helpers.load_tf_results()
+            stats["loader_spectral"] = int(len(sf))
+            stats["loader_cleaned"] = int(len(cl))
+            stats["loader_bakeoff"] = bool(bake)
+            stats["loader_tf"] = bool(tf)
+            if "psd_f" in sf.columns and len(sf):
+                sample = sf["psd_f"].iloc[0]
+                stats["psd_f_type"] = type(sample).__name__
+                if isinstance(sample, str):
+                    arr = json.loads(sample)
+                    stats["psd_len"] = len(arr)
+            if spectral_src:
+                import numpy as np
+
+                sm = sys.modules["spectral_methods"]
+                ts = np.random.default_rng(0).normal(0, 1, 64)
+                f, p = sm.multitaper_psd(ts, fs=1 / 3.0)
+                stats["multitaper_bins"] = int(len(p))
+        finally:
+            helpers._find_processed = orig_find  # type: ignore
+    except Exception as e:
+        stats["ok"] = False
+        stats["errors"].append(str(e))
+    finally:
+        for k in ("helpers", "spectral_methods", "book_data"):
+            sys.modules.pop(k, None)
+        sys.modules.update(saved)
+    return stats
+
+
 def export_one(notebook: Path, mode: str, tmp_dir: Path) -> bool:
     out_dir = EXPORT_DIR / notebook.stem
     if out_dir.exists():
@@ -124,52 +235,32 @@ def export_one(notebook: Path, mode: str, tmp_dir: Path) -> bool:
     out_dir.mkdir(parents=True, exist_ok=True)
 
     helpers_src = HELPERS.read_text(encoding="utf-8")
-    # Canonical JSON for book_data (never exec Python dict with true/false)
-    bundle_json_path = ROOT / "data" / "processed" / "book_bundle.json"
-    if bundle_json_path.exists():
-        book_bundle_json = bundle_json_path.read_text(encoding="utf-8")
-    elif BOOK_DATA.exists():
-        # fallback: import local book_data safely and re-serialize
-        ns: dict = {}
-        exec(
-            compile(BOOK_DATA.read_text(encoding="utf-8"), "book_data.py", "exec"),
-            ns,
-        )
-        import json as _json
-
-        book_bundle_json = _json.dumps(ns["BOOK_BUNDLE"], separators=(",", ":"))
-    else:
-        book_bundle_json = None
+    spectral_src = SPECTRAL.read_text(encoding="utf-8") if SPECTRAL.exists() else None
+    book_bundle_json = _load_book_bundle_json()
 
     nb_src = notebook.read_text(encoding="utf-8")
     packed = _inject_modules(
-        nb_src, helpers_src=helpers_src, book_bundle_json=book_bundle_json
+        nb_src,
+        helpers_src=helpers_src,
+        book_bundle_json=book_bundle_json,
+        spectral_src=spectral_src,
     )
     _validate_packed(packed, notebook)
-    # Fail closed: injected source must not contain JSON-as-Python booleans
     if re.search(r'BOOK_BUNDLE\s*=\s*\{[^}]*\btrue\b', packed):
         raise RuntimeError(
             f"Refusing to export {notebook.name}: BOOK_BUNDLE still has JSON true/false"
         )
 
+    # Require spectral_methods inject for QC chapter (and always when file exists)
+    if spectral_src and "spectral_methods" not in packed:
+        print(f"   ❌ spectral_methods missing from packed {notebook.name}")
+        return False
+    if book_bundle_json and "_book_json_b64" not in packed:
+        print(f"   ❌ book_bundle JSON missing from packed {notebook.name}")
+        return False
+
     tmp_nb = tmp_dir / notebook.name
     tmp_nb.write_text(packed, encoding="utf-8")
-
-    # Sanity: can import helpers via the same mechanism
-    try:
-        subprocess.check_call(
-            [
-                sys.executable,
-                "-c",
-                "import runpy; runpy.run_path(r'%s', run_name='__not_main__')"
-                % str(tmp_nb).replace("'", "\\'"),
-            ],
-            cwd=str(NOTEBOOK_DIR),
-            env={**dict(**{k: v for k, v in __import__("os").environ.items()}), "MPLBACKEND": "Agg"},
-        )
-    except subprocess.CalledProcessError:
-        # run_path executes module body only (defines app) — OK if no side effects
-        pass
 
     cmd = [
         "marimo",
@@ -195,23 +286,27 @@ def export_one(notebook: Path, mode: str, tmp_dir: Path) -> bool:
         print(f"   ❌ missing {index}")
         return False
 
-    # Guard against the triple-quote breakage pattern
     html = index.read_text(encoding="utf-8", errors="replace")
-    if "injected by export_wasm" not in html:
-        print("   ❌ export missing module injection marker")
-        return False
-    if 'exec(compile("""' in html or "exec(compile(\\\"\\\"\\\"" in html:
-        print("   ❌ unsafe triple-quote embedding detected")
-        return False
-    if "b64decode" not in html:
-        print("   ❌ base64 module loader missing from export")
-        return False
-    if book_bundle_json is not None and (
-        "book_data" not in html and "_book_json_b64" not in html
-    ):
-        print("   ❌ book_data JSON injection missing from export")
-        return False
-    # Old bug marker: JSON true inside exec'd book_data.py source
+    checks = [
+        ("injected by export_wasm" in html, "module injection marker"),
+        ("b64decode" in html, "base64 module loader"),
+        ("_helpers_b64" in html or "helpers" in html, "helpers injection"),
+        (
+            spectral_src is None or "_spectral_b64" in html or "spectral_methods" in html,
+            "spectral_methods injection",
+        ),
+        (
+            book_bundle_json is None
+            or "_book_json_b64" in html
+            or "book_data" in html,
+            "book_data JSON injection",
+        ),
+        ('exec(compile("""' not in html, "no unsafe triple-quote exec"),
+    ]
+    for ok, label in checks:
+        if not ok:
+            print(f"   ❌ export missing: {label}")
+            return False
     if re.search(r"has_bold.{0,5}true", html) and "json.loads" not in html:
         print("   ❌ suspicious JSON true in export without json.loads path")
         return False
@@ -251,6 +346,77 @@ def sync_docs() -> None:
         print(f"   synced → docs/wasm/{child.name}")
     (DOCS_DIR / ".nojekyll").touch(exist_ok=True)
 
+    # Freeze FastAPI payloads as static JSON for GitHub Pages (no Python runtime)
+    print("Exporting static FastAPI mirror → docs/api/ …")
+    try:
+        from marimo_exports.static_api import export_static_api
+    except ImportError:
+        # running as script from repo root
+        sys.path.insert(0, str(ROOT))
+        from marimo_exports.static_api import export_static_api  # type: ignore
+
+    export_static_api(DOCS_DIR / "api", docs=DOCS_DIR)
+    print("   synced → docs/api/ (GitHub Pages FastAPI mirror)")
+
+
+def verify_exports(docs: bool = True) -> bool:
+    """Post-export integration checks on HTML + simulated module loaders."""
+    ok = True
+    helpers_src = HELPERS.read_text(encoding="utf-8")
+    spectral_src = SPECTRAL.read_text(encoding="utf-8") if SPECTRAL.exists() else None
+    book_bundle_json = _load_book_bundle_json()
+    print("\n=== WASM module simulation (disk-hidden loaders) ===")
+    stats = _simulate_wasm_modules(helpers_src, spectral_src, book_bundle_json)
+    for k, v in stats.items():
+        if k != "errors":
+            print(f"  {k}: {v}")
+    if not stats.get("ok"):
+        print("  ERRORS:", stats.get("errors"))
+        ok = False
+    if stats.get("loader_spectral", 0) < 1:
+        print("  ❌ spectral features empty under WASM loaders")
+        ok = False
+    if stats.get("loader_cleaned", 0) < 1:
+        print("  ❌ cleaned features empty under WASM loaders")
+        ok = False
+    if not stats.get("has_psd_arrays"):
+        print("  ⚠️  bundle spectral_features lack psd_f (Ch II plots need them)")
+        # soft fail if we at least have psd_examples
+        if book_bundle_json:
+            b = json.loads(book_bundle_json)
+            if not b.get("psd_examples"):
+                ok = False
+    if not stats.get("spectral"):
+        print("  ❌ spectral_methods not loaded")
+        ok = False
+
+    base = DOCS_WASM if docs else EXPORT_DIR
+    print(f"\n=== HTML export checks under {base} ===")
+    for name in CANDIDATES:
+        stem = Path(name).stem
+        idx = base / stem / "index.html"
+        if not idx.exists():
+            print(f"  ❌ missing {idx}")
+            ok = False
+            continue
+        html = idx.read_text(encoding="utf-8", errors="replace")
+        need = [
+            ("injected by export_wasm", "injection"),
+            ("b64decode", "b64"),
+            ("_helpers_b64", "helpers"),
+            ("_spectral_b64", "spectral"),
+            ("_book_json_b64", "book_json"),
+            ('"auto_instantiate": true', "auto_instantiate"),
+        ]
+        missing = [lab for tok, lab in need if tok not in html]
+        size = idx.stat().st_size
+        if missing:
+            print(f"  ❌ {stem}: missing {missing} ({size} B)")
+            ok = False
+        else:
+            print(f"  ✅ {stem} ({size} B)")
+    return ok
+
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
@@ -260,16 +426,43 @@ def main() -> int:
         action="store_true",
         help="Copy wasm exports into docs/ for GitHub Pages",
     )
+    parser.add_argument(
+        "--verify",
+        action="store_true",
+        help="Run integration checks after export (also on --sync-docs)",
+    )
+    parser.add_argument(
+        "--verify-only",
+        action="store_true",
+        help="Only run integration checks (no export)",
+    )
     args = parser.parse_args()
     mode = "edit" if args.edit else "run"
 
+    if args.verify_only:
+        return 0 if verify_exports(docs=DOCS_WASM.exists()) else 1
+
     if not HELPERS.exists():
         print(f"Missing canonical helpers: {HELPERS}", file=sys.stderr)
+        return 1
+    if not SPECTRAL.exists():
+        print(f"Missing spectral_methods: {SPECTRAL}", file=sys.stderr)
         return 1
 
     EXPORT_DIR.mkdir(parents=True, exist_ok=True)
     print(f"Canonical notebooks: {NOTEBOOK_DIR}")
     print(f"Export dir: {EXPORT_DIR} (mode={mode})")
+    bj = _load_book_bundle_json()
+    if bj:
+        b = json.loads(bj)
+        print(
+            f"Bundle: psd={b.get('psd_method')} runs={b.get('n_bold_runs')} "
+            f"cleaned={b.get('n_cleaned_runs')} "
+            f"bakeoff={'yes' if b.get('ml_bakeoff') else 'no'} "
+            f"tf={'yes' if b.get('tf_results') else 'no'}"
+        )
+    else:
+        print("⚠️  No book_bundle.json — WASM chapters will lack embedded data")
 
     ok = True
     with tempfile.TemporaryDirectory(prefix="marimo_wasm_") as td:
@@ -294,7 +487,29 @@ def main() -> int:
             print(f"Missing export: {idx}", file=sys.stderr)
             ok = False
 
-    print("\nDone. Serve with:  python marimo_exports/serve.py")
+    if args.verify or args.sync_docs:
+        if not verify_exports(docs=args.sync_docs):
+            ok = False
+        # Static FastAPI mirror required for GitHub Pages
+        api_checks = [
+            DOCS_DIR / "api" / "index.html",
+            DOCS_DIR / "api" / "health.json",
+            DOCS_DIR / "api" / "meta.json",
+            DOCS_DIR / "api" / "openapi.json",
+            DOCS_DIR / "api" / "features" / "spectral.json",
+            DOCS_DIR / "api" / "features" / "spectral_clean.json",
+            DOCS_DIR / "api" / "qc.json",
+            DOCS_DIR / "api" / "bakeoff.json",
+        ]
+        for p in api_checks:
+            if not p.exists():
+                print(f"   ❌ missing static API artifact: {p}")
+                ok = False
+            else:
+                print(f"   ✅ static API: {p.relative_to(ROOT)}")
+
+    print("\nDone. Serve with:  python marimo_exports/serve.py --fastapi")
+    print("GitHub Pages API:  …/api/  and  …/api/health.json")
     return 0 if ok else 1
 
 

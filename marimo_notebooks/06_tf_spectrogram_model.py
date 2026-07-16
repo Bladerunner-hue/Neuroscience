@@ -52,6 +52,7 @@ def _():
         hypothesis_card,
         key_insight_card,
         load_bold_timeseries,
+        load_cleaned_spectral_features,
         load_condition_features,
         load_ml_bakeoff,
         load_spectral_features,
@@ -76,6 +77,7 @@ def _():
         hypothesis_card,
         key_insight_card,
         load_bold_timeseries,
+        load_cleaned_spectral_features,
         load_condition_features,
         load_ml_bakeoff,
         load_spectral_features,
@@ -123,6 +125,7 @@ We compare net metrics to the **sklearn bake-off winners** so you see when deep 
 @app.cell
 def _(
     load_bold_timeseries,
+    load_cleaned_spectral_features,
     load_condition_features,
     load_ml_bakeoff,
     load_spectral_features,
@@ -132,15 +135,21 @@ def _(
     pd,
 ):
     ts = load_bold_timeseries()
-    runs = load_spectral_features()
+    _all = load_spectral_features()
+    _clean = load_cleaned_spectral_features()
+    runs = _clean if _clean is not None and not getattr(_clean, "empty", True) else _all
     cond = load_condition_features()
     subj = load_subject_features()
     bake = load_ml_bakeoff()
-    mo.md("## 0. Real data inventory for TF")
+    mo.md(
+        "## 0. Real data inventory for TF  \n"
+        f"Spectral runs after QC: **{len(runs)}** / {len(_all)} "
+        "(prefer `cleaned_spectral_features.csv` from adaptive multitaper + IsolationForest)."
+    )
     _inv = pd.DataFrame(
         [
             {"layer": "bold_timeseries runs", "n": ts.groupby(["subject", "run"]).ngroups if len(ts) else 0},
-            {"layer": "spectral runs", "n": len(runs)},
+            {"layer": "spectral runs (clean)", "n": len(runs)},
             {"layer": "condition epochs", "n": len(cond)},
             {"layer": "subjects", "n": len(subj)},
         ]
