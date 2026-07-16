@@ -37,6 +37,7 @@ DATA_DIR = Path("data/raw/ds000171")
 PROCESSED_DIR = Path("data/processed")
 
 BOOK_CHAPTERS: list[tuple[str, str, str]] = [
+    ("00_qc_dashboard", "0 · QC Dashboard", "tSNR, spectral quality, IsolationForest, clean-run export."),
     ("01_pre_flight", "I · Cohort & Design", "Who was studied, what was heard, and how BOLD meets music."),
     ("02_eda_univariate", "II · Spectral Power", "Welch PSD as a window onto rhythmic BOLD energy."),
     ("03_eda_multivariate", "III · Algorithm Lab", "Bake-off, best model, confusion, explainability, RecSys."),
@@ -297,6 +298,38 @@ def load_tf_results() -> dict:
         return json.loads((proc / "tf_results.json").read_text())
     bundle = load_book_bundle()
     return bundle.get("tf_results") or {}
+
+
+def load_run_qc() -> pd.DataFrame:
+    """Run-level QC table (tSNR, flatness, IsolationForest flags)."""
+    proc = _find_processed()
+    if proc and (proc / "run_qc.csv").exists():
+        return pd.read_csv(proc / "run_qc.csv")
+    bundle = load_book_bundle()
+    if bundle.get("run_qc"):
+        return pd.DataFrame(bundle["run_qc"])
+    # fallback: derive from spectral features if QC columns present
+    sf = load_spectral_features()
+    if not sf.empty and "tsnr" in sf.columns:
+        cols = [
+            c
+            for c in [
+                "subject",
+                "group",
+                "task",
+                "run",
+                "tsnr",
+                "spectral_flatness",
+                "spectral_entropy",
+                "band_snr_high",
+                "ts_spike_frac",
+                "qc_outlier",
+                "qc_flag_any",
+            ]
+            if c in sf.columns
+        ]
+        return sf[cols]
+    return pd.DataFrame()
 
 
 def data_dictionary_md() -> str:

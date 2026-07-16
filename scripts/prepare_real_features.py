@@ -112,32 +112,63 @@ def extract_spatial_bold(path: Path) -> dict[str, np.ndarray]:
     if not np.any(mask):
         mask = np.ones((nx, ny, nz), dtype=bool)
 
-    def mean_ts(m: np.ndarray) -> np.ndarray:
-        if not np.any(m):
-            return zscore(data.mean(axis=(0, 1, 2)))
-        return zscore(data[m].mean(axis=0))
+    def mean_ts(m: np.ndarray) -> tuple[np.ndarray, float]:
+        raw = data.mean(axis=(0, 1, 2)) if not np.any(m) else data[m].mean(axis=0)
+        tsnr = float(np.mean(raw) / (np.std(raw) + 1e-8))
+        return zscore(raw), tsnr
 
     mx, my, mz = nx // 2, ny // 2, nz // 2
+    g_ts, g_tsnr = mean_ts(mask)
     out = {
-        "global": mean_ts(mask),
-        "left": mean_ts(mask & (np.arange(nx)[:, None, None] < mx)),
-        "right": mean_ts(mask & (np.arange(nx)[:, None, None] >= mx)),
-        "posterior": mean_ts(mask & (np.arange(ny)[None, :, None] < my)),
-        "anterior": mean_ts(mask & (np.arange(ny)[None, :, None] >= my)),
-        "inferior": mean_ts(mask & (np.arange(nz)[None, None, :] < mz)),
-        "superior": mean_ts(mask & (np.arange(nz)[None, None, :] >= mz)),
+        "global": g_ts,
+        "tsnr_global": g_tsnr,
+        "left": mean_ts(mask & (np.arange(nx)[:, None, None] < mx))[0],
+        "right": mean_ts(mask & (np.arange(nx)[:, None, None] >= mx))[0],
+        "posterior": mean_ts(mask & (np.arange(ny)[None, :, None] < my))[0],
+        "anterior": mean_ts(mask & (np.arange(ny)[None, :, None] >= my))[0],
+        "inferior": mean_ts(mask & (np.arange(nz)[None, None, :] < mz))[0],
+        "superior": mean_ts(mask & (np.arange(nz)[None, None, :] >= mz))[0],
     }
     return out
 
 
 def spectral_feats(ts: np.ndarray, tr: float = TR) -> dict:
+    """Welch PSD with Hann window, 50% overlap, constant detrend + quality metrics.
+
+    Quality metrics
+    ---------------
+    spectral_flatness : Wiener entropy (geom mean / arith mean of power).
+        Low → structured; high → noise-like.
+    spectral_entropy  : normalized Shannon entropy of PSD mass.
+    band_snr_high     : high-band power / median power outside high band.
+    """
     fs = 1.0 / tr
     nper = min(32, max(8, len(ts) // 3))
-    f, pxx = signal.welch(ts, fs=fs, nperseg=nper)
+    nover = nper // 2
+    f, pxx = signal.welch(
+        ts,
+        fs=fs,
+        window="hann",
+        nperseg=nper,
+        noverlap=nover,
+        detrend="constant",
+        scaling="density",
+    )
+    pxx = np.maximum(pxx, 1e-20)
     total = trapz(pxx, f) + 1e-12
+    # Spectral flatness (Wiener entropy)
+    log_mean = float(np.mean(np.log(pxx)))
+    geom = float(np.exp(log_mean))
+    arith = float(np.mean(pxx))
+    flatness = geom / (arith + 1e-20)
+    # Normalized spectral entropy
+    p_norm = pxx / (pxx.sum() + 1e-20)
+    entropy = float(-np.sum(p_norm * np.log(p_norm + 1e-20)) / np.log(len(p_norm)))
     out = {
         "total_power": total,
         "spectral_centroid": float(np.sum(f * pxx) / total),
+        "spectral_flatness": flatness,
+        "spectral_entropy": entropy,
         "psd_f": f.tolist(),
         "psd_pxx": pxx.tolist(),
     }
@@ -148,7 +179,25 @@ def spectral_feats(ts: np.ndarray, tr: float = TR) -> dict:
     ]:
         m = (f >= lo) & (f <= hi)
         out[name] = trapz(pxx[m], f[m]) / total if np.any(m) else 0.0
+    # Band SNR proxy: high-band vs median outside
+    m_hi = (f >= 0.08) & (f <= 0.15)
+    m_out = ~m_hi
+    p_hi = float(np.mean(pxx[m_hi])) if np.any(m_hi) else 0.0
+    p_out = float(np.median(pxx[m_out])) if np.any(m_out) else 1e-12
+    out["band_snr_high"] = p_hi / (p_out + 1e-12)
     return out
+
+
+def temporal_qc(ts: np.ndarray) -> dict:
+    """Simple time-domain QC on z-scored (or raw) series."""
+    ts = np.asarray(ts, dtype=np.float64)
+    d = np.diff(ts)
+    return {
+        "ts_std": float(ts.std()),
+        "ts_abs_mean": float(np.abs(ts).mean()),
+        "ts_spike_frac": float(np.mean(np.abs(d) > 3.0 * (d.std() + 1e-8))),
+        "n_volumes": int(len(ts)),
+    }
 
 
 def band_coherence(x: np.ndarray, y: np.ndarray, tr: float = TR, lo=0.03, hi=0.10) -> float:
@@ -284,6 +333,7 @@ def main() -> None:
             ts_rows.append(row_ts)
 
         sp = spectral_feats(ts)
+        tqc = temporal_qc(ts)
         # spatial spectral summary (high-band only, compact)
         spat_pow = {}
         for k in SPATIAL_KEYS:
@@ -347,7 +397,12 @@ def main() -> None:
                 "power_mid": sp["power_mid"],
                 "power_high": sp["power_high"],
                 "spectral_centroid": sp["spectral_centroid"],
+                "spectral_flatness": sp["spectral_flatness"],
+                "spectral_entropy": sp["spectral_entropy"],
+                "band_snr_high": sp["band_snr_high"],
                 "total_power": sp["total_power"],
+                "tsnr": float(spatial.get("tsnr_global", np.nan)),
+                "ts_spike_frac": tqc["ts_spike_frac"],
                 "peak_latency_s": peak_lat,
                 "peak_amp": peak_amp,
                 "coh_ant_post": coh_ap,
@@ -391,6 +446,85 @@ def main() -> None:
     feat_df = pd.DataFrame(feat_rows)
     cond_df = pd.DataFrame(cond_rows)
     conn_df = pd.DataFrame(conn_rows)
+
+    # --- Run-level QC: IsolationForest + rule flags ---
+    qc_cols = [
+        c
+        for c in [
+            "tsnr",
+            "spectral_flatness",
+            "spectral_entropy",
+            "band_snr_high",
+            "ts_spike_frac",
+            "power_high",
+            "spectral_centroid",
+            "total_power",
+        ]
+        if c in feat_df.columns
+    ]
+    if len(feat_df) and qc_cols:
+        from sklearn.ensemble import IsolationForest
+        from sklearn.preprocessing import StandardScaler
+
+        Xq = feat_df[qc_cols].apply(pd.to_numeric, errors="coerce")
+        Xq = Xq.fillna(Xq.median(numeric_only=True))
+        Xs = StandardScaler().fit_transform(Xq.values)
+        cont = min(0.2, max(0.05, 2.0 / max(len(feat_df), 1)))
+        iso = IsolationForest(
+            n_estimators=200, contamination=cont, random_state=42
+        )
+        pred = iso.fit_predict(Xs)  # -1 outlier
+        feat_df["qc_iforest"] = pred
+        feat_df["qc_outlier"] = (pred == -1).astype(int)
+        # Rule-based flags (conservative thresholds for z-scored mean BOLD pipelines)
+        feat_df["qc_low_tsnr"] = (
+            feat_df["tsnr"] < feat_df["tsnr"].median() - feat_df["tsnr"].std()
+        ).astype(int) if "tsnr" in feat_df else 0
+        feat_df["qc_high_flatness"] = (
+            feat_df["spectral_flatness"]
+            > feat_df["spectral_flatness"].quantile(0.9)
+        ).astype(int) if "spectral_flatness" in feat_df else 0
+        feat_df["qc_high_spike"] = (
+            feat_df["ts_spike_frac"] > 0.15
+        ).astype(int) if "ts_spike_frac" in feat_df else 0
+        feat_df["qc_flag_any"] = (
+            (feat_df["qc_outlier"] == 1)
+            | (feat_df.get("qc_low_tsnr", 0) == 1)
+            | (feat_df.get("qc_high_flatness", 0) == 1)
+            | (feat_df.get("qc_high_spike", 0) == 1)
+        ).astype(int)
+        qc_df = feat_df[
+            [
+                c
+                for c in [
+                    "subject",
+                    "group",
+                    "task",
+                    "run",
+                    "tsnr",
+                    "spectral_flatness",
+                    "spectral_entropy",
+                    "band_snr_high",
+                    "ts_spike_frac",
+                    "qc_outlier",
+                    "qc_low_tsnr",
+                    "qc_high_flatness",
+                    "qc_high_spike",
+                    "qc_flag_any",
+                ]
+                if c in feat_df.columns
+            ]
+        ].copy()
+        qc_df.to_csv(OUT / "run_qc.csv", index=False)
+        print(
+            "QC outliers (IsolationForest):",
+            int(feat_df["qc_outlier"].sum()),
+            "/",
+            len(feat_df),
+        )
+    else:
+        qc_df = pd.DataFrame()
+
     ts_df.to_csv(OUT / "bold_timeseries.csv", index=False)
     feat_df.to_csv(OUT / "spectral_features.csv", index=False)
     cond_df.to_csv(OUT / "condition_features.csv", index=False)
@@ -506,6 +640,7 @@ def main() -> None:
         ),
         "subject_features": subj_df.to_dict(orient="records"),
         "spatial_connectivity": conn_df.to_dict(orient="records"),
+        "run_qc": qc_df.to_dict(orient="records") if len(qc_df) else [],
         "psd_examples": {},
         "peri_examples": {},
         "timeseries_examples": {},

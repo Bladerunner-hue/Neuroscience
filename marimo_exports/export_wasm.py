@@ -39,6 +39,7 @@ DOCS_WASM = DOCS_DIR / "wasm"
 
 # WASM book chapters (TF trains offline; 05 shows precomputed results only)
 CANDIDATES = [
+    "00_qc_dashboard.py",
     "01_pre_flight.py",
     "02_eda_univariate.py",
     "03_eda_multivariate.py",

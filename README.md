@@ -6,6 +6,7 @@ Interactive methods book on emotional music processing in MDD: **real BOLD** fea
 
 | Notebook | Chapter | GitHub Pages |
 |----------|---------|--------------|
+| `00_qc_dashboard.py` | 0 · QC Dashboard | ✅ WASM |
 | `01_pre_flight.py` | I · Cohort & Design | ✅ WASM |
 | `02_eda_univariate.py` | II · Spectral Power | ✅ WASM |
 | `03_eda_multivariate.py` | III · Algorithm Lab | ✅ WASM |

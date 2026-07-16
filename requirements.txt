@@ -2,6 +2,7 @@
 marimo[recommended]>=0.10
 numpy
 pandas
+polars
 scipy
 scikit-learn
 matplotlib

@@ -34,7 +34,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install "marimo[recommended]" numpy pandas scipy matplotlib plotly scikit-learn seaborn
+          pip install "marimo[recommended]" numpy pandas polars scipy matplotlib plotly scikit-learn seaborn
 
       - name: Export notebooks to WASM book chapters
         run: |
@@ -45,9 +45,11 @@ jobs:
           echo "=== docs/wasm ==="
           find docs/wasm -name index.html -print
           # Require public book chapters
-          for ch in 01_pre_flight 02_eda_univariate 03_eda_multivariate 04_feature_engineering 05_tf_results; do
+          for ch in 00_qc_dashboard 01_pre_flight 02_eda_univariate 03_eda_multivariate 04_feature_engineering 05_tf_results; do
             test -f "docs/wasm/$ch/index.html" || { echo "Missing docs/wasm/$ch/index.html"; exit 1; }
           done
+          # polars for QC chapter (WASM micropip)
+          # (declared in 00_qc_dashboard.py PEP 723 deps)
           # Guard: never ship JSON-as-Python book_data (true/false NameError)
           if grep -q 'BOOK_BUNDLE = {' docs/wasm/01_pre_flight/index.html 2>/dev/null; then
             echo "FATAL: old BOOK_BUNDLE dict embed detected in WASM HTML"
