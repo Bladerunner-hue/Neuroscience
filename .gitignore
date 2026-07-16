@@ -6,12 +6,15 @@ __pycache__/
 .mypy_cache/
 .ruff_cache/
 
-# Data (large NIfTI stay local; processed tables are committed for the book)
-data/raw/
+# Data: large NIfTI stay local; processed tables are committed for the book
 data/*
 !data/processed/
 !data/processed/**
 !data/.gitkeep
+# Allow a short local-data note under data/raw/ (not the BIDS tree)
+!data/raw/
+data/raw/**
+!data/raw/README.md
 *.nii.gz
 
 # ML / notebooks clutter
@@ -25,8 +28,12 @@ notebooks/html/
 .idea/
 
 # marimo runtime (sessions are regenerated; keep folder via export)
+marimo_notebooks/__marimo__/
 marimo_notebooks/__pycache__/
 
 # Optional: uncomment to stop tracking huge WASM assets and rely on CI only
 # docs/wasm/
 # marimo_exports/wasm/
+
+# Continue local stubs
+.continue/mcpServers/
