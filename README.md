@@ -10,7 +10,8 @@ Interactive methods book on emotional music processing in MDD: **real BOLD** fea
 | `02_eda_univariate.py` | II · Spectral Power | ✅ WASM |
 | `03_eda_multivariate.py` | III · Algorithm Lab | ✅ WASM |
 | `04_feature_engineering.py` | IV · Features & Music Effects | ✅ WASM |
-| `06_tf_spectrogram_model.py` | V · TensorFlow Neural Nets | ❌ **local only** (TF + GPU) |
+| `05_tf_results.py` | V · Neural Net Results | ✅ WASM (precomputed; **no TF in browser**) |
+| `06_tf_spectrogram_model.py` | V-local · Train TensorFlow | ❌ local retrain only |
 | `helpers.py` / `book_data.py` | Shared loaders + embedded tables | — |
 
 **Legacy code** (old Jupyter steps, `src/neuro`, one-off generators) lives under `archives/` and is **not** used by the active book.
@@ -35,11 +36,12 @@ python scripts/gen_book_data.py           # usually already called by prepare
 export PYTHONPATH=marimo_notebooks
 marimo edit marimo_notebooks/03_eda_multivariate.py
 
-# Local TensorFlow / neural nets (real spectrograms + MLPs)
-marimo edit marimo_notebooks/06_tf_spectrogram_model.py
-# or: python marimo_notebooks/06_tf_spectrogram_model.py
+# TensorFlow offline (trains locally → JSON for public Ch V)
+python scripts/run_tf_offline.py
+# optional interactive retrain:
+# marimo edit marimo_notebooks/06_tf_spectrogram_model.py
 
-# Publish WASM book
+# Publish WASM book (patches auto_instantiate=true for Pages)
 python marimo_exports/export_wasm.py --sync-docs
 python marimo_exports/serve.py   # http://127.0.0.1:8765/
 ```

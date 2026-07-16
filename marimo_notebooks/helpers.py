@@ -41,12 +41,13 @@ BOOK_CHAPTERS: list[tuple[str, str, str]] = [
     ("02_eda_univariate", "II · Spectral Power", "Welch PSD as a window onto rhythmic BOLD energy."),
     ("03_eda_multivariate", "III · Algorithm Lab", "Bake-off, best model, confusion, explainability, RecSys."),
     ("04_feature_engineering", "IV · Features & Music Effects", "Inventory, harmonization, spatial proxies, PCA."),
+    ("05_tf_results", "V · Neural Net Results", "Precomputed TensorFlow CNN/MLP metrics (trained offline)."),
 ]
 BOOK_LOCAL_ONLY = [
     (
         "06_tf_spectrogram_model",
-        "V · TensorFlow Neural Nets (local)",
-        "STFT CNN + MLP on real BOLD/features — GPU optional, not on WASM Pages.",
+        "V-local · Train TensorFlow",
+        "Retrain STFT CNN + MLPs locally (optional); results ship via 05.",
     ),
 ]
 
@@ -287,6 +288,15 @@ def load_ml_bakeoff() -> dict:
         return json.loads((proc / "ml_bakeoff.json").read_text())
     bundle = load_book_bundle()
     return bundle.get("ml_bakeoff") or {}
+
+
+def load_tf_results() -> dict:
+    """Precomputed TensorFlow offline train results (no TF needed to load)."""
+    proc = _find_processed()
+    if proc and (proc / "tf_results.json").exists():
+        return json.loads((proc / "tf_results.json").read_text())
+    bundle = load_book_bundle()
+    return bundle.get("tf_results") or {}
 
 
 def data_dictionary_md() -> str:

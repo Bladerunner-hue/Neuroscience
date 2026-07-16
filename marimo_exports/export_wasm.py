@@ -37,12 +37,13 @@ EXPORT_DIR = ROOT / "marimo_exports" / "wasm"
 DOCS_DIR = ROOT / "docs"
 DOCS_WASM = DOCS_DIR / "wasm"
 
-# WASM book chapters only (no TensorFlow — TF is local GPU notebook 06)
+# WASM book chapters (TF trains offline; 05 shows precomputed results only)
 CANDIDATES = [
     "01_pre_flight.py",
     "02_eda_univariate.py",
     "03_eda_multivariate.py",
     "04_feature_engineering.py",
+    "05_tf_results.py",  # precomputed TF/NN page — no tensorflow package in browser
 ]
 
 
@@ -165,6 +166,15 @@ def export_one(notebook: Path, mode: str, tmp_dir: Path) -> bool:
     if BOOK_DATA.exists() and "book_data" not in html:
         print("   ❌ book_data module missing from export")
         return False
+
+    # marimo 0.23 html-wasm embeds auto_instantiate=false → blank Pages until Run.
+    patched = html.replace('"auto_instantiate": false', '"auto_instantiate": true')
+    patched = patched.replace('"show_tracebacks": false', '"show_tracebacks": true')
+    if patched != html:
+        index.write_text(patched, encoding="utf-8")
+        print("   ↺ patched auto_instantiate=true, show_tracebacks=true")
+    elif mode == "run" and '"auto_instantiate": true' not in patched:
+        print("   ⚠️  could not force auto_instantiate=true")
 
     (out_dir / ".nojekyll").touch(exist_ok=True)
     for junk in ("CLAUDE.md",):
