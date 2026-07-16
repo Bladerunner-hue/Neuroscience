@@ -39,8 +39,8 @@ PROCESSED_DIR = Path("data/processed")
 BOOK_CHAPTERS: list[tuple[str, str, str]] = [
     ("01_pre_flight", "I · Cohort & Design", "Who was studied, what was heard, and how BOLD meets music."),
     ("02_eda_univariate", "II · Spectral Power", "Welch PSD as a window onto rhythmic BOLD energy."),
-    ("03_eda_multivariate", "III · Multivariate & ML", "Coherence, logistic/RF, confusion matrices, explainability."),
-    ("04_feature_engineering", "IV · Features & Music Effects", "Inventory, harmonization, trial-type maps, PCA."),
+    ("03_eda_multivariate", "III · Algorithm Lab", "Bake-off, best model, confusion, explainability, RecSys."),
+    ("04_feature_engineering", "IV · Features & Music Effects", "Inventory, harmonization, spatial proxies, PCA."),
 ]
 BOOK_LOCAL_ONLY = [
     ("06_tf_spectrogram_model", "V · Deep Spectrograms (local TF)", "ConvNets on STFT — GPU optional."),
@@ -265,6 +265,26 @@ def load_subject_features() -> pd.DataFrame:
     return pd.DataFrame()
 
 
+def load_spatial_connectivity() -> pd.DataFrame:
+    """Anterior–posterior / L–R / S–I band coherence (pseudo-ROI seeds)."""
+    proc = _find_processed()
+    if proc and (proc / "spatial_connectivity.csv").exists():
+        return pd.read_csv(proc / "spatial_connectivity.csv")
+    bundle = load_book_bundle()
+    if bundle.get("spatial_connectivity"):
+        return pd.DataFrame(bundle["spatial_connectivity"])
+    return pd.DataFrame()
+
+
+def load_ml_bakeoff() -> dict:
+    """Precomputed LOOCV algorithm bake-off (winners, CMs, importances)."""
+    proc = _find_processed()
+    if proc and (proc / "ml_bakeoff.json").exists():
+        return json.loads((proc / "ml_bakeoff.json").read_text())
+    bundle = load_book_bundle()
+    return bundle.get("ml_bakeoff") or {}
+
+
 def data_dictionary_md() -> str:
     return """
 ### What each stimulus is (ds000171 events)
@@ -297,6 +317,7 @@ def data_provenance_md() -> str:
 | **Full cohort (metadata)** | **{n_full}** participants |
 | **Subjects with BOLD in this book** | **{n_subj}** |
 | **BOLD runs processed** | **{n_runs}** |
+| **Spatial proxies** | Anterior/posterior, L/R, S/I slabs + A–P coherence |
 | **Feature store** | `data/processed/` · WASM embed `book_data.py` |
 | **Source** | `{src}` |
 

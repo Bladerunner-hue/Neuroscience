@@ -118,19 +118,19 @@ def _(
                 "layer": "BOLD runs processed",
                 "n": len(runs),
                 "grain": "run (task×subject)",
-                "used_for": "Run-level Welch PSD",
+                "used_for": "Welch PSD + spatial pseudo-ROI high-band + A–P coherence",
             },
             {
                 "layer": "Trial-type epochs",
                 "n": len(cond),
                 "grain": "trial_type within run",
-                "used_for": "Music valence / domain effects",
+                "used_for": "Music valence / domain effects + anterior means",
             },
             {
                 "layer": "Subject feature rows",
                 "n": len(subj),
                 "grain": "subject",
-                "used_for": "ML, contrasts, responder scores",
+                "used_for": "ML bake-off, contrasts, RecSys responder scores",
             },
         ]
     )
@@ -362,6 +362,9 @@ def _(CONTROL_COLOR, MDD_COLOR, key_insight_card, mo, np, pd, plt, subj):
                 "music_vs_nonmusic_bold",
                 "pos_music_vs_pos_nonmusic_bold",
                 "pos_music_vs_tones_power_high",
+                "pos_music_vs_tones_anterior",
+                "responder_score",
+                "coh_ant_post_mean",
             ]
             if c in subj.columns
         ]
@@ -478,14 +481,17 @@ def _(book_nav, clinical_relevance_card, mo):
 
 ```text
 OpenNeuro ds000171 NIfTI + events.tsv
-    → whole-brain mean BOLD (z per run)
-    → run-level Welch PSD  (power_low/mid/high, centroid)
-    → trial-type epochs    (positive_music, negative_music, tones, …)
-    → subject contrasts    (pos_music − tones, music − nonmusic, …)
-    → StandardScaler + PCA / ML (next chapters)
+    → global + spatial slab BOLD (A/P, L/R, S/I; z per run)
+    → run Welch PSD + A–P / L–R seed-style coherence
+    → trial-type epochs (pos/neg music, tones, nonmusic; response excluded)
+    → subject contrasts + responder_score R
+    → StandardScaler + PCA
+    → Chapter III algorithm bake-off → best model + RecSys priors
 ```
 
-**Harmonization:** within-run z-scoring; age/sex reported; feature scaling for models; task never collapsed blindly.
+**Harmonization:** within-run z-scoring; age/sex reported; feature scaling; collinearity prune in ML; task never collapsed blindly.
+
+**Primary RecSys contrast:** positive music − tones (global + anterior).
 """
             ),
             mo.md(

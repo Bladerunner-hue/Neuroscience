@@ -376,8 +376,9 @@ def _(book_nav, clinical_relevance_card, mo):
 
 1. **Always stratify by task and trial_type** — “music” is not one thing.  
 2. **Positive vs negative music** can diverge in mean BOLD and peak shape.  
-3. **Tones** are the within-subject baseline for music effects.  
-4. Small BOLD subset ⇒ effect sizes are **directional evidence** for the book narrative; Chapter III adds multivariate ML with confusion matrices.
+3. **Tones** are the within-subject baseline for music effects (`pos music − tones`).  
+4. Peri-stimulus waveforms show **when** engagement peaks after onset.  
+5. Expanded BOLD subset + Chapter III **algorithm bake-off** turn these univariate maps into ranked, explainable models for RecSys priors.
 """
             ),
             mo.md(

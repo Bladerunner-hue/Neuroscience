@@ -4,12 +4,17 @@
 Produces:
   data/processed/participants_clean.csv
   data/processed/events_summary.csv
-  data/processed/bold_timeseries.csv
-  data/processed/spectral_features.csv      # run-level Welch
-  data/processed/condition_features.csv     # trial-type / music-valence effects
-  data/processed/subject_features.csv       # subject-level aggregated for ML
+  data/processed/bold_timeseries.csv       # global + spatial slab means
+  data/processed/spectral_features.csv     # run-level Welch + spatial
+  data/processed/condition_features.csv    # trial-type / music-valence effects
+  data/processed/subject_features.csv      # subject-level for ML
+  data/processed/spatial_connectivity.csv  # A–P / L–R coherence proxies
   data/processed/book_bundle.json
   + regenerates marimo_notebooks/book_data.py if gen script available
+
+Spatial note: without an atlas in the public book pipeline we define *pseudo-ROIs*
+from the native grid (anterior/posterior, left/right, superior/inferior brain mask
+by signal variance). This restores coarse spatial specificity that whole-brain means lose.
 
 Run:  python scripts/prepare_real_features.py
 """
@@ -21,6 +26,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 from scipy import signal
+from scipy.signal import coherence as msc_coherence
 
 ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "data" / "raw" / "ds000171"
@@ -28,7 +34,6 @@ OUT = ROOT / "data" / "processed"
 OUT.mkdir(parents=True, exist_ok=True)
 TR = 3.0
 
-# Canonical stimulus families in this paradigm
 STIM_MAP = {
     "positive_music": {"valence": "positive", "domain": "music", "label": "Positive music"},
     "negative_music": {"valence": "negative", "domain": "music", "label": "Negative music"},
@@ -37,11 +42,18 @@ STIM_MAP = {
     "tones": {"valence": "neutral", "domain": "tones", "label": "Tones"},
 }
 
+SPATIAL_KEYS = ("global", "anterior", "posterior", "left", "right", "superior", "inferior")
+
 
 def trapz(y, x):
     if hasattr(np, "trapezoid"):
         return float(np.trapezoid(y, x))
     return float(np.trapz(y, x))
+
+
+def zscore(ts: np.ndarray) -> np.ndarray:
+    ts = np.asarray(ts, dtype=np.float64)
+    return ((ts - ts.mean()) / (ts.std() + 1e-8)).astype(np.float64)
 
 
 def load_participants() -> pd.DataFrame:
@@ -52,7 +64,6 @@ def load_participants() -> pd.DataFrame:
             "Never-Depressed Control": "Control",
         }
     )
-    # harmonization helpers
     df["age_z"] = (df["age"] - df["age"].mean()) / (df["age"].std() + 1e-8)
     df["sex_m"] = (df["sex"].astype(str).str.upper() == "M").astype(int)
     return df
@@ -65,29 +76,58 @@ def inventory_events() -> pd.DataFrame:
         sub, task, run = parts[0], parts[1].replace("task-", ""), int(parts[2].replace("run-", ""))
         edf = pd.read_csv(ev, sep="\t")
         types = edf["trial_type"].astype(str)
-        row = {
-            "subject": sub,
-            "task": task,
-            "run": run,
-            "n_events": len(edf),
-            "trial_types": ",".join(sorted(types.unique())),
-            "n_positive_music": int((types == "positive_music").sum()),
-            "n_negative_music": int((types == "negative_music").sum()),
-            "n_positive_nonmusic": int((types == "positive_nonmusic").sum()),
-            "n_negative_nonmusic": int((types == "negative_nonmusic").sum()),
-            "n_tones": int((types == "tones").sum()),
-        }
-        rows.append(row)
+        rows.append(
+            {
+                "subject": sub,
+                "task": task,
+                "run": run,
+                "n_events": len(edf),
+                "trial_types": ",".join(sorted(types.unique())),
+                "n_positive_music": int((types == "positive_music").sum()),
+                "n_negative_music": int((types == "negative_music").sum()),
+                "n_positive_nonmusic": int((types == "positive_nonmusic").sum()),
+                "n_negative_nonmusic": int((types == "negative_nonmusic").sum()),
+                "n_tones": int((types == "tones").sum()),
+                "n_response": int((types == "response").sum()),
+                "has_bold": (ev.with_name(ev.name.replace("_events.tsv", "_bold.nii.gz"))).exists(),
+            }
+        )
     return pd.DataFrame(rows)
 
 
-def extract_mean_bold(path: Path) -> np.ndarray:
+def extract_spatial_bold(path: Path) -> dict[str, np.ndarray]:
+    """Global + 6 slab pseudo-ROIs from native grid (brain mask = high temporal variance)."""
     import nibabel as nib
 
     img = nib.load(str(path))
-    data = img.get_fdata(dtype=np.float32)
-    ts = data.mean(axis=(0, 1, 2))
-    return ((ts - ts.mean()) / (ts.std() + 1e-8)).astype(np.float64)
+    data = img.get_fdata(dtype=np.float32)  # X,Y,Z,T
+    if data.ndim != 4:
+        raise ValueError(f"Expected 4D BOLD, got shape {data.shape}")
+    nx, ny, nz, nt = data.shape
+    # brain-ish mask: voxels with temporal std above 20th pct of positive stds
+    vstd = data.std(axis=3)
+    pos = vstd[vstd > 0]
+    thr = float(np.percentile(pos, 20)) if pos.size else 0.0
+    mask = vstd > thr
+    if not np.any(mask):
+        mask = np.ones((nx, ny, nz), dtype=bool)
+
+    def mean_ts(m: np.ndarray) -> np.ndarray:
+        if not np.any(m):
+            return zscore(data.mean(axis=(0, 1, 2)))
+        return zscore(data[m].mean(axis=0))
+
+    mx, my, mz = nx // 2, ny // 2, nz // 2
+    out = {
+        "global": mean_ts(mask),
+        "left": mean_ts(mask & (np.arange(nx)[:, None, None] < mx)),
+        "right": mean_ts(mask & (np.arange(nx)[:, None, None] >= mx)),
+        "posterior": mean_ts(mask & (np.arange(ny)[None, :, None] < my)),
+        "anterior": mean_ts(mask & (np.arange(ny)[None, :, None] >= my)),
+        "inferior": mean_ts(mask & (np.arange(nz)[None, None, :] < mz)),
+        "superior": mean_ts(mask & (np.arange(nz)[None, None, :] >= mz)),
+    }
+    return out
 
 
 def spectral_feats(ts: np.ndarray, tr: float = TR) -> dict:
@@ -111,6 +151,20 @@ def spectral_feats(ts: np.ndarray, tr: float = TR) -> dict:
     return out
 
 
+def band_coherence(x: np.ndarray, y: np.ndarray, tr: float = TR, lo=0.03, hi=0.10) -> float:
+    """Integrated magnitude-squared coherence in [lo, hi] Hz."""
+    n = min(len(x), len(y))
+    if n < 16:
+        return float("nan")
+    x, y = x[:n], y[:n]
+    nper = min(28, max(8, n // 2))
+    f, cxy = msc_coherence(x, y, fs=1.0 / tr, nperseg=nper)
+    m = (f > lo) & (f < hi)
+    if not np.any(m):
+        return float("nan")
+    return trapz(cxy[m], f[m])
+
+
 def segment_mean(ts: np.ndarray, onset: float, duration: float, tr: float = TR) -> np.ndarray:
     i0 = max(0, int(round(onset / tr)))
     i1 = min(len(ts), int(round((onset + duration) / tr)))
@@ -120,7 +174,7 @@ def segment_mean(ts: np.ndarray, onset: float, duration: float, tr: float = TR) 
 
 
 def condition_metrics(ts: np.ndarray, events_path: Path) -> list[dict]:
-    """Per trial-type summary within one run."""
+    """Per trial-type summary within one run (response events excluded)."""
     if not events_path.exists():
         return []
     edf = pd.read_csv(events_path, sep="\t")
@@ -128,7 +182,7 @@ def condition_metrics(ts: np.ndarray, events_path: Path) -> list[dict]:
     for trial, g in edf.groupby("trial_type"):
         trial = str(trial)
         if trial == "response":
-            continue
+            continue  # task button-press windows — excluded by design from spectral epochs
         segs = []
         for _, r in g.iterrows():
             seg = segment_mean(ts, float(r["onset"]), float(r.get("duration", 31.5)))
@@ -137,26 +191,26 @@ def condition_metrics(ts: np.ndarray, events_path: Path) -> list[dict]:
         if not segs:
             continue
         cat = np.concatenate(segs)
-        meta = STIM_MAP.get(
-            trial,
-            {"valence": "other", "domain": "other", "label": trial},
-        )
-        # peak within mean peri-stimulus (align by resampling to same length)
+        meta = STIM_MAP.get(trial, {"valence": "other", "domain": "other", "label": trial})
         L = int(np.median([len(s) for s in segs]))
         stacked = np.stack(
             [np.interp(np.linspace(0, 1, L), np.linspace(0, 1, len(s)), s) for s in segs]
         )
         mean_seg = stacked.mean(axis=0)
         peak_i = int(np.argmax(mean_seg))
-        sp = spectral_feats(cat) if len(cat) >= 16 else {
-            "power_low": np.nan,
-            "power_mid": np.nan,
-            "power_high": np.nan,
-            "spectral_centroid": np.nan,
-            "total_power": np.nan,
-            "psd_f": [],
-            "psd_pxx": [],
-        }
+        sp = (
+            spectral_feats(cat)
+            if len(cat) >= 16
+            else {
+                "power_low": np.nan,
+                "power_mid": np.nan,
+                "power_high": np.nan,
+                "spectral_centroid": np.nan,
+                "total_power": np.nan,
+                "psd_f": [],
+                "psd_pxx": [],
+            }
+        )
         rows.append(
             {
                 "trial_type": trial,
@@ -185,11 +239,12 @@ def main() -> None:
 
     events = inventory_events()
     events.to_csv(OUT / "events_summary.csv", index=False)
-    print("event files:", len(events))
+    print("event files:", len(events), "with BOLD:", int(events["has_bold"].sum()) if "has_bold" in events else "?")
 
     ts_rows: list[dict] = []
     feat_rows: list[dict] = []
     cond_rows: list[dict] = []
+    conn_rows: list[dict] = []
 
     bold_files = sorted(DATA.glob("sub-*/func/*_bold.nii.gz"))
     print("BOLD files:", len(bold_files))
@@ -208,23 +263,53 @@ def main() -> None:
         sex_v = str(sex.iloc[0]) if len(sex) else ""
         print(f"  {bold.relative_to(DATA)}")
 
-        ts = extract_mean_bold(bold)
+        spatial = extract_spatial_bold(bold)
+        ts = spatial["global"]
+
         for t_i, val in enumerate(ts):
-            ts_rows.append(
-                {
-                    "subject": sub,
-                    "group": group,
-                    "task": task,
-                    "run": run,
-                    "volume": t_i,
-                    "time": t_i * TR,
-                    "bold_z": float(val),
-                }
-            )
+            row_ts = {
+                "subject": sub,
+                "group": group,
+                "task": task,
+                "run": run,
+                "volume": t_i,
+                "time": t_i * TR,
+                "bold_z": float(val),
+            }
+            for k in SPATIAL_KEYS:
+                if k == "global":
+                    continue
+                if t_i < len(spatial[k]):
+                    row_ts[f"bold_{k}"] = float(spatial[k][t_i])
+            ts_rows.append(row_ts)
 
         sp = spectral_feats(ts)
+        # spatial spectral summary (high-band only, compact)
+        spat_pow = {}
+        for k in SPATIAL_KEYS:
+            if k == "global":
+                continue
+            sk = spectral_feats(spatial[k])
+            spat_pow[f"power_high_{k}"] = sk["power_high"]
+            spat_pow[f"centroid_{k}"] = sk["spectral_centroid"]
+
+        # seed-based-style coupling: anterior–posterior and left–right MSC
+        coh_ap = band_coherence(spatial["anterior"], spatial["posterior"])
+        coh_lr = band_coherence(spatial["left"], spatial["right"])
+        coh_si = band_coherence(spatial["superior"], spatial["inferior"])
+        conn_rows.append(
+            {
+                "subject": sub,
+                "group": group,
+                "task": task,
+                "run": run,
+                "coh_ant_post": coh_ap,
+                "coh_left_right": coh_lr,
+                "coh_sup_inf": coh_si,
+            }
+        )
+
         ev_path = bold.with_name(bold.name.replace("_bold.nii.gz", "_events.tsv"))
-        # run-level peak on any music-like onset
         peak_lat, peak_amp = np.nan, np.nan
         if ev_path.exists():
             edf = pd.read_csv(ev_path, sep="\t")
@@ -245,6 +330,10 @@ def main() -> None:
                 peak_i = int(np.argmax(mean_seg))
                 peak_lat, peak_amp = float(peak_i * TR), float(mean_seg[peak_i])
 
+        # anterior vs posterior mean during music-like epochs (spatial effect)
+        ant_mean = float(spatial["anterior"].mean())
+        post_mean = float(spatial["posterior"].mean())
+
         feat_rows.append(
             {
                 "subject": sub,
@@ -261,12 +350,29 @@ def main() -> None:
                 "total_power": sp["total_power"],
                 "peak_latency_s": peak_lat,
                 "peak_amp": peak_amp,
+                "coh_ant_post": coh_ap,
+                "coh_left_right": coh_lr,
+                "coh_sup_inf": coh_si,
+                "ant_minus_post_mean": ant_mean - post_mean,
+                "left_minus_right_mean": float(spatial["left"].mean() - spatial["right"].mean()),
+                **spat_pow,
                 "psd_f": json.dumps(sp["psd_f"]),
                 "psd_pxx": json.dumps(sp["psd_pxx"]),
             }
         )
 
         for cm in condition_metrics(ts, ev_path):
+            # also condition means on anterior slab (reward-relevant anterior bias proxy)
+            ant_segs = []
+            if ev_path.exists():
+                edf2 = pd.read_csv(ev_path, sep="\t")
+                for _, r in edf2[edf2["trial_type"].astype(str) == cm["trial_type"]].iterrows():
+                    seg = segment_mean(
+                        spatial["anterior"], float(r["onset"]), float(r.get("duration", 31.5))
+                    )
+                    if len(seg) >= 4:
+                        ant_segs.append(seg)
+            ant_mean_c = float(np.concatenate(ant_segs).mean()) if ant_segs else np.nan
             cond_rows.append(
                 {
                     "subject": sub,
@@ -276,6 +382,7 @@ def main() -> None:
                     "task": task,
                     "run": run,
                     **{k: v for k, v in cm.items() if k != "peri_stim"},
+                    "anterior_mean_bold": ant_mean_c,
                     "peri_stim": json.dumps(cm["peri_stim"]),
                 }
             )
@@ -283,11 +390,13 @@ def main() -> None:
     ts_df = pd.DataFrame(ts_rows)
     feat_df = pd.DataFrame(feat_rows)
     cond_df = pd.DataFrame(cond_rows)
+    conn_df = pd.DataFrame(conn_rows)
     ts_df.to_csv(OUT / "bold_timeseries.csv", index=False)
     feat_df.to_csv(OUT / "spectral_features.csv", index=False)
     cond_df.to_csv(OUT / "condition_features.csv", index=False)
+    conn_df.to_csv(OUT / "spatial_connectivity.csv", index=False)
 
-    # Subject-level wide features for ML (music contrast effects)
+    # Subject-level wide features for ML
     subj_rows = []
     for sub, g in cond_df.groupby("subject"):
         row = {
@@ -303,10 +412,12 @@ def main() -> None:
                 row[f"{trial}_peak_amp"] = float(subg["peak_amp"].mean())
                 row[f"{trial}_power_high"] = float(subg["power_high"].mean())
                 row[f"{trial}_centroid"] = float(subg["spectral_centroid"].mean())
+                if "anterior_mean_bold" in subg.columns:
+                    row[f"{trial}_anterior"] = float(subg["anterior_mean_bold"].mean())
             else:
-                for sfx in ("mean_bold", "peak_amp", "power_high", "centroid"):
+                for sfx in ("mean_bold", "peak_amp", "power_high", "centroid", "anterior"):
                     row[f"{trial}_{sfx}"] = np.nan
-        # contrasts: what music does relative to tones / nonmusic
+
         def _c(a, b):
             if a in row and b in row and pd.notna(row[a]) and pd.notna(row[b]):
                 return float(row[a] - row[b])
@@ -322,6 +433,9 @@ def main() -> None:
         )
         row["pos_music_vs_tones_power_high"] = _c(
             "positive_music_power_high", "tones_power_high"
+        )
+        row["pos_music_vs_tones_anterior"] = _c(
+            "positive_music_anterior", "tones_anterior"
         )
         row["music_domain_mean_bold"] = np.nanmean(
             [
@@ -341,24 +455,47 @@ def main() -> None:
             and pd.notna(row["nonmusic_domain_mean_bold"])
             else np.nan
         )
-        # run-level spectral means
+        # RecSys-style responder score (primary clinical contrast)
+        row["responder_score"] = np.nanmean(
+            [
+                row.get("pos_music_vs_tones_bold", np.nan),
+                row.get("music_vs_nonmusic_bold", np.nan),
+                row.get("pos_music_vs_tones_anterior", np.nan),
+            ]
+        )
         sf = feat_df[feat_df.subject == sub]
         if len(sf):
             row["run_power_high_mean"] = float(sf["power_high"].mean())
             row["run_centroid_mean"] = float(sf["spectral_centroid"].mean())
+            row["coh_ant_post_mean"] = float(sf["coh_ant_post"].mean())
+            row["coh_left_right_mean"] = float(sf["coh_left_right"].mean())
+            row["ant_minus_post_mean"] = float(sf["ant_minus_post_mean"].mean())
+            # music-task minus nonmusic-task spectral
+            sm = sf[sf.task == "music"]
+            sn = sf[sf.task == "nonmusic"]
+            if len(sm) and len(sn):
+                row["music_task_vs_nonmusic_power_high"] = float(
+                    sm["power_high"].mean() - sn["power_high"].mean()
+                )
+                row["music_task_vs_nonmusic_coh_ap"] = float(
+                    sm["coh_ant_post"].mean() - sn["coh_ant_post"].mean()
+                )
+            else:
+                row["music_task_vs_nonmusic_power_high"] = np.nan
+                row["music_task_vs_nonmusic_coh_ap"] = np.nan
         subj_rows.append(row)
 
     subj_df = pd.DataFrame(subj_rows)
     subj_df.to_csv(OUT / "subject_features.csv", index=False)
 
-    # Bundle for WASM
     bundle = {
-        "source": "OpenNeuro ds000171 — real BOLD subset, trial-type aware features",
+        "source": "OpenNeuro ds000171 — expanded BOLD + spatial pseudo-ROIs + trial-type features",
         "tr_sec": TR,
         "n_participants_full": int(len(parts)),
         "n_bold_runs": int(len(feat_df)),
         "n_subjects_with_bold": int(feat_df["subject"].nunique()) if len(feat_df) else 0,
         "stim_map": STIM_MAP,
+        "spatial_keys": list(SPATIAL_KEYS),
         "participants": parts.to_dict(orient="records"),
         "events_summary": events.to_dict(orient="records"),
         "spectral_features": feat_df.drop(
@@ -368,6 +505,7 @@ def main() -> None:
             orient="records"
         ),
         "subject_features": subj_df.to_dict(orient="records"),
+        "spatial_connectivity": conn_df.to_dict(orient="records"),
         "psd_examples": {},
         "peri_examples": {},
         "timeseries_examples": {},
@@ -408,25 +546,16 @@ def main() -> None:
 
     (OUT / "book_bundle.json").write_text(json.dumps(bundle))
     print("Wrote", OUT)
-    print("\ncondition features sample:")
+    print("subjects with BOLD:", feat_df["subject"].nunique())
+    print("\ncondition mean_bold:")
     print(cond_df.groupby(["group", "trial_type"])["mean_bold"].mean().unstack().round(3))
-    print("\nsubject contrasts:")
-    print(
-        subj_df[
-            [
-                "subject",
-                "group",
-                "pos_music_vs_tones_bold",
-                "pos_music_vs_neg_music_bold",
-                "music_vs_nonmusic_bold",
-            ]
-        ].round(3)
-    )
+    print("\nresponder scores:")
+    print(subj_df[["subject", "group", "responder_score", "pos_music_vs_tones_bold"]].round(3))
 
-    # regenerate embedded book_data
     gen = ROOT / "scripts" / "gen_book_data.py"
     if gen.exists():
-        import subprocess, sys
+        import subprocess
+        import sys
 
         subprocess.check_call([sys.executable, str(gen)], cwd=str(ROOT))
 
