@@ -39,8 +39,8 @@ PROCESSED_DIR = Path("data/processed")
 BOOK_CHAPTERS: list[tuple[str, str, str]] = [
     ("01_pre_flight", "I · Cohort & Design", "Who was studied, what was heard, and how BOLD meets music."),
     ("02_eda_univariate", "II · Spectral Power", "Welch PSD as a window onto rhythmic BOLD energy."),
-    ("03_eda_multivariate", "III · Network Timing", "Auditory–limbic coherence and anhedonia."),
-    ("04_feature_engineering", "IV · Responder Maps", "Fingerprints, clusters, and a path to RecSys."),
+    ("03_eda_multivariate", "III · Multivariate & ML", "Coherence, logistic/RF, confusion matrices, explainability."),
+    ("04_feature_engineering", "IV · Features & Music Effects", "Inventory, harmonization, trial-type maps, PCA."),
 ]
 BOOK_LOCAL_ONLY = [
     ("06_tf_spectrogram_model", "V · Deep Spectrograms (local TF)", "ConvNets on STFT — GPU optional."),
@@ -243,24 +243,64 @@ def load_events_summary() -> pd.DataFrame:
     return pd.DataFrame()
 
 
+def load_condition_features() -> pd.DataFrame:
+    """Trial-type features: positive/negative music, tones, nonmusic."""
+    proc = _find_processed()
+    if proc and (proc / "condition_features.csv").exists():
+        return pd.read_csv(proc / "condition_features.csv")
+    bundle = load_book_bundle()
+    if bundle.get("condition_features"):
+        return pd.DataFrame(bundle["condition_features"])
+    return pd.DataFrame()
+
+
+def load_subject_features() -> pd.DataFrame:
+    """Subject-level wide table with music-effect contrasts for ML."""
+    proc = _find_processed()
+    if proc and (proc / "subject_features.csv").exists():
+        return pd.read_csv(proc / "subject_features.csv")
+    bundle = load_book_bundle()
+    if bundle.get("subject_features"):
+        return pd.DataFrame(bundle["subject_features"])
+    return pd.DataFrame()
+
+
+def data_dictionary_md() -> str:
+    return """
+### What each stimulus is (ds000171 events)
+
+| `trial_type` | Domain | Valence | Meaning in the paradigm |
+|---|---|---|---|
+| `positive_music` | music | positive | Validated emotionally positive musical excerpts |
+| `negative_music` | music | negative | Validated emotionally negative musical excerpts |
+| `positive_nonmusic` | non-music | positive | Non-musical positive auditory material |
+| `negative_nonmusic` | non-music | negative | Non-musical negative auditory material |
+| `tones` | control | neutral | Tone blocks / baseline auditory control |
+| `response` | task | — | Brief response window (excluded from spectra) |
+
+**How we use BOLD:** whole-brain spatial mean → z-score within run → (a) run-level Welch PSD, (b) epoch means locked to each `trial_type`, (c) contrasts such as *positive music − tones* (music effect) and *positive music − negative music* (valence within music).
+"""
+
+
 def data_provenance_md() -> str:
     b = load_book_bundle()
     n_full = b.get("n_participants_full", 0)
     n_runs = b.get("n_bold_runs", 0)
+    n_subj = b.get("n_subjects_with_bold", 0)
     src = b.get("source", "unknown")
     return f"""
 ### Data provenance
 
 | | |
 |---|---|
-| **Dataset** | OpenNeuro [ds000171](https://openneuro.org/datasets/ds000171) — *Neural Processing of Emotional Musical and Nonmusical Stimuli in Depression* (Lepping et al.) |
-| **Full cohort (metadata)** | **{n_full}** participants in `participants.tsv` |
-| **BOLD runs processed for this book** | **{n_runs}** (subset with local NIfTI available) |
-| **Feature store** | `data/processed/` · embedded in WASM via `book_data.py` |
-| **Source string** | `{src}` |
+| **Dataset** | OpenNeuro [ds000171](https://openneuro.org/datasets/ds000171) — Lepping et al. |
+| **Full cohort (metadata)** | **{n_full}** participants |
+| **Subjects with BOLD in this book** | **{n_subj}** |
+| **BOLD runs processed** | **{n_runs}** |
+| **Feature store** | `data/processed/` · WASM embed `book_data.py` |
+| **Source** | `{src}` |
 
-Whole-brain mean BOLD was z-scored per run; spectral features use Welch PSD at TR = 3 s.
-When raw NIfTI is absent (browser), the notebooks read the **same processed tables** that were computed locally from real scans — not random mock series.
+{data_dictionary_md()}
 """
 
 

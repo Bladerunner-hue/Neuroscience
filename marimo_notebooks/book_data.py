@@ -4,283 +4,389 @@ Source: OpenNeuro ds000171 (processed subset). Regenerate via scripts/gen_book_d
 from __future__ import annotations
 
 BOOK_BUNDLE = {
-  "source": "OpenNeuro ds000171 (subset processed locally)",
+  "source": "OpenNeuro ds000171 \u2014 real BOLD subset, trial-type aware features",
   "tr_sec": 3.0,
   "n_participants_full": 39,
   "n_bold_runs": 13,
+  "n_subjects_with_bold": 5,
+  "stim_map": {
+    "positive_music": {
+      "valence": "positive",
+      "domain": "music",
+      "label": "Positive music"
+    },
+    "negative_music": {
+      "valence": "negative",
+      "domain": "music",
+      "label": "Negative music"
+    },
+    "positive_nonmusic": {
+      "valence": "positive",
+      "domain": "nonmusic",
+      "label": "Positive non-music"
+    },
+    "negative_nonmusic": {
+      "valence": "negative",
+      "domain": "nonmusic",
+      "label": "Negative non-music"
+    },
+    "tones": {
+      "valence": "neutral",
+      "domain": "tones",
+      "label": "Tones"
+    }
+  },
   "participants": [
     {
       "participant_id": "sub-control01",
       "sex": "F",
       "age": 19,
       "group": "Never-Depressed Control",
-      "group_short": "Control"
+      "group_short": "Control",
+      "age_z": -0.9933597135434602,
+      "sex_m": 0
     },
     {
       "participant_id": "sub-control02",
       "sex": "M",
       "age": 22,
       "group": "Never-Depressed Control",
-      "group_short": "Control"
+      "group_short": "Control",
+      "age_z": -0.7537244836783368,
+      "sex_m": 1
     },
     {
       "participant_id": "sub-control03",
       "sex": "F",
       "age": 18,
       "group": "Never-Depressed Control",
-      "group_short": "Control"
+      "group_short": "Control",
+      "age_z": -1.0732381234985013,
+      "sex_m": 0
     },
     {
       "participant_id": "sub-control04",
       "sex": "M",
       "age": 19,
       "group": "Never-Depressed Control",
-      "group_short": "Control"
+      "group_short": "Control",
+      "age_z": -0.9933597135434602,
+      "sex_m": 1
     },
     {
       "participant_id": "sub-control05",
       "sex": "M",
       "age": 27,
       "group": "Never-Depressed Control",
-      "group_short": "Control"
+      "group_short": "Control",
+      "age_z": -0.35433243390313107,
+      "sex_m": 1
     },
     {
       "participant_id": "sub-control06",
       "sex": "M",
       "age": 31,
       "group": "Never-Depressed Control",
-      "group_short": "Control"
+      "group_short": "Control",
+      "age_z": -0.03481879408296652,
+      "sex_m": 1
     },
     {
       "participant_id": "sub-control07",
       "sex": "F",
       "age": 31,
       "group": "Never-Depressed Control",
-      "group_short": "Control"
+      "group_short": "Control",
+      "age_z": -0.03481879408296652,
+      "sex_m": 0
     },
     {
       "participant_id": "sub-control08",
       "sex": "M",
       "age": 18,
       "group": "Never-Depressed Control",
-      "group_short": "Control"
+      "group_short": "Control",
+      "age_z": -1.0732381234985013,
+      "sex_m": 1
     },
     {
       "participant_id": "sub-control09",
       "sex": "F",
       "age": 24,
       "group": "Never-Depressed Control",
-      "group_short": "Control"
+      "group_short": "Control",
+      "age_z": -0.5939676637682545,
+      "sex_m": 0
     },
     {
       "participant_id": "sub-control10",
       "sex": "F",
       "age": 23,
       "group": "Never-Depressed Control",
-      "group_short": "Control"
+      "group_short": "Control",
+      "age_z": -0.6738460737232956,
+      "sex_m": 0
     },
     {
       "participant_id": "sub-control11",
       "sex": "F",
       "age": 29,
       "group": "Never-Depressed Control",
-      "group_short": "Control"
+      "group_short": "Control",
+      "age_z": -0.1945756139930488,
+      "sex_m": 0
     },
     {
       "participant_id": "sub-control12",
       "sex": "F",
       "age": 27,
       "group": "Never-Depressed Control",
-      "group_short": "Control"
+      "group_short": "Control",
+      "age_z": -0.35433243390313107,
+      "sex_m": 0
     },
     {
       "participant_id": "sub-control13",
       "sex": "F",
       "age": 22,
       "group": "Never-Depressed Control",
-      "group_short": "Control"
+      "group_short": "Control",
+      "age_z": -0.7537244836783368,
+      "sex_m": 0
     },
     {
       "participant_id": "sub-control14",
       "sex": "M",
       "age": 25,
       "group": "Never-Depressed Control",
-      "group_short": "Control"
+      "group_short": "Control",
+      "age_z": -0.5140892538132134,
+      "sex_m": 1
     },
     {
       "participant_id": "sub-control15",
       "sex": "F",
       "age": 25,
       "group": "Never-Depressed Control",
-      "group_short": "Control"
+      "group_short": "Control",
+      "age_z": -0.5140892538132134,
+      "sex_m": 0
     },
     {
       "participant_id": "sub-control16",
       "sex": "F",
       "age": 37,
       "group": "Never-Depressed Control",
-      "group_short": "Control"
+      "group_short": "Control",
+      "age_z": 0.4444516656472803,
+      "sex_m": 0
     },
     {
       "participant_id": "sub-control17",
       "sex": "M",
       "age": 52,
       "group": "Never-Depressed Control",
-      "group_short": "Control"
+      "group_short": "Control",
+      "age_z": 1.6426278149728974,
+      "sex_m": 1
     },
     {
       "participant_id": "sub-control18",
       "sex": "F",
       "age": 59,
       "group": "Never-Depressed Control",
-      "group_short": "Control"
+      "group_short": "Control",
+      "age_z": 2.2017766846581854,
+      "sex_m": 0
     },
     {
       "participant_id": "sub-control19",
       "sex": "M",
       "age": 39,
       "group": "Never-Depressed Control",
-      "group_short": "Control"
+      "group_short": "Control",
+      "age_z": 0.6042084855573626,
+      "sex_m": 1
     },
     {
       "participant_id": "sub-control20",
       "sex": "M",
       "age": 42,
       "group": "Never-Depressed Control",
-      "group_short": "Control"
+      "group_short": "Control",
+      "age_z": 0.843843715422486,
+      "sex_m": 1
     },
     {
       "participant_id": "sub-mdd01",
       "sex": "F",
       "age": 29,
       "group": "Major Depressive Disorder",
-      "group_short": "MDD"
+      "group_short": "MDD",
+      "age_z": -0.1945756139930488,
+      "sex_m": 0
     },
     {
       "participant_id": "sub-mdd02",
       "sex": "F",
       "age": 19,
       "group": "Major Depressive Disorder",
-      "group_short": "MDD"
+      "group_short": "MDD",
+      "age_z": -0.9933597135434602,
+      "sex_m": 0
     },
     {
       "participant_id": "sub-mdd03",
       "sex": "F",
       "age": 21,
       "group": "Major Depressive Disorder",
-      "group_short": "MDD"
+      "group_short": "MDD",
+      "age_z": -0.8336028936333779,
+      "sex_m": 0
     },
     {
       "participant_id": "sub-mdd04",
       "sex": "M",
       "age": 30,
       "group": "Major Depressive Disorder",
-      "group_short": "MDD"
+      "group_short": "MDD",
+      "age_z": -0.11469720403800766,
+      "sex_m": 1
     },
     {
       "participant_id": "sub-mdd05",
       "sex": "M",
       "age": 19,
       "group": "Major Depressive Disorder",
-      "group_short": "MDD"
+      "group_short": "MDD",
+      "age_z": -0.9933597135434602,
+      "sex_m": 1
     },
     {
       "participant_id": "sub-mdd06",
       "sex": "F",
       "age": 27,
       "group": "Major Depressive Disorder",
-      "group_short": "MDD"
+      "group_short": "MDD",
+      "age_z": -0.35433243390313107,
+      "sex_m": 0
     },
     {
       "participant_id": "sub-mdd07",
       "sex": "F",
       "age": 26,
       "group": "Major Depressive Disorder",
-      "group_short": "MDD"
+      "group_short": "MDD",
+      "age_z": -0.4342108438581722,
+      "sex_m": 0
     },
     {
       "participant_id": "sub-mdd08",
       "sex": "F",
       "age": 24,
       "group": "Major Depressive Disorder",
-      "group_short": "MDD"
+      "group_short": "MDD",
+      "age_z": -0.5939676637682545,
+      "sex_m": 0
     },
     {
       "participant_id": "sub-mdd09",
       "sex": "M",
       "age": 30,
       "group": "Major Depressive Disorder",
-      "group_short": "MDD"
+      "group_short": "MDD",
+      "age_z": -0.11469720403800766,
+      "sex_m": 1
     },
     {
       "participant_id": "sub-mdd10",
       "sex": "F",
       "age": 19,
       "group": "Major Depressive Disorder",
-      "group_short": "MDD"
+      "group_short": "MDD",
+      "age_z": -0.9933597135434602,
+      "sex_m": 0
     },
     {
       "participant_id": "sub-mdd11",
       "sex": "F",
       "age": 18,
       "group": "Major Depressive Disorder",
-      "group_short": "MDD"
+      "group_short": "MDD",
+      "age_z": -1.0732381234985013,
+      "sex_m": 0
     },
     {
       "participant_id": "sub-mdd12",
       "sex": "M",
       "age": 26,
       "group": "Major Depressive Disorder",
-      "group_short": "MDD"
+      "group_short": "MDD",
+      "age_z": -0.4342108438581722,
+      "sex_m": 1
     },
     {
       "participant_id": "sub-mdd13",
       "sex": "M",
       "age": 44,
       "group": "Major Depressive Disorder",
-      "group_short": "MDD"
+      "group_short": "MDD",
+      "age_z": 1.0036005353325683,
+      "sex_m": 1
     },
     {
       "participant_id": "sub-mdd14",
       "sex": "F",
       "age": 52,
       "group": "Major Depressive Disorder",
-      "group_short": "MDD"
+      "group_short": "MDD",
+      "age_z": 1.6426278149728974,
+      "sex_m": 0
     },
     {
       "participant_id": "sub-mdd15",
       "sex": "F",
       "age": 46,
       "group": "Major Depressive Disorder",
-      "group_short": "MDD"
+      "group_short": "MDD",
+      "age_z": 1.1633573552426506,
+      "sex_m": 0
     },
     {
       "participant_id": "sub-mdd16",
       "sex": "M",
       "age": 54,
       "group": "Major Depressive Disorder",
-      "group_short": "MDD"
+      "group_short": "MDD",
+      "age_z": 1.8023846348829797,
+      "sex_m": 1
     },
     {
       "participant_id": "sub-mdd17",
       "sex": "F",
       "age": 42,
       "group": "Major Depressive Disorder",
-      "group_short": "MDD"
+      "group_short": "MDD",
+      "age_z": 0.843843715422486,
+      "sex_m": 0
     },
     {
       "participant_id": "sub-mdd18",
       "sex": "M",
       "age": 56,
       "group": "Major Depressive Disorder",
-      "group_short": "MDD"
+      "group_short": "MDD",
+      "age_z": 1.962141454793062,
+      "sex_m": 1
     },
     {
       "participant_id": "sub-mdd19",
       "sex": "M",
       "age": 55,
       "group": "Major Depressive Disorder",
-      "group_short": "MDD"
+      "group_short": "MDD",
+      "age_z": 1.8822630448380209,
+      "sex_m": 1
     }
   ],
   "events_summary": [
@@ -290,7 +396,11 @@ BOOK_BUNDLE = {
       "run": 1,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-control01",
@@ -298,7 +408,11 @@ BOOK_BUNDLE = {
       "run": 2,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-control01",
@@ -306,7 +420,11 @@ BOOK_BUNDLE = {
       "run": 3,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-control01",
@@ -314,7 +432,11 @@ BOOK_BUNDLE = {
       "run": 4,
       "n_events": 18,
       "trial_types": "negative_nonmusic,positive_nonmusic,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 0,
+      "n_negative_music": 0,
+      "n_positive_nonmusic": 2,
+      "n_negative_nonmusic": 2,
+      "n_tones": 5
     },
     {
       "subject": "sub-control01",
@@ -322,7 +444,11 @@ BOOK_BUNDLE = {
       "run": 5,
       "n_events": 18,
       "trial_types": "negative_nonmusic,positive_nonmusic,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 0,
+      "n_negative_music": 0,
+      "n_positive_nonmusic": 2,
+      "n_negative_nonmusic": 2,
+      "n_tones": 5
     },
     {
       "subject": "sub-control02",
@@ -330,7 +456,11 @@ BOOK_BUNDLE = {
       "run": 1,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-control02",
@@ -338,7 +468,11 @@ BOOK_BUNDLE = {
       "run": 2,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-control02",
@@ -346,7 +480,11 @@ BOOK_BUNDLE = {
       "run": 3,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-control02",
@@ -354,7 +492,11 @@ BOOK_BUNDLE = {
       "run": 4,
       "n_events": 18,
       "trial_types": "negative_nonmusic,positive_nonmusic,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 0,
+      "n_negative_music": 0,
+      "n_positive_nonmusic": 2,
+      "n_negative_nonmusic": 2,
+      "n_tones": 5
     },
     {
       "subject": "sub-control02",
@@ -362,7 +504,11 @@ BOOK_BUNDLE = {
       "run": 5,
       "n_events": 18,
       "trial_types": "negative_nonmusic,positive_nonmusic,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 0,
+      "n_negative_music": 0,
+      "n_positive_nonmusic": 2,
+      "n_negative_nonmusic": 2,
+      "n_tones": 5
     },
     {
       "subject": "sub-control03",
@@ -370,7 +516,11 @@ BOOK_BUNDLE = {
       "run": 3,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-control03",
@@ -378,7 +528,11 @@ BOOK_BUNDLE = {
       "run": 4,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-control03",
@@ -386,7 +540,11 @@ BOOK_BUNDLE = {
       "run": 5,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-control03",
@@ -394,7 +552,11 @@ BOOK_BUNDLE = {
       "run": 1,
       "n_events": 18,
       "trial_types": "negative_nonmusic,positive_nonmusic,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 0,
+      "n_negative_music": 0,
+      "n_positive_nonmusic": 2,
+      "n_negative_nonmusic": 2,
+      "n_tones": 5
     },
     {
       "subject": "sub-control03",
@@ -402,7 +564,11 @@ BOOK_BUNDLE = {
       "run": 2,
       "n_events": 18,
       "trial_types": "negative_nonmusic,positive_nonmusic,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 0,
+      "n_negative_music": 0,
+      "n_positive_nonmusic": 2,
+      "n_negative_nonmusic": 2,
+      "n_tones": 5
     },
     {
       "subject": "sub-control04",
@@ -410,7 +576,11 @@ BOOK_BUNDLE = {
       "run": 3,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-control04",
@@ -418,7 +588,11 @@ BOOK_BUNDLE = {
       "run": 4,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-control04",
@@ -426,7 +600,11 @@ BOOK_BUNDLE = {
       "run": 5,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-control04",
@@ -434,7 +612,11 @@ BOOK_BUNDLE = {
       "run": 1,
       "n_events": 18,
       "trial_types": "negative_nonmusic,positive_nonmusic,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 0,
+      "n_negative_music": 0,
+      "n_positive_nonmusic": 2,
+      "n_negative_nonmusic": 2,
+      "n_tones": 5
     },
     {
       "subject": "sub-control04",
@@ -442,7 +624,11 @@ BOOK_BUNDLE = {
       "run": 2,
       "n_events": 18,
       "trial_types": "negative_nonmusic,positive_nonmusic,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 0,
+      "n_negative_music": 0,
+      "n_positive_nonmusic": 2,
+      "n_negative_nonmusic": 2,
+      "n_tones": 5
     },
     {
       "subject": "sub-control05",
@@ -450,7 +636,11 @@ BOOK_BUNDLE = {
       "run": 3,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-control05",
@@ -458,7 +648,11 @@ BOOK_BUNDLE = {
       "run": 4,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-control05",
@@ -466,7 +660,11 @@ BOOK_BUNDLE = {
       "run": 5,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-control05",
@@ -474,7 +672,11 @@ BOOK_BUNDLE = {
       "run": 1,
       "n_events": 18,
       "trial_types": "negative_nonmusic,positive_nonmusic,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 0,
+      "n_negative_music": 0,
+      "n_positive_nonmusic": 2,
+      "n_negative_nonmusic": 2,
+      "n_tones": 5
     },
     {
       "subject": "sub-control05",
@@ -482,7 +684,11 @@ BOOK_BUNDLE = {
       "run": 2,
       "n_events": 18,
       "trial_types": "negative_nonmusic,positive_nonmusic,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 0,
+      "n_negative_music": 0,
+      "n_positive_nonmusic": 2,
+      "n_negative_nonmusic": 2,
+      "n_tones": 5
     },
     {
       "subject": "sub-control06",
@@ -490,7 +696,11 @@ BOOK_BUNDLE = {
       "run": 3,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-control06",
@@ -498,7 +708,11 @@ BOOK_BUNDLE = {
       "run": 4,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-control06",
@@ -506,7 +720,11 @@ BOOK_BUNDLE = {
       "run": 5,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-control06",
@@ -514,7 +732,11 @@ BOOK_BUNDLE = {
       "run": 1,
       "n_events": 18,
       "trial_types": "negative_nonmusic,positive_nonmusic,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 0,
+      "n_negative_music": 0,
+      "n_positive_nonmusic": 2,
+      "n_negative_nonmusic": 2,
+      "n_tones": 5
     },
     {
       "subject": "sub-control06",
@@ -522,7 +744,11 @@ BOOK_BUNDLE = {
       "run": 2,
       "n_events": 18,
       "trial_types": "negative_nonmusic,positive_nonmusic,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 0,
+      "n_negative_music": 0,
+      "n_positive_nonmusic": 2,
+      "n_negative_nonmusic": 2,
+      "n_tones": 5
     },
     {
       "subject": "sub-control07",
@@ -530,7 +756,11 @@ BOOK_BUNDLE = {
       "run": 1,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-control07",
@@ -538,7 +768,11 @@ BOOK_BUNDLE = {
       "run": 2,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-control07",
@@ -546,7 +780,11 @@ BOOK_BUNDLE = {
       "run": 3,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-control07",
@@ -554,7 +792,11 @@ BOOK_BUNDLE = {
       "run": 4,
       "n_events": 18,
       "trial_types": "negative_nonmusic,positive_nonmusic,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 0,
+      "n_negative_music": 0,
+      "n_positive_nonmusic": 2,
+      "n_negative_nonmusic": 2,
+      "n_tones": 5
     },
     {
       "subject": "sub-control07",
@@ -562,7 +804,11 @@ BOOK_BUNDLE = {
       "run": 5,
       "n_events": 18,
       "trial_types": "negative_nonmusic,positive_nonmusic,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 0,
+      "n_negative_music": 0,
+      "n_positive_nonmusic": 2,
+      "n_negative_nonmusic": 2,
+      "n_tones": 5
     },
     {
       "subject": "sub-control08",
@@ -570,7 +816,11 @@ BOOK_BUNDLE = {
       "run": 1,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-control08",
@@ -578,7 +828,11 @@ BOOK_BUNDLE = {
       "run": 2,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-control08",
@@ -586,7 +840,11 @@ BOOK_BUNDLE = {
       "run": 3,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-control08",
@@ -594,7 +852,11 @@ BOOK_BUNDLE = {
       "run": 4,
       "n_events": 18,
       "trial_types": "negative_nonmusic,positive_nonmusic,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 0,
+      "n_negative_music": 0,
+      "n_positive_nonmusic": 2,
+      "n_negative_nonmusic": 2,
+      "n_tones": 5
     },
     {
       "subject": "sub-control08",
@@ -602,7 +864,11 @@ BOOK_BUNDLE = {
       "run": 5,
       "n_events": 13,
       "trial_types": "negative_nonmusic,positive_nonmusic,response,tones",
-      "duration_sum": 213.0
+      "n_positive_music": 0,
+      "n_negative_music": 0,
+      "n_positive_nonmusic": 2,
+      "n_negative_nonmusic": 1,
+      "n_tones": 4
     },
     {
       "subject": "sub-control09",
@@ -610,7 +876,11 @@ BOOK_BUNDLE = {
       "run": 1,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-control09",
@@ -618,7 +888,11 @@ BOOK_BUNDLE = {
       "run": 2,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-control09",
@@ -626,7 +900,11 @@ BOOK_BUNDLE = {
       "run": 3,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-control09",
@@ -634,7 +912,11 @@ BOOK_BUNDLE = {
       "run": 4,
       "n_events": 18,
       "trial_types": "negative_nonmusic,positive_nonmusic,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 0,
+      "n_negative_music": 0,
+      "n_positive_nonmusic": 2,
+      "n_negative_nonmusic": 2,
+      "n_tones": 5
     },
     {
       "subject": "sub-control09",
@@ -642,7 +924,11 @@ BOOK_BUNDLE = {
       "run": 5,
       "n_events": 18,
       "trial_types": "negative_nonmusic,positive_nonmusic,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 0,
+      "n_negative_music": 0,
+      "n_positive_nonmusic": 2,
+      "n_negative_nonmusic": 2,
+      "n_tones": 5
     },
     {
       "subject": "sub-control10",
@@ -650,7 +936,11 @@ BOOK_BUNDLE = {
       "run": 1,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-control10",
@@ -658,7 +948,11 @@ BOOK_BUNDLE = {
       "run": 2,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-control10",
@@ -666,7 +960,11 @@ BOOK_BUNDLE = {
       "run": 3,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-control10",
@@ -674,7 +972,11 @@ BOOK_BUNDLE = {
       "run": 4,
       "n_events": 18,
       "trial_types": "negative_nonmusic,positive_nonmusic,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 0,
+      "n_negative_music": 0,
+      "n_positive_nonmusic": 2,
+      "n_negative_nonmusic": 2,
+      "n_tones": 5
     },
     {
       "subject": "sub-control10",
@@ -682,7 +984,11 @@ BOOK_BUNDLE = {
       "run": 5,
       "n_events": 18,
       "trial_types": "negative_nonmusic,positive_nonmusic,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 0,
+      "n_negative_music": 0,
+      "n_positive_nonmusic": 2,
+      "n_negative_nonmusic": 2,
+      "n_tones": 5
     },
     {
       "subject": "sub-control11",
@@ -690,7 +996,11 @@ BOOK_BUNDLE = {
       "run": 1,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-control11",
@@ -698,7 +1008,11 @@ BOOK_BUNDLE = {
       "run": 2,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-control11",
@@ -706,7 +1020,11 @@ BOOK_BUNDLE = {
       "run": 3,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-control11",
@@ -714,7 +1032,11 @@ BOOK_BUNDLE = {
       "run": 4,
       "n_events": 18,
       "trial_types": "negative_nonmusic,positive_nonmusic,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 0,
+      "n_negative_music": 0,
+      "n_positive_nonmusic": 2,
+      "n_negative_nonmusic": 2,
+      "n_tones": 5
     },
     {
       "subject": "sub-control11",
@@ -722,7 +1044,11 @@ BOOK_BUNDLE = {
       "run": 5,
       "n_events": 18,
       "trial_types": "negative_nonmusic,positive_nonmusic,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 0,
+      "n_negative_music": 0,
+      "n_positive_nonmusic": 2,
+      "n_negative_nonmusic": 2,
+      "n_tones": 5
     },
     {
       "subject": "sub-control12",
@@ -730,7 +1056,11 @@ BOOK_BUNDLE = {
       "run": 3,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-control12",
@@ -738,7 +1068,11 @@ BOOK_BUNDLE = {
       "run": 4,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-control12",
@@ -746,7 +1080,11 @@ BOOK_BUNDLE = {
       "run": 5,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-control12",
@@ -754,7 +1092,11 @@ BOOK_BUNDLE = {
       "run": 1,
       "n_events": 18,
       "trial_types": "negative_nonmusic,positive_nonmusic,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 0,
+      "n_negative_music": 0,
+      "n_positive_nonmusic": 2,
+      "n_negative_nonmusic": 2,
+      "n_tones": 5
     },
     {
       "subject": "sub-control12",
@@ -762,7 +1104,11 @@ BOOK_BUNDLE = {
       "run": 2,
       "n_events": 18,
       "trial_types": "negative_nonmusic,positive_nonmusic,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 0,
+      "n_negative_music": 0,
+      "n_positive_nonmusic": 2,
+      "n_negative_nonmusic": 2,
+      "n_tones": 5
     },
     {
       "subject": "sub-control13",
@@ -770,7 +1116,11 @@ BOOK_BUNDLE = {
       "run": 1,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-control13",
@@ -778,7 +1128,11 @@ BOOK_BUNDLE = {
       "run": 2,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-control13",
@@ -786,7 +1140,11 @@ BOOK_BUNDLE = {
       "run": 3,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-control13",
@@ -794,7 +1152,11 @@ BOOK_BUNDLE = {
       "run": 4,
       "n_events": 18,
       "trial_types": "negative_nonmusic,positive_nonmusic,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 0,
+      "n_negative_music": 0,
+      "n_positive_nonmusic": 2,
+      "n_negative_nonmusic": 2,
+      "n_tones": 5
     },
     {
       "subject": "sub-control13",
@@ -802,7 +1164,11 @@ BOOK_BUNDLE = {
       "run": 5,
       "n_events": 18,
       "trial_types": "negative_nonmusic,positive_nonmusic,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 0,
+      "n_negative_music": 0,
+      "n_positive_nonmusic": 2,
+      "n_negative_nonmusic": 2,
+      "n_tones": 5
     },
     {
       "subject": "sub-control14",
@@ -810,7 +1176,11 @@ BOOK_BUNDLE = {
       "run": 3,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-control14",
@@ -818,7 +1188,11 @@ BOOK_BUNDLE = {
       "run": 4,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-control14",
@@ -826,7 +1200,11 @@ BOOK_BUNDLE = {
       "run": 5,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-control14",
@@ -834,7 +1212,11 @@ BOOK_BUNDLE = {
       "run": 1,
       "n_events": 18,
       "trial_types": "negative_nonmusic,positive_nonmusic,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 0,
+      "n_negative_music": 0,
+      "n_positive_nonmusic": 2,
+      "n_negative_nonmusic": 2,
+      "n_tones": 5
     },
     {
       "subject": "sub-control14",
@@ -842,7 +1224,11 @@ BOOK_BUNDLE = {
       "run": 2,
       "n_events": 18,
       "trial_types": "negative_nonmusic,positive_nonmusic,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 0,
+      "n_negative_music": 0,
+      "n_positive_nonmusic": 2,
+      "n_negative_nonmusic": 2,
+      "n_tones": 5
     },
     {
       "subject": "sub-control15",
@@ -850,7 +1236,11 @@ BOOK_BUNDLE = {
       "run": 1,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-control15",
@@ -858,7 +1248,11 @@ BOOK_BUNDLE = {
       "run": 2,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-control15",
@@ -866,7 +1260,11 @@ BOOK_BUNDLE = {
       "run": 3,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-control15",
@@ -874,7 +1272,11 @@ BOOK_BUNDLE = {
       "run": 4,
       "n_events": 18,
       "trial_types": "negative_nonmusic,positive_nonmusic,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 0,
+      "n_negative_music": 0,
+      "n_positive_nonmusic": 2,
+      "n_negative_nonmusic": 2,
+      "n_tones": 5
     },
     {
       "subject": "sub-control15",
@@ -882,7 +1284,11 @@ BOOK_BUNDLE = {
       "run": 5,
       "n_events": 18,
       "trial_types": "negative_nonmusic,positive_nonmusic,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 0,
+      "n_negative_music": 0,
+      "n_positive_nonmusic": 2,
+      "n_negative_nonmusic": 2,
+      "n_tones": 5
     },
     {
       "subject": "sub-control16",
@@ -890,7 +1296,11 @@ BOOK_BUNDLE = {
       "run": 3,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-control16",
@@ -898,7 +1308,11 @@ BOOK_BUNDLE = {
       "run": 4,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-control16",
@@ -906,7 +1320,11 @@ BOOK_BUNDLE = {
       "run": 5,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-control16",
@@ -914,7 +1332,11 @@ BOOK_BUNDLE = {
       "run": 1,
       "n_events": 18,
       "trial_types": "negative_nonmusic,positive_nonmusic,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 0,
+      "n_negative_music": 0,
+      "n_positive_nonmusic": 2,
+      "n_negative_nonmusic": 2,
+      "n_tones": 5
     },
     {
       "subject": "sub-control16",
@@ -922,7 +1344,11 @@ BOOK_BUNDLE = {
       "run": 2,
       "n_events": 18,
       "trial_types": "negative_nonmusic,positive_nonmusic,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 0,
+      "n_negative_music": 0,
+      "n_positive_nonmusic": 2,
+      "n_negative_nonmusic": 2,
+      "n_tones": 5
     },
     {
       "subject": "sub-control17",
@@ -930,7 +1356,11 @@ BOOK_BUNDLE = {
       "run": 3,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-control17",
@@ -938,7 +1368,11 @@ BOOK_BUNDLE = {
       "run": 4,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-control17",
@@ -946,7 +1380,11 @@ BOOK_BUNDLE = {
       "run": 5,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-control17",
@@ -954,7 +1392,11 @@ BOOK_BUNDLE = {
       "run": 1,
       "n_events": 18,
       "trial_types": "negative_nonmusic,positive_nonmusic,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 0,
+      "n_negative_music": 0,
+      "n_positive_nonmusic": 2,
+      "n_negative_nonmusic": 2,
+      "n_tones": 5
     },
     {
       "subject": "sub-control17",
@@ -962,7 +1404,11 @@ BOOK_BUNDLE = {
       "run": 2,
       "n_events": 18,
       "trial_types": "negative_nonmusic,positive_nonmusic,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 0,
+      "n_negative_music": 0,
+      "n_positive_nonmusic": 2,
+      "n_negative_nonmusic": 2,
+      "n_tones": 5
     },
     {
       "subject": "sub-control18",
@@ -970,7 +1416,11 @@ BOOK_BUNDLE = {
       "run": 1,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-control18",
@@ -978,7 +1428,11 @@ BOOK_BUNDLE = {
       "run": 2,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-control18",
@@ -986,7 +1440,11 @@ BOOK_BUNDLE = {
       "run": 3,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-control18",
@@ -994,7 +1452,11 @@ BOOK_BUNDLE = {
       "run": 4,
       "n_events": 18,
       "trial_types": "negative_nonmusic,positive_nonmusic,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 0,
+      "n_negative_music": 0,
+      "n_positive_nonmusic": 2,
+      "n_negative_nonmusic": 2,
+      "n_tones": 5
     },
     {
       "subject": "sub-control18",
@@ -1002,7 +1464,11 @@ BOOK_BUNDLE = {
       "run": 5,
       "n_events": 18,
       "trial_types": "negative_nonmusic,positive_nonmusic,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 0,
+      "n_negative_music": 0,
+      "n_positive_nonmusic": 2,
+      "n_negative_nonmusic": 2,
+      "n_tones": 5
     },
     {
       "subject": "sub-control19",
@@ -1010,7 +1476,11 @@ BOOK_BUNDLE = {
       "run": 3,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-control19",
@@ -1018,7 +1488,11 @@ BOOK_BUNDLE = {
       "run": 4,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-control19",
@@ -1026,7 +1500,11 @@ BOOK_BUNDLE = {
       "run": 5,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-control19",
@@ -1034,7 +1512,11 @@ BOOK_BUNDLE = {
       "run": 1,
       "n_events": 18,
       "trial_types": "negative_nonmusic,positive_nonmusic,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 0,
+      "n_negative_music": 0,
+      "n_positive_nonmusic": 2,
+      "n_negative_nonmusic": 2,
+      "n_tones": 5
     },
     {
       "subject": "sub-control19",
@@ -1042,7 +1524,11 @@ BOOK_BUNDLE = {
       "run": 2,
       "n_events": 18,
       "trial_types": "negative_nonmusic,positive_nonmusic,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 0,
+      "n_negative_music": 0,
+      "n_positive_nonmusic": 2,
+      "n_negative_nonmusic": 2,
+      "n_tones": 5
     },
     {
       "subject": "sub-control20",
@@ -1050,7 +1536,11 @@ BOOK_BUNDLE = {
       "run": 1,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-control20",
@@ -1058,7 +1548,11 @@ BOOK_BUNDLE = {
       "run": 2,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-control20",
@@ -1066,7 +1560,11 @@ BOOK_BUNDLE = {
       "run": 3,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-control20",
@@ -1074,7 +1572,11 @@ BOOK_BUNDLE = {
       "run": 4,
       "n_events": 18,
       "trial_types": "negative_nonmusic,positive_nonmusic,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 0,
+      "n_negative_music": 0,
+      "n_positive_nonmusic": 2,
+      "n_negative_nonmusic": 2,
+      "n_tones": 5
     },
     {
       "subject": "sub-control20",
@@ -1082,7 +1584,11 @@ BOOK_BUNDLE = {
       "run": 5,
       "n_events": 18,
       "trial_types": "negative_nonmusic,positive_nonmusic,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 0,
+      "n_negative_music": 0,
+      "n_positive_nonmusic": 2,
+      "n_negative_nonmusic": 2,
+      "n_tones": 5
     },
     {
       "subject": "sub-mdd01",
@@ -1090,7 +1596,11 @@ BOOK_BUNDLE = {
       "run": 1,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-mdd01",
@@ -1098,7 +1608,11 @@ BOOK_BUNDLE = {
       "run": 2,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-mdd01",
@@ -1106,7 +1620,11 @@ BOOK_BUNDLE = {
       "run": 3,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-mdd01",
@@ -1114,7 +1632,11 @@ BOOK_BUNDLE = {
       "run": 4,
       "n_events": 18,
       "trial_types": "negative_nonmusic,positive_nonmusic,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 0,
+      "n_negative_music": 0,
+      "n_positive_nonmusic": 2,
+      "n_negative_nonmusic": 2,
+      "n_tones": 5
     },
     {
       "subject": "sub-mdd01",
@@ -1122,7 +1644,11 @@ BOOK_BUNDLE = {
       "run": 5,
       "n_events": 18,
       "trial_types": "negative_nonmusic,positive_nonmusic,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 0,
+      "n_negative_music": 0,
+      "n_positive_nonmusic": 2,
+      "n_negative_nonmusic": 2,
+      "n_tones": 5
     },
     {
       "subject": "sub-mdd02",
@@ -1130,7 +1656,11 @@ BOOK_BUNDLE = {
       "run": 3,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-mdd02",
@@ -1138,7 +1668,11 @@ BOOK_BUNDLE = {
       "run": 4,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-mdd02",
@@ -1146,7 +1680,11 @@ BOOK_BUNDLE = {
       "run": 5,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-mdd02",
@@ -1154,7 +1692,11 @@ BOOK_BUNDLE = {
       "run": 1,
       "n_events": 18,
       "trial_types": "negative_nonmusic,positive_nonmusic,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 0,
+      "n_negative_music": 0,
+      "n_positive_nonmusic": 2,
+      "n_negative_nonmusic": 2,
+      "n_tones": 5
     },
     {
       "subject": "sub-mdd02",
@@ -1162,7 +1704,11 @@ BOOK_BUNDLE = {
       "run": 2,
       "n_events": 18,
       "trial_types": "negative_nonmusic,positive_nonmusic,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 0,
+      "n_negative_music": 0,
+      "n_positive_nonmusic": 2,
+      "n_negative_nonmusic": 2,
+      "n_tones": 5
     },
     {
       "subject": "sub-mdd03",
@@ -1170,7 +1716,11 @@ BOOK_BUNDLE = {
       "run": 1,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-mdd03",
@@ -1178,7 +1728,11 @@ BOOK_BUNDLE = {
       "run": 2,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-mdd03",
@@ -1186,7 +1740,11 @@ BOOK_BUNDLE = {
       "run": 3,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-mdd03",
@@ -1194,7 +1752,11 @@ BOOK_BUNDLE = {
       "run": 4,
       "n_events": 18,
       "trial_types": "negative_nonmusic,positive_nonmusic,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 0,
+      "n_negative_music": 0,
+      "n_positive_nonmusic": 2,
+      "n_negative_nonmusic": 2,
+      "n_tones": 5
     },
     {
       "subject": "sub-mdd03",
@@ -1202,7 +1764,11 @@ BOOK_BUNDLE = {
       "run": 5,
       "n_events": 14,
       "trial_types": "negative_nonmusic,positive_nonmusic,response,tones",
-      "duration_sum": 243.0
+      "n_positive_music": 0,
+      "n_negative_music": 0,
+      "n_positive_nonmusic": 1,
+      "n_negative_nonmusic": 2,
+      "n_tones": 4
     },
     {
       "subject": "sub-mdd04",
@@ -1210,7 +1776,11 @@ BOOK_BUNDLE = {
       "run": 3,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-mdd04",
@@ -1218,7 +1788,11 @@ BOOK_BUNDLE = {
       "run": 4,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-mdd04",
@@ -1226,7 +1800,11 @@ BOOK_BUNDLE = {
       "run": 5,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-mdd04",
@@ -1234,7 +1812,11 @@ BOOK_BUNDLE = {
       "run": 1,
       "n_events": 18,
       "trial_types": "negative_nonmusic,positive_nonmusic,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 0,
+      "n_negative_music": 0,
+      "n_positive_nonmusic": 2,
+      "n_negative_nonmusic": 2,
+      "n_tones": 5
     },
     {
       "subject": "sub-mdd04",
@@ -1242,7 +1824,11 @@ BOOK_BUNDLE = {
       "run": 2,
       "n_events": 18,
       "trial_types": "negative_nonmusic,positive_nonmusic,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 0,
+      "n_negative_music": 0,
+      "n_positive_nonmusic": 2,
+      "n_negative_nonmusic": 2,
+      "n_tones": 5
     },
     {
       "subject": "sub-mdd05",
@@ -1250,7 +1836,11 @@ BOOK_BUNDLE = {
       "run": 3,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-mdd05",
@@ -1258,7 +1848,11 @@ BOOK_BUNDLE = {
       "run": 4,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-mdd05",
@@ -1266,7 +1860,11 @@ BOOK_BUNDLE = {
       "run": 5,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-mdd05",
@@ -1274,7 +1872,11 @@ BOOK_BUNDLE = {
       "run": 1,
       "n_events": 15,
       "trial_types": "negative_nonmusic,positive_nonmusic,response,tones",
-      "duration_sum": 267.0
+      "n_positive_music": 0,
+      "n_negative_music": 0,
+      "n_positive_nonmusic": 2,
+      "n_negative_nonmusic": 2,
+      "n_tones": 4
     },
     {
       "subject": "sub-mdd05",
@@ -1282,7 +1884,11 @@ BOOK_BUNDLE = {
       "run": 2,
       "n_events": 18,
       "trial_types": "negative_nonmusic,positive_nonmusic,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 0,
+      "n_negative_music": 0,
+      "n_positive_nonmusic": 2,
+      "n_negative_nonmusic": 2,
+      "n_tones": 5
     },
     {
       "subject": "sub-mdd06",
@@ -1290,7 +1896,11 @@ BOOK_BUNDLE = {
       "run": 1,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-mdd06",
@@ -1298,7 +1908,11 @@ BOOK_BUNDLE = {
       "run": 2,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-mdd06",
@@ -1306,7 +1920,11 @@ BOOK_BUNDLE = {
       "run": 3,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-mdd06",
@@ -1314,7 +1932,11 @@ BOOK_BUNDLE = {
       "run": 4,
       "n_events": 18,
       "trial_types": "negative_nonmusic,positive_nonmusic,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 0,
+      "n_negative_music": 0,
+      "n_positive_nonmusic": 2,
+      "n_negative_nonmusic": 2,
+      "n_tones": 5
     },
     {
       "subject": "sub-mdd06",
@@ -1322,7 +1944,11 @@ BOOK_BUNDLE = {
       "run": 5,
       "n_events": 18,
       "trial_types": "negative_nonmusic,positive_nonmusic,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 0,
+      "n_negative_music": 0,
+      "n_positive_nonmusic": 2,
+      "n_negative_nonmusic": 2,
+      "n_tones": 5
     },
     {
       "subject": "sub-mdd07",
@@ -1330,7 +1956,11 @@ BOOK_BUNDLE = {
       "run": 1,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-mdd07",
@@ -1338,7 +1968,11 @@ BOOK_BUNDLE = {
       "run": 2,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-mdd07",
@@ -1346,7 +1980,11 @@ BOOK_BUNDLE = {
       "run": 3,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-mdd07",
@@ -1354,7 +1992,11 @@ BOOK_BUNDLE = {
       "run": 4,
       "n_events": 18,
       "trial_types": "negative_nonmusic,positive_nonmusic,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 0,
+      "n_negative_music": 0,
+      "n_positive_nonmusic": 2,
+      "n_negative_nonmusic": 2,
+      "n_tones": 5
     },
     {
       "subject": "sub-mdd07",
@@ -1362,7 +2004,11 @@ BOOK_BUNDLE = {
       "run": 5,
       "n_events": 18,
       "trial_types": "negative_nonmusic,positive_nonmusic,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 0,
+      "n_negative_music": 0,
+      "n_positive_nonmusic": 2,
+      "n_negative_nonmusic": 2,
+      "n_tones": 5
     },
     {
       "subject": "sub-mdd08",
@@ -1370,7 +2016,11 @@ BOOK_BUNDLE = {
       "run": 1,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-mdd08",
@@ -1378,7 +2028,11 @@ BOOK_BUNDLE = {
       "run": 2,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-mdd08",
@@ -1386,7 +2040,11 @@ BOOK_BUNDLE = {
       "run": 3,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-mdd08",
@@ -1394,7 +2052,11 @@ BOOK_BUNDLE = {
       "run": 4,
       "n_events": 18,
       "trial_types": "negative_nonmusic,positive_nonmusic,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 0,
+      "n_negative_music": 0,
+      "n_positive_nonmusic": 2,
+      "n_negative_nonmusic": 2,
+      "n_tones": 5
     },
     {
       "subject": "sub-mdd08",
@@ -1402,7 +2064,11 @@ BOOK_BUNDLE = {
       "run": 5,
       "n_events": 18,
       "trial_types": "negative_nonmusic,positive_nonmusic,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 0,
+      "n_negative_music": 0,
+      "n_positive_nonmusic": 2,
+      "n_negative_nonmusic": 2,
+      "n_tones": 5
     },
     {
       "subject": "sub-mdd09",
@@ -1410,7 +2076,11 @@ BOOK_BUNDLE = {
       "run": 3,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-mdd09",
@@ -1418,7 +2088,11 @@ BOOK_BUNDLE = {
       "run": 4,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-mdd09",
@@ -1426,7 +2100,11 @@ BOOK_BUNDLE = {
       "run": 5,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-mdd09",
@@ -1434,7 +2112,11 @@ BOOK_BUNDLE = {
       "run": 1,
       "n_events": 18,
       "trial_types": "negative_nonmusic,positive_nonmusic,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 0,
+      "n_negative_music": 0,
+      "n_positive_nonmusic": 2,
+      "n_negative_nonmusic": 2,
+      "n_tones": 5
     },
     {
       "subject": "sub-mdd09",
@@ -1442,7 +2124,11 @@ BOOK_BUNDLE = {
       "run": 2,
       "n_events": 18,
       "trial_types": "negative_nonmusic,positive_nonmusic,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 0,
+      "n_negative_music": 0,
+      "n_positive_nonmusic": 2,
+      "n_negative_nonmusic": 2,
+      "n_tones": 5
     },
     {
       "subject": "sub-mdd10",
@@ -1450,7 +2136,11 @@ BOOK_BUNDLE = {
       "run": 1,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-mdd10",
@@ -1458,7 +2148,11 @@ BOOK_BUNDLE = {
       "run": 2,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-mdd10",
@@ -1466,7 +2160,11 @@ BOOK_BUNDLE = {
       "run": 3,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-mdd10",
@@ -1474,7 +2172,11 @@ BOOK_BUNDLE = {
       "run": 4,
       "n_events": 18,
       "trial_types": "negative_nonmusic,positive_nonmusic,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 0,
+      "n_negative_music": 0,
+      "n_positive_nonmusic": 2,
+      "n_negative_nonmusic": 2,
+      "n_tones": 5
     },
     {
       "subject": "sub-mdd10",
@@ -1482,7 +2184,11 @@ BOOK_BUNDLE = {
       "run": 5,
       "n_events": 18,
       "trial_types": "negative_nonmusic,positive_nonmusic,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 0,
+      "n_negative_music": 0,
+      "n_positive_nonmusic": 2,
+      "n_negative_nonmusic": 2,
+      "n_tones": 5
     },
     {
       "subject": "sub-mdd11",
@@ -1490,7 +2196,11 @@ BOOK_BUNDLE = {
       "run": 1,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-mdd11",
@@ -1498,7 +2208,11 @@ BOOK_BUNDLE = {
       "run": 2,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-mdd11",
@@ -1506,7 +2220,11 @@ BOOK_BUNDLE = {
       "run": 3,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-mdd11",
@@ -1514,7 +2232,11 @@ BOOK_BUNDLE = {
       "run": 4,
       "n_events": 18,
       "trial_types": "negative_nonmusic,positive_nonmusic,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 0,
+      "n_negative_music": 0,
+      "n_positive_nonmusic": 2,
+      "n_negative_nonmusic": 2,
+      "n_tones": 5
     },
     {
       "subject": "sub-mdd11",
@@ -1522,7 +2244,11 @@ BOOK_BUNDLE = {
       "run": 5,
       "n_events": 18,
       "trial_types": "negative_nonmusic,positive_nonmusic,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 0,
+      "n_negative_music": 0,
+      "n_positive_nonmusic": 2,
+      "n_negative_nonmusic": 2,
+      "n_tones": 5
     },
     {
       "subject": "sub-mdd12",
@@ -1530,7 +2256,11 @@ BOOK_BUNDLE = {
       "run": 1,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-mdd12",
@@ -1538,7 +2268,11 @@ BOOK_BUNDLE = {
       "run": 2,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-mdd12",
@@ -1546,7 +2280,11 @@ BOOK_BUNDLE = {
       "run": 3,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-mdd12",
@@ -1554,7 +2292,11 @@ BOOK_BUNDLE = {
       "run": 4,
       "n_events": 18,
       "trial_types": "negative_nonmusic,positive_nonmusic,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 0,
+      "n_negative_music": 0,
+      "n_positive_nonmusic": 2,
+      "n_negative_nonmusic": 2,
+      "n_tones": 5
     },
     {
       "subject": "sub-mdd12",
@@ -1562,7 +2304,11 @@ BOOK_BUNDLE = {
       "run": 5,
       "n_events": 18,
       "trial_types": "negative_nonmusic,positive_nonmusic,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 0,
+      "n_negative_music": 0,
+      "n_positive_nonmusic": 2,
+      "n_negative_nonmusic": 2,
+      "n_tones": 5
     },
     {
       "subject": "sub-mdd13",
@@ -1570,7 +2316,11 @@ BOOK_BUNDLE = {
       "run": 3,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-mdd13",
@@ -1578,7 +2328,11 @@ BOOK_BUNDLE = {
       "run": 4,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-mdd13",
@@ -1586,7 +2340,11 @@ BOOK_BUNDLE = {
       "run": 5,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-mdd13",
@@ -1594,7 +2352,11 @@ BOOK_BUNDLE = {
       "run": 1,
       "n_events": 18,
       "trial_types": "negative_nonmusic,positive_nonmusic,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 0,
+      "n_negative_music": 0,
+      "n_positive_nonmusic": 2,
+      "n_negative_nonmusic": 2,
+      "n_tones": 5
     },
     {
       "subject": "sub-mdd13",
@@ -1602,7 +2364,11 @@ BOOK_BUNDLE = {
       "run": 2,
       "n_events": 18,
       "trial_types": "negative_nonmusic,positive_nonmusic,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 0,
+      "n_negative_music": 0,
+      "n_positive_nonmusic": 2,
+      "n_negative_nonmusic": 2,
+      "n_tones": 5
     },
     {
       "subject": "sub-mdd14",
@@ -1610,7 +2376,11 @@ BOOK_BUNDLE = {
       "run": 3,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-mdd14",
@@ -1618,7 +2388,11 @@ BOOK_BUNDLE = {
       "run": 4,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-mdd14",
@@ -1626,7 +2400,11 @@ BOOK_BUNDLE = {
       "run": 5,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-mdd14",
@@ -1634,7 +2412,11 @@ BOOK_BUNDLE = {
       "run": 1,
       "n_events": 18,
       "trial_types": "negative_nonmusic,positive_nonmusic,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 0,
+      "n_negative_music": 0,
+      "n_positive_nonmusic": 2,
+      "n_negative_nonmusic": 2,
+      "n_tones": 5
     },
     {
       "subject": "sub-mdd14",
@@ -1642,7 +2424,11 @@ BOOK_BUNDLE = {
       "run": 2,
       "n_events": 18,
       "trial_types": "negative_nonmusic,positive_nonmusic,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 0,
+      "n_negative_music": 0,
+      "n_positive_nonmusic": 2,
+      "n_negative_nonmusic": 2,
+      "n_tones": 5
     },
     {
       "subject": "sub-mdd15",
@@ -1650,7 +2436,11 @@ BOOK_BUNDLE = {
       "run": 1,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-mdd15",
@@ -1658,7 +2448,11 @@ BOOK_BUNDLE = {
       "run": 2,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-mdd15",
@@ -1666,7 +2460,11 @@ BOOK_BUNDLE = {
       "run": 3,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-mdd15",
@@ -1674,7 +2472,11 @@ BOOK_BUNDLE = {
       "run": 4,
       "n_events": 18,
       "trial_types": "negative_nonmusic,positive_nonmusic,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 0,
+      "n_negative_music": 0,
+      "n_positive_nonmusic": 2,
+      "n_negative_nonmusic": 2,
+      "n_tones": 5
     },
     {
       "subject": "sub-mdd15",
@@ -1682,7 +2484,11 @@ BOOK_BUNDLE = {
       "run": 5,
       "n_events": 18,
       "trial_types": "negative_nonmusic,positive_nonmusic,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 0,
+      "n_negative_music": 0,
+      "n_positive_nonmusic": 2,
+      "n_negative_nonmusic": 2,
+      "n_tones": 5
     },
     {
       "subject": "sub-mdd16",
@@ -1690,7 +2496,11 @@ BOOK_BUNDLE = {
       "run": 3,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-mdd16",
@@ -1698,7 +2508,11 @@ BOOK_BUNDLE = {
       "run": 4,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-mdd16",
@@ -1706,7 +2520,11 @@ BOOK_BUNDLE = {
       "run": 5,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-mdd16",
@@ -1714,7 +2532,11 @@ BOOK_BUNDLE = {
       "run": 1,
       "n_events": 18,
       "trial_types": "negative_nonmusic,positive_nonmusic,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 0,
+      "n_negative_music": 0,
+      "n_positive_nonmusic": 2,
+      "n_negative_nonmusic": 2,
+      "n_tones": 5
     },
     {
       "subject": "sub-mdd16",
@@ -1722,7 +2544,11 @@ BOOK_BUNDLE = {
       "run": 2,
       "n_events": 18,
       "trial_types": "negative_nonmusic,positive_nonmusic,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 0,
+      "n_negative_music": 0,
+      "n_positive_nonmusic": 2,
+      "n_negative_nonmusic": 2,
+      "n_tones": 5
     },
     {
       "subject": "sub-mdd17",
@@ -1730,7 +2556,11 @@ BOOK_BUNDLE = {
       "run": 3,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-mdd17",
@@ -1738,7 +2568,11 @@ BOOK_BUNDLE = {
       "run": 4,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-mdd17",
@@ -1746,7 +2580,11 @@ BOOK_BUNDLE = {
       "run": 5,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-mdd17",
@@ -1754,7 +2592,11 @@ BOOK_BUNDLE = {
       "run": 1,
       "n_events": 18,
       "trial_types": "negative_nonmusic,positive_nonmusic,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 0,
+      "n_negative_music": 0,
+      "n_positive_nonmusic": 2,
+      "n_negative_nonmusic": 2,
+      "n_tones": 5
     },
     {
       "subject": "sub-mdd17",
@@ -1762,7 +2604,11 @@ BOOK_BUNDLE = {
       "run": 2,
       "n_events": 18,
       "trial_types": "negative_nonmusic,positive_nonmusic,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 0,
+      "n_negative_music": 0,
+      "n_positive_nonmusic": 2,
+      "n_negative_nonmusic": 2,
+      "n_tones": 5
     },
     {
       "subject": "sub-mdd18",
@@ -1770,7 +2616,11 @@ BOOK_BUNDLE = {
       "run": 3,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-mdd18",
@@ -1778,7 +2628,11 @@ BOOK_BUNDLE = {
       "run": 4,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-mdd18",
@@ -1786,7 +2640,11 @@ BOOK_BUNDLE = {
       "run": 5,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-mdd18",
@@ -1794,7 +2652,11 @@ BOOK_BUNDLE = {
       "run": 1,
       "n_events": 18,
       "trial_types": "negative_nonmusic,positive_nonmusic,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 0,
+      "n_negative_music": 0,
+      "n_positive_nonmusic": 2,
+      "n_negative_nonmusic": 2,
+      "n_tones": 5
     },
     {
       "subject": "sub-mdd18",
@@ -1802,7 +2664,11 @@ BOOK_BUNDLE = {
       "run": 2,
       "n_events": 18,
       "trial_types": "negative_nonmusic,positive_nonmusic,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 0,
+      "n_negative_music": 0,
+      "n_positive_nonmusic": 2,
+      "n_negative_nonmusic": 2,
+      "n_tones": 5
     },
     {
       "subject": "sub-mdd19",
@@ -1810,7 +2676,11 @@ BOOK_BUNDLE = {
       "run": 1,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-mdd19",
@@ -1818,7 +2688,11 @@ BOOK_BUNDLE = {
       "run": 2,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-mdd19",
@@ -1826,7 +2700,11 @@ BOOK_BUNDLE = {
       "run": 3,
       "n_events": 18,
       "trial_types": "negative_music,positive_music,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 2,
+      "n_negative_music": 2,
+      "n_positive_nonmusic": 0,
+      "n_negative_nonmusic": 0,
+      "n_tones": 5
     },
     {
       "subject": "sub-mdd19",
@@ -1834,7 +2712,11 @@ BOOK_BUNDLE = {
       "run": 4,
       "n_events": 18,
       "trial_types": "negative_nonmusic,positive_nonmusic,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 0,
+      "n_negative_music": 0,
+      "n_positive_nonmusic": 2,
+      "n_negative_nonmusic": 2,
+      "n_tones": 5
     },
     {
       "subject": "sub-mdd19",
@@ -1842,13 +2724,19 @@ BOOK_BUNDLE = {
       "run": 5,
       "n_events": 18,
       "trial_types": "negative_nonmusic,positive_nonmusic,response,tones",
-      "duration_sum": 312.0
+      "n_positive_music": 0,
+      "n_negative_music": 0,
+      "n_positive_nonmusic": 2,
+      "n_negative_nonmusic": 2,
+      "n_tones": 5
     }
   ],
   "spectral_features": [
     {
       "subject": "sub-control01",
       "group": "Control",
+      "age": 19,
+      "sex": "F",
       "task": "music",
       "run": 1,
       "n_volumes": 105,
@@ -1863,6 +2751,8 @@ BOOK_BUNDLE = {
     {
       "subject": "sub-control01",
       "group": "Control",
+      "age": 19,
+      "sex": "F",
       "task": "nonmusic",
       "run": 4,
       "n_volumes": 105,
@@ -1877,6 +2767,8 @@ BOOK_BUNDLE = {
     {
       "subject": "sub-control02",
       "group": "Control",
+      "age": 22,
+      "sex": "M",
       "task": "music",
       "run": 1,
       "n_volumes": 105,
@@ -1891,6 +2783,8 @@ BOOK_BUNDLE = {
     {
       "subject": "sub-control02",
       "group": "Control",
+      "age": 22,
+      "sex": "M",
       "task": "nonmusic",
       "run": 4,
       "n_volumes": 105,
@@ -1905,6 +2799,8 @@ BOOK_BUNDLE = {
     {
       "subject": "sub-control10",
       "group": "Control",
+      "age": 23,
+      "sex": "F",
       "task": "music",
       "run": 1,
       "n_volumes": 105,
@@ -1919,6 +2815,8 @@ BOOK_BUNDLE = {
     {
       "subject": "sub-control10",
       "group": "Control",
+      "age": 23,
+      "sex": "F",
       "task": "nonmusic",
       "run": 4,
       "n_volumes": 105,
@@ -1933,6 +2831,8 @@ BOOK_BUNDLE = {
     {
       "subject": "sub-mdd01",
       "group": "MDD",
+      "age": 29,
+      "sex": "F",
       "task": "music",
       "run": 1,
       "n_volumes": 105,
@@ -1947,6 +2847,8 @@ BOOK_BUNDLE = {
     {
       "subject": "sub-mdd01",
       "group": "MDD",
+      "age": 29,
+      "sex": "F",
       "task": "nonmusic",
       "run": 4,
       "n_volumes": 105,
@@ -1961,6 +2863,8 @@ BOOK_BUNDLE = {
     {
       "subject": "sub-mdd10",
       "group": "MDD",
+      "age": 19,
+      "sex": "F",
       "task": "music",
       "run": 1,
       "n_volumes": 105,
@@ -1975,6 +2879,8 @@ BOOK_BUNDLE = {
     {
       "subject": "sub-mdd10",
       "group": "MDD",
+      "age": 19,
+      "sex": "F",
       "task": "music",
       "run": 2,
       "n_volumes": 105,
@@ -1989,6 +2895,8 @@ BOOK_BUNDLE = {
     {
       "subject": "sub-mdd10",
       "group": "MDD",
+      "age": 19,
+      "sex": "F",
       "task": "music",
       "run": 3,
       "n_volumes": 105,
@@ -2003,6 +2911,8 @@ BOOK_BUNDLE = {
     {
       "subject": "sub-mdd10",
       "group": "MDD",
+      "age": 19,
+      "sex": "F",
       "task": "nonmusic",
       "run": 4,
       "n_volumes": 105,
@@ -2017,6 +2927,8 @@ BOOK_BUNDLE = {
     {
       "subject": "sub-mdd10",
       "group": "MDD",
+      "age": 19,
+      "sex": "F",
       "task": "nonmusic",
       "run": 5,
       "n_volumes": 105,
@@ -2027,6 +2939,1009 @@ BOOK_BUNDLE = {
       "total_power": 0.1243333973453132,
       "peak_latency_s": 24.0,
       "peak_amp": 0.15317144058644772
+    }
+  ],
+  "condition_features": [
+    {
+      "subject": "sub-control01",
+      "group": "Control",
+      "age": 19,
+      "sex": "F",
+      "task": "music",
+      "run": 1,
+      "trial_type": "negative_music",
+      "valence": "negative",
+      "domain": "music",
+      "stim_label": "Negative music",
+      "n_epochs": 2,
+      "mean_bold": -0.39786110501736405,
+      "std_bold": 0.6936959332720868,
+      "peak_amp": -0.12152473628520966,
+      "peak_latency_s": 0.0,
+      "power_high": 0.1565693567915582,
+      "power_mid": 0.0,
+      "power_low": 0.0,
+      "spectral_centroid": 1.6514687832642363
+    },
+    {
+      "subject": "sub-control01",
+      "group": "Control",
+      "age": 19,
+      "sex": "F",
+      "task": "music",
+      "run": 1,
+      "trial_type": "positive_music",
+      "valence": "positive",
+      "domain": "music",
+      "stim_label": "Positive music",
+      "n_epochs": 2,
+      "mean_bold": 0.3719798692248084,
+      "std_bold": 0.8815739230111742,
+      "peak_amp": 0.5403279364109039,
+      "peak_latency_s": 24.0,
+      "power_high": 0.16711770588572608,
+      "power_mid": 0.0,
+      "power_low": 0.0,
+      "spectral_centroid": 1.49934985990077
+    },
+    {
+      "subject": "sub-control01",
+      "group": "Control",
+      "age": 19,
+      "sex": "F",
+      "task": "music",
+      "run": 1,
+      "trial_type": "tones",
+      "valence": "neutral",
+      "domain": "tones",
+      "stim_label": "Tones",
+      "n_epochs": 5,
+      "mean_bold": -0.04557967416168946,
+      "std_bold": 1.0800682024052985,
+      "peak_amp": 0.14580649197101575,
+      "peak_latency_s": 24.0,
+      "power_high": 0.13785465655124698,
+      "power_mid": 0.12722506175164486,
+      "power_low": 0.2500314957198215,
+      "spectral_centroid": 3.00212872302407
+    },
+    {
+      "subject": "sub-control01",
+      "group": "Control",
+      "age": 19,
+      "sex": "F",
+      "task": "nonmusic",
+      "run": 4,
+      "trial_type": "negative_nonmusic",
+      "valence": "negative",
+      "domain": "nonmusic",
+      "stim_label": "Negative non-music",
+      "n_epochs": 2,
+      "mean_bold": 0.40966446714645083,
+      "std_bold": 0.6484675537570181,
+      "peak_amp": 0.715770311653614,
+      "peak_latency_s": 24.0,
+      "power_high": 0.20597019558006666,
+      "power_mid": 0.0,
+      "power_low": 0.0,
+      "spectral_centroid": 2.0878464555478957
+    },
+    {
+      "subject": "sub-control01",
+      "group": "Control",
+      "age": 19,
+      "sex": "F",
+      "task": "nonmusic",
+      "run": 4,
+      "trial_type": "positive_nonmusic",
+      "valence": "positive",
+      "domain": "nonmusic",
+      "stim_label": "Positive non-music",
+      "n_epochs": 2,
+      "mean_bold": -0.3831143967807293,
+      "std_bold": 0.7593772806854562,
+      "peak_amp": -0.10265061259269714,
+      "peak_latency_s": 18.0,
+      "power_high": 0.23384220697471841,
+      "power_mid": 0.0,
+      "power_low": 0.0,
+      "spectral_centroid": 1.7171720167595408
+    },
+    {
+      "subject": "sub-control01",
+      "group": "Control",
+      "age": 19,
+      "sex": "F",
+      "task": "nonmusic",
+      "run": 4,
+      "trial_type": "tones",
+      "valence": "neutral",
+      "domain": "tones",
+      "stim_label": "Tones",
+      "n_epochs": 5,
+      "mean_bold": -0.05887831374124255,
+      "std_bold": 1.1159294554679684,
+      "peak_amp": 0.12878125309944163,
+      "peak_latency_s": 24.0,
+      "power_high": 0.14627579459009232,
+      "power_mid": 0.044328283484677614,
+      "power_low": 0.321894580949091,
+      "spectral_centroid": 2.8371454181962763
+    },
+    {
+      "subject": "sub-control02",
+      "group": "Control",
+      "age": 22,
+      "sex": "M",
+      "task": "music",
+      "run": 1,
+      "trial_type": "negative_music",
+      "valence": "negative",
+      "domain": "music",
+      "stim_label": "Negative music",
+      "n_epochs": 2,
+      "mean_bold": 0.4365712560035966,
+      "std_bold": 0.8147552584953632,
+      "peak_amp": 0.6643151491880417,
+      "peak_latency_s": 24.0,
+      "power_high": 0.12045093681612128,
+      "power_mid": 0.0,
+      "power_low": 0.0,
+      "spectral_centroid": 1.3925089003092146
+    },
+    {
+      "subject": "sub-control02",
+      "group": "Control",
+      "age": 22,
+      "sex": "M",
+      "task": "music",
+      "run": 1,
+      "trial_type": "positive_music",
+      "valence": "positive",
+      "domain": "music",
+      "stim_label": "Positive music",
+      "n_epochs": 2,
+      "mean_bold": -0.2199931559385732,
+      "std_bold": 0.728576467491839,
+      "peak_amp": 0.1779283583164215,
+      "peak_latency_s": 21.0,
+      "power_high": 0.27209736432910875,
+      "power_mid": 0.0,
+      "power_low": 0.0,
+      "spectral_centroid": 1.8225937423608753
+    },
+    {
+      "subject": "sub-control02",
+      "group": "Control",
+      "age": 22,
+      "sex": "M",
+      "task": "music",
+      "run": 1,
+      "trial_type": "tones",
+      "valence": "neutral",
+      "domain": "tones",
+      "stim_label": "Tones",
+      "n_epochs": 5,
+      "mean_bold": -0.10472928479595005,
+      "std_bold": 1.088354929684212,
+      "peak_amp": 0.05158653944730753,
+      "peak_latency_s": 27.0,
+      "power_high": 0.09778523838480264,
+      "power_mid": 0.14990958391140466,
+      "power_low": 0.24841183563002267,
+      "spectral_centroid": 2.8543225834792953
+    },
+    {
+      "subject": "sub-control02",
+      "group": "Control",
+      "age": 22,
+      "sex": "M",
+      "task": "nonmusic",
+      "run": 4,
+      "trial_type": "negative_nonmusic",
+      "valence": "negative",
+      "domain": "nonmusic",
+      "stim_label": "Negative non-music",
+      "n_epochs": 2,
+      "mean_bold": -0.39794974531978367,
+      "std_bold": 0.7347542057595948,
+      "peak_amp": -0.27163010835647583,
+      "peak_latency_s": 3.0,
+      "power_high": 0.10611617562076874,
+      "power_mid": 0.0,
+      "power_low": 0.0,
+      "spectral_centroid": 1.6477796865153498
+    },
+    {
+      "subject": "sub-control02",
+      "group": "Control",
+      "age": 22,
+      "sex": "M",
+      "task": "nonmusic",
+      "run": 4,
+      "trial_type": "positive_nonmusic",
+      "valence": "positive",
+      "domain": "nonmusic",
+      "stim_label": "Positive non-music",
+      "n_epochs": 2,
+      "mean_bold": 0.26072446460073645,
+      "std_bold": 0.7205964521176607,
+      "peak_amp": 0.623539961874485,
+      "peak_latency_s": 15.0,
+      "power_high": 0.23273048135085042,
+      "power_mid": 0.0,
+      "power_low": 0.0,
+      "spectral_centroid": 1.5892013725961318
+    },
+    {
+      "subject": "sub-control02",
+      "group": "Control",
+      "age": 22,
+      "sex": "M",
+      "task": "nonmusic",
+      "run": 4,
+      "trial_type": "tones",
+      "valence": "neutral",
+      "domain": "tones",
+      "stim_label": "Tones",
+      "n_epochs": 5,
+      "mean_bold": 0.0020427212540833455,
+      "std_bold": 1.1148473397901695,
+      "peak_amp": 0.2741045427322386,
+      "peak_latency_s": 24.0,
+      "power_high": 0.12854221465936086,
+      "power_mid": 0.16856288420994206,
+      "power_low": 0.20925405521804366,
+      "spectral_centroid": 3.1263787238993928
+    },
+    {
+      "subject": "sub-control10",
+      "group": "Control",
+      "age": 23,
+      "sex": "F",
+      "task": "music",
+      "run": 1,
+      "trial_type": "negative_music",
+      "valence": "negative",
+      "domain": "music",
+      "stim_label": "Negative music",
+      "n_epochs": 2,
+      "mean_bold": 0.16530487991192125,
+      "std_bold": 0.627459017502433,
+      "peak_amp": 0.7189531698822975,
+      "peak_latency_s": 0.0,
+      "power_high": 0.2036219847942492,
+      "power_mid": 0.0,
+      "power_low": 0.0,
+      "spectral_centroid": 1.4695171411417571
+    },
+    {
+      "subject": "sub-control10",
+      "group": "Control",
+      "age": 23,
+      "sex": "F",
+      "task": "music",
+      "run": 1,
+      "trial_type": "positive_music",
+      "valence": "positive",
+      "domain": "music",
+      "stim_label": "Positive music",
+      "n_epochs": 2,
+      "mean_bold": -0.35062253549695016,
+      "std_bold": 0.6795492640646851,
+      "peak_amp": -0.0537739098072052,
+      "peak_latency_s": 24.0,
+      "power_high": 0.1414382924915981,
+      "power_mid": 0.0,
+      "power_low": 0.0,
+      "spectral_centroid": 1.7606111700216491
+    },
+    {
+      "subject": "sub-control10",
+      "group": "Control",
+      "age": 23,
+      "sex": "F",
+      "task": "music",
+      "run": 1,
+      "trial_type": "tones",
+      "valence": "neutral",
+      "domain": "tones",
+      "stim_label": "Tones",
+      "n_epochs": 5,
+      "mean_bold": 0.013288727838475749,
+      "std_bold": 1.1495676401045716,
+      "peak_amp": 0.16270823046565042,
+      "peak_latency_s": 24.0,
+      "power_high": 0.05575323712834611,
+      "power_mid": 0.12415943687442564,
+      "power_low": 0.3224704751637802,
+      "spectral_centroid": 2.2658346883359033
+    },
+    {
+      "subject": "sub-control10",
+      "group": "Control",
+      "age": 23,
+      "sex": "F",
+      "task": "nonmusic",
+      "run": 4,
+      "trial_type": "negative_nonmusic",
+      "valence": "negative",
+      "domain": "nonmusic",
+      "stim_label": "Negative non-music",
+      "n_epochs": 2,
+      "mean_bold": -0.49207989894784987,
+      "std_bold": 0.8909187453671573,
+      "peak_amp": 0.05613529682159424,
+      "peak_latency_s": 27.0,
+      "power_high": 0.16648816382393863,
+      "power_mid": 0.0,
+      "power_low": 0.0,
+      "spectral_centroid": 1.6851949781559987
+    },
+    {
+      "subject": "sub-control10",
+      "group": "Control",
+      "age": 23,
+      "sex": "F",
+      "task": "nonmusic",
+      "run": 4,
+      "trial_type": "positive_nonmusic",
+      "valence": "positive",
+      "domain": "nonmusic",
+      "stim_label": "Positive non-music",
+      "n_epochs": 2,
+      "mean_bold": 0.35020260246131907,
+      "std_bold": 0.5491561766130628,
+      "peak_amp": 0.5283326655626297,
+      "peak_latency_s": 0.0,
+      "power_high": 0.16850594530006405,
+      "power_mid": 0.0,
+      "power_low": 0.0,
+      "spectral_centroid": 1.4625301179758134
+    },
+    {
+      "subject": "sub-control10",
+      "group": "Control",
+      "age": 23,
+      "sex": "F",
+      "task": "nonmusic",
+      "run": 4,
+      "trial_type": "tones",
+      "valence": "neutral",
+      "domain": "tones",
+      "stim_label": "Tones",
+      "n_epochs": 5,
+      "mean_bold": 0.008577549443492349,
+      "std_bold": 1.0776568997460212,
+      "peak_amp": 0.4924280524253845,
+      "peak_latency_s": 27.0,
+      "power_high": 0.16693795130218864,
+      "power_mid": 0.06089253357755125,
+      "power_low": 0.27960428027650547,
+      "spectral_centroid": 3.0939488851296484
+    },
+    {
+      "subject": "sub-mdd01",
+      "group": "MDD",
+      "age": 29,
+      "sex": "F",
+      "task": "music",
+      "run": 1,
+      "trial_type": "negative_music",
+      "valence": "negative",
+      "domain": "music",
+      "stim_label": "Negative music",
+      "n_epochs": 2,
+      "mean_bold": 0.33980494094165886,
+      "std_bold": 0.8859391460578238,
+      "peak_amp": 0.7130041494965553,
+      "peak_latency_s": 15.0,
+      "power_high": 0.211189309594309,
+      "power_mid": 0.0,
+      "power_low": 0.0,
+      "spectral_centroid": 1.5743017294434956
+    },
+    {
+      "subject": "sub-mdd01",
+      "group": "MDD",
+      "age": 29,
+      "sex": "F",
+      "task": "music",
+      "run": 1,
+      "trial_type": "positive_music",
+      "valence": "positive",
+      "domain": "music",
+      "stim_label": "Positive music",
+      "n_epochs": 2,
+      "mean_bold": -0.359904071688652,
+      "std_bold": 0.684834722847005,
+      "peak_amp": -0.12841521203517914,
+      "peak_latency_s": 9.0,
+      "power_high": 0.14167084032745073,
+      "power_mid": 0.0,
+      "power_low": 0.0,
+      "spectral_centroid": 1.3351696145563894
+    },
+    {
+      "subject": "sub-mdd01",
+      "group": "MDD",
+      "age": 29,
+      "sex": "F",
+      "task": "music",
+      "run": 1,
+      "trial_type": "tones",
+      "valence": "neutral",
+      "domain": "tones",
+      "stim_label": "Tones",
+      "n_epochs": 5,
+      "mean_bold": -0.06058531973229827,
+      "std_bold": 1.0694409354699472,
+      "peak_amp": 0.16747510433197021,
+      "peak_latency_s": 30.0,
+      "power_high": 0.12715665743165505,
+      "power_mid": 0.15337379644429835,
+      "power_low": 0.2308312173811123,
+      "spectral_centroid": 2.8833539754886526
+    },
+    {
+      "subject": "sub-mdd01",
+      "group": "MDD",
+      "age": 29,
+      "sex": "F",
+      "task": "nonmusic",
+      "run": 4,
+      "trial_type": "negative_nonmusic",
+      "valence": "negative",
+      "domain": "nonmusic",
+      "stim_label": "Negative non-music",
+      "n_epochs": 2,
+      "mean_bold": -0.21436042636632918,
+      "std_bold": 0.7606694632610487,
+      "peak_amp": 0.028461366891860962,
+      "peak_latency_s": 27.0,
+      "power_high": 0.13523054310634827,
+      "power_mid": 0.0,
+      "power_low": 0.0,
+      "spectral_centroid": 1.309350816003328
+    },
+    {
+      "subject": "sub-mdd01",
+      "group": "MDD",
+      "age": 29,
+      "sex": "F",
+      "task": "nonmusic",
+      "run": 4,
+      "trial_type": "positive_nonmusic",
+      "valence": "positive",
+      "domain": "nonmusic",
+      "stim_label": "Positive non-music",
+      "n_epochs": 2,
+      "mean_bold": 0.4183771522207694,
+      "std_bold": 0.7807158899514501,
+      "peak_amp": 0.8250493165105581,
+      "peak_latency_s": 30.0,
+      "power_high": 0.13947771207933327,
+      "power_mid": 0.0,
+      "power_low": 0.0,
+      "spectral_centroid": 1.467859360291454
+    },
+    {
+      "subject": "sub-mdd01",
+      "group": "MDD",
+      "age": 29,
+      "sex": "F",
+      "task": "nonmusic",
+      "run": 4,
+      "trial_type": "tones",
+      "valence": "neutral",
+      "domain": "tones",
+      "stim_label": "Tones",
+      "n_epochs": 5,
+      "mean_bold": -0.1126805143430829,
+      "std_bold": 1.112025813278151,
+      "peak_amp": 0.0816876769065857,
+      "peak_latency_s": 3.0,
+      "power_high": 0.06059268737445047,
+      "power_mid": 0.08001608834698792,
+      "power_low": 0.35559830647592117,
+      "spectral_centroid": 2.1935703696822793
+    },
+    {
+      "subject": "sub-mdd10",
+      "group": "MDD",
+      "age": 19,
+      "sex": "F",
+      "task": "music",
+      "run": 1,
+      "trial_type": "negative_music",
+      "valence": "negative",
+      "domain": "music",
+      "stim_label": "Negative music",
+      "n_epochs": 2,
+      "mean_bold": -0.36294849365949633,
+      "std_bold": 0.7753394991392412,
+      "peak_amp": -0.13750261068344116,
+      "peak_latency_s": 15.0,
+      "power_high": 0.11025914106928549,
+      "power_mid": 0.0,
+      "power_low": 0.0,
+      "spectral_centroid": 1.408737680412581
+    },
+    {
+      "subject": "sub-mdd10",
+      "group": "MDD",
+      "age": 19,
+      "sex": "F",
+      "task": "music",
+      "run": 1,
+      "trial_type": "positive_music",
+      "valence": "positive",
+      "domain": "music",
+      "stim_label": "Positive music",
+      "n_epochs": 2,
+      "mean_bold": 0.4930618540807204,
+      "std_bold": 0.7261835760634398,
+      "peak_amp": 0.7037329375743866,
+      "peak_latency_s": 6.0,
+      "power_high": 0.11899368183603942,
+      "power_mid": 0.0,
+      "power_low": 0.0,
+      "spectral_centroid": 1.4204843559182108
+    },
+    {
+      "subject": "sub-mdd10",
+      "group": "MDD",
+      "age": 19,
+      "sex": "F",
+      "task": "music",
+      "run": 1,
+      "trial_type": "tones",
+      "valence": "neutral",
+      "domain": "tones",
+      "stim_label": "Tones",
+      "n_epochs": 5,
+      "mean_bold": -0.1037493380542212,
+      "std_bold": 1.0814484716797392,
+      "peak_amp": 0.08458915948867798,
+      "peak_latency_s": 30.0,
+      "power_high": 0.06472807554677147,
+      "power_mid": 0.07225606885455248,
+      "power_low": 0.3623634783267583,
+      "spectral_centroid": 2.0708354595315748
+    },
+    {
+      "subject": "sub-mdd10",
+      "group": "MDD",
+      "age": 19,
+      "sex": "F",
+      "task": "music",
+      "run": 2,
+      "trial_type": "negative_music",
+      "valence": "negative",
+      "domain": "music",
+      "stim_label": "Negative music",
+      "n_epochs": 2,
+      "mean_bold": 0.41356645118106494,
+      "std_bold": 0.8510022467061268,
+      "peak_amp": 0.6566998511552811,
+      "peak_latency_s": 30.0,
+      "power_high": 0.14665443448752322,
+      "power_mid": 0.0,
+      "power_low": 0.0,
+      "spectral_centroid": 1.397603323832252
+    },
+    {
+      "subject": "sub-mdd10",
+      "group": "MDD",
+      "age": 19,
+      "sex": "F",
+      "task": "music",
+      "run": 2,
+      "trial_type": "positive_music",
+      "valence": "positive",
+      "domain": "music",
+      "stim_label": "Positive music",
+      "n_epochs": 2,
+      "mean_bold": -0.4174268558621407,
+      "std_bold": 0.6020757822773467,
+      "peak_amp": 0.008401572704315186,
+      "peak_latency_s": 12.0,
+      "power_high": 0.13218067294085165,
+      "power_mid": 0.0,
+      "power_low": 0.0,
+      "spectral_centroid": 1.3160634495496168
+    },
+    {
+      "subject": "sub-mdd10",
+      "group": "MDD",
+      "age": 19,
+      "sex": "F",
+      "task": "music",
+      "run": 2,
+      "trial_type": "tones",
+      "valence": "neutral",
+      "domain": "tones",
+      "stim_label": "Tones",
+      "n_epochs": 5,
+      "mean_bold": -0.036483348856838245,
+      "std_bold": 1.1035074984401223,
+      "peak_amp": 0.1789487838745117,
+      "peak_latency_s": 30.0,
+      "power_high": 0.05368932931333902,
+      "power_mid": 0.06277493042758385,
+      "power_low": 0.3833078477568639,
+      "spectral_centroid": 1.9920015824442108
+    },
+    {
+      "subject": "sub-mdd10",
+      "group": "MDD",
+      "age": 19,
+      "sex": "F",
+      "task": "music",
+      "run": 3,
+      "trial_type": "negative_music",
+      "valence": "negative",
+      "domain": "music",
+      "stim_label": "Negative music",
+      "n_epochs": 2,
+      "mean_bold": -0.31631258726119993,
+      "std_bold": 0.7601463396522851,
+      "peak_amp": -0.11071887612342834,
+      "peak_latency_s": 27.0,
+      "power_high": 0.0943169656213282,
+      "power_mid": 0.0,
+      "power_low": 0.0,
+      "spectral_centroid": 1.1403838536369937
+    },
+    {
+      "subject": "sub-mdd10",
+      "group": "MDD",
+      "age": 19,
+      "sex": "F",
+      "task": "music",
+      "run": 3,
+      "trial_type": "positive_music",
+      "valence": "positive",
+      "domain": "music",
+      "stim_label": "Positive music",
+      "n_epochs": 2,
+      "mean_bold": 0.37062718312848697,
+      "std_bold": 0.7104118852379802,
+      "peak_amp": 0.6182697415351868,
+      "peak_latency_s": 30.0,
+      "power_high": 0.17414637938071964,
+      "power_mid": 0.0,
+      "power_low": 0.0,
+      "spectral_centroid": 1.4063104259220616
+    },
+    {
+      "subject": "sub-mdd10",
+      "group": "MDD",
+      "age": 19,
+      "sex": "F",
+      "task": "music",
+      "run": 3,
+      "trial_type": "tones",
+      "valence": "neutral",
+      "domain": "tones",
+      "stim_label": "Tones",
+      "n_epochs": 5,
+      "mean_bold": -0.033889551330709235,
+      "std_bold": 1.1589417763267755,
+      "peak_amp": 0.24350780937820674,
+      "peak_latency_s": 30.0,
+      "power_high": 0.06255353345258374,
+      "power_mid": 0.06574004619776169,
+      "power_low": 0.37132501972641496,
+      "spectral_centroid": 2.0572155041963636
+    },
+    {
+      "subject": "sub-mdd10",
+      "group": "MDD",
+      "age": 19,
+      "sex": "F",
+      "task": "nonmusic",
+      "run": 4,
+      "trial_type": "negative_nonmusic",
+      "valence": "negative",
+      "domain": "nonmusic",
+      "stim_label": "Negative non-music",
+      "n_epochs": 2,
+      "mean_bold": 0.5165976380548355,
+      "std_bold": 0.688060358613151,
+      "peak_amp": 0.6468470888212323,
+      "peak_latency_s": 15.0,
+      "power_high": 0.13721386455436277,
+      "power_mid": 0.0,
+      "power_low": 0.0,
+      "spectral_centroid": 1.6952040524995722
+    },
+    {
+      "subject": "sub-mdd10",
+      "group": "MDD",
+      "age": 19,
+      "sex": "F",
+      "task": "nonmusic",
+      "run": 4,
+      "trial_type": "positive_nonmusic",
+      "valence": "positive",
+      "domain": "nonmusic",
+      "stim_label": "Positive non-music",
+      "n_epochs": 2,
+      "mean_bold": -0.3394998624920845,
+      "std_bold": 0.8801424618713841,
+      "peak_amp": -0.022408783435821533,
+      "peak_latency_s": 24.0,
+      "power_high": 0.22304042214418068,
+      "power_mid": 0.0,
+      "power_low": 0.0,
+      "spectral_centroid": 1.5551983997964984
+    },
+    {
+      "subject": "sub-mdd10",
+      "group": "MDD",
+      "age": 19,
+      "sex": "F",
+      "task": "nonmusic",
+      "run": 4,
+      "trial_type": "tones",
+      "valence": "neutral",
+      "domain": "tones",
+      "stim_label": "Tones",
+      "n_epochs": 5,
+      "mean_bold": -0.10481505011612514,
+      "std_bold": 1.0662418050573272,
+      "peak_amp": 0.25337558150291445,
+      "peak_latency_s": 3.0,
+      "power_high": 0.0596396266216328,
+      "power_mid": 0.10924487641161869,
+      "power_low": 0.32609555705972626,
+      "spectral_centroid": 2.3636568026744
+    },
+    {
+      "subject": "sub-mdd10",
+      "group": "MDD",
+      "age": 19,
+      "sex": "F",
+      "task": "nonmusic",
+      "run": 5,
+      "trial_type": "negative_nonmusic",
+      "valence": "negative",
+      "domain": "nonmusic",
+      "stim_label": "Negative non-music",
+      "n_epochs": 2,
+      "mean_bold": -0.3614137817174196,
+      "std_bold": 0.7775459838124021,
+      "peak_amp": -0.25551141798496246,
+      "peak_latency_s": 9.0,
+      "power_high": 0.15875842958000522,
+      "power_mid": 0.0,
+      "power_low": 0.0,
+      "spectral_centroid": 1.4476429237228343
+    },
+    {
+      "subject": "sub-mdd10",
+      "group": "MDD",
+      "age": 19,
+      "sex": "F",
+      "task": "nonmusic",
+      "run": 5,
+      "trial_type": "positive_nonmusic",
+      "valence": "positive",
+      "domain": "nonmusic",
+      "stim_label": "Positive non-music",
+      "n_epochs": 2,
+      "mean_bold": 0.4556085756895217,
+      "std_bold": 0.6181381041256949,
+      "peak_amp": 0.6292230300605297,
+      "peak_latency_s": 24.0,
+      "power_high": 0.2519426612161124,
+      "power_mid": 0.0,
+      "power_low": 0.0,
+      "spectral_centroid": 1.61057022628613
+    },
+    {
+      "subject": "sub-mdd10",
+      "group": "MDD",
+      "age": 19,
+      "sex": "F",
+      "task": "nonmusic",
+      "run": 5,
+      "trial_type": "tones",
+      "valence": "neutral",
+      "domain": "tones",
+      "stim_label": "Tones",
+      "n_epochs": 5,
+      "mean_bold": -0.0810942486859858,
+      "std_bold": 1.123636456793996,
+      "peak_amp": 0.09582433819770811,
+      "peak_latency_s": 6.0,
+      "power_high": 0.03643730538891832,
+      "power_mid": 0.05127134132464671,
+      "power_low": 0.4024585010051138,
+      "spectral_centroid": 1.8562287677916158
+    }
+  ],
+  "subject_features": [
+    {
+      "subject": "sub-control01",
+      "group": "Control",
+      "age": 19,
+      "sex": "F",
+      "positive_music_mean_bold": 0.3719798692248084,
+      "positive_music_peak_amp": 0.5403279364109039,
+      "positive_music_power_high": 0.16711770588572608,
+      "positive_music_centroid": 1.49934985990077,
+      "negative_music_mean_bold": -0.39786110501736405,
+      "negative_music_peak_amp": -0.12152473628520966,
+      "negative_music_power_high": 0.1565693567915582,
+      "negative_music_centroid": 1.6514687832642363,
+      "positive_nonmusic_mean_bold": -0.3831143967807293,
+      "positive_nonmusic_peak_amp": -0.10265061259269714,
+      "positive_nonmusic_power_high": 0.23384220697471841,
+      "positive_nonmusic_centroid": 1.7171720167595408,
+      "negative_nonmusic_mean_bold": 0.40966446714645083,
+      "negative_nonmusic_peak_amp": 0.715770311653614,
+      "negative_nonmusic_power_high": 0.20597019558006666,
+      "negative_nonmusic_centroid": 2.0878464555478957,
+      "tones_mean_bold": -0.052228993951466005,
+      "tones_peak_amp": 0.13729387253522868,
+      "tones_power_high": 0.14206522557066964,
+      "tones_centroid": 2.919637070610173,
+      "pos_music_vs_tones_bold": 0.42420886317627443,
+      "neg_music_vs_tones_bold": -0.34563211106589803,
+      "pos_music_vs_neg_music_bold": 0.7698409742421725,
+      "pos_music_vs_pos_nonmusic_bold": 0.7550942660055378,
+      "pos_music_vs_tones_power_high": 0.02505248031505644,
+      "music_domain_mean_bold": -0.012940617896277817,
+      "nonmusic_domain_mean_bold": 0.013275035182860773,
+      "music_vs_nonmusic_bold": -0.02621565307913859,
+      "run_power_high_mean": 0.21215501503371778,
+      "run_centroid_mean": 4.854109287110339
+    },
+    {
+      "subject": "sub-control02",
+      "group": "Control",
+      "age": 22,
+      "sex": "M",
+      "positive_music_mean_bold": -0.2199931559385732,
+      "positive_music_peak_amp": 0.1779283583164215,
+      "positive_music_power_high": 0.27209736432910875,
+      "positive_music_centroid": 1.8225937423608753,
+      "negative_music_mean_bold": 0.4365712560035966,
+      "negative_music_peak_amp": 0.6643151491880417,
+      "negative_music_power_high": 0.12045093681612128,
+      "negative_music_centroid": 1.3925089003092146,
+      "positive_nonmusic_mean_bold": 0.26072446460073645,
+      "positive_nonmusic_peak_amp": 0.623539961874485,
+      "positive_nonmusic_power_high": 0.23273048135085042,
+      "positive_nonmusic_centroid": 1.5892013725961318,
+      "negative_nonmusic_mean_bold": -0.39794974531978367,
+      "negative_nonmusic_peak_amp": -0.27163010835647583,
+      "negative_nonmusic_power_high": 0.10611617562076874,
+      "negative_nonmusic_centroid": 1.6477796865153498,
+      "tones_mean_bold": -0.05134328177093335,
+      "tones_peak_amp": 0.16284554108977306,
+      "tones_power_high": 0.11316372652208176,
+      "tones_centroid": 2.990350653689344,
+      "pos_music_vs_tones_bold": -0.16864987416763982,
+      "neg_music_vs_tones_bold": 0.4879145377745299,
+      "pos_music_vs_neg_music_bold": -0.6565644119421697,
+      "pos_music_vs_pos_nonmusic_bold": -0.48071762053930966,
+      "pos_music_vs_tones_power_high": 0.158933637807027,
+      "music_domain_mean_bold": 0.1082890500325117,
+      "nonmusic_domain_mean_bold": -0.06861264035952361,
+      "music_vs_nonmusic_bold": 0.1769016903920353,
+      "run_power_high_mean": 0.16695810395561178,
+      "run_centroid_mean": 4.723992620304642
+    },
+    {
+      "subject": "sub-control10",
+      "group": "Control",
+      "age": 23,
+      "sex": "F",
+      "positive_music_mean_bold": -0.35062253549695016,
+      "positive_music_peak_amp": -0.0537739098072052,
+      "positive_music_power_high": 0.1414382924915981,
+      "positive_music_centroid": 1.7606111700216491,
+      "negative_music_mean_bold": 0.16530487991192125,
+      "negative_music_peak_amp": 0.7189531698822975,
+      "negative_music_power_high": 0.2036219847942492,
+      "negative_music_centroid": 1.4695171411417571,
+      "positive_nonmusic_mean_bold": 0.35020260246131907,
+      "positive_nonmusic_peak_amp": 0.5283326655626297,
+      "positive_nonmusic_power_high": 0.16850594530006405,
+      "positive_nonmusic_centroid": 1.4625301179758134,
+      "negative_nonmusic_mean_bold": -0.49207989894784987,
+      "negative_nonmusic_peak_amp": 0.05613529682159424,
+      "negative_nonmusic_power_high": 0.16648816382393863,
+      "negative_nonmusic_centroid": 1.6851949781559987,
+      "tones_mean_bold": 0.010933138640984049,
+      "tones_peak_amp": 0.3275681414455175,
+      "tones_power_high": 0.11134559421526738,
+      "tones_centroid": 2.679891786732776,
+      "pos_music_vs_tones_bold": -0.3615556741379342,
+      "neg_music_vs_tones_bold": 0.1543717412709372,
+      "pos_music_vs_neg_music_bold": -0.5159274154088714,
+      "pos_music_vs_pos_nonmusic_bold": -0.7008251379582693,
+      "pos_music_vs_tones_power_high": 0.03009269827633071,
+      "music_domain_mean_bold": -0.09265882779251446,
+      "nonmusic_domain_mean_bold": -0.0709386482432654,
+      "music_vs_nonmusic_bold": -0.021720179549249055,
+      "run_power_high_mean": 0.17074094602478726,
+      "run_centroid_mean": 4.455450289973575
+    },
+    {
+      "subject": "sub-mdd01",
+      "group": "MDD",
+      "age": 29,
+      "sex": "F",
+      "positive_music_mean_bold": -0.359904071688652,
+      "positive_music_peak_amp": -0.12841521203517914,
+      "positive_music_power_high": 0.14167084032745073,
+      "positive_music_centroid": 1.3351696145563894,
+      "negative_music_mean_bold": 0.33980494094165886,
+      "negative_music_peak_amp": 0.7130041494965553,
+      "negative_music_power_high": 0.211189309594309,
+      "negative_music_centroid": 1.5743017294434956,
+      "positive_nonmusic_mean_bold": 0.4183771522207694,
+      "positive_nonmusic_peak_amp": 0.8250493165105581,
+      "positive_nonmusic_power_high": 0.13947771207933327,
+      "positive_nonmusic_centroid": 1.467859360291454,
+      "negative_nonmusic_mean_bold": -0.21436042636632918,
+      "negative_nonmusic_peak_amp": 0.028461366891860962,
+      "negative_nonmusic_power_high": 0.13523054310634827,
+      "negative_nonmusic_centroid": 1.309350816003328,
+      "tones_mean_bold": -0.08663291703769059,
+      "tones_peak_amp": 0.12458139061927795,
+      "tones_power_high": 0.09387467240305276,
+      "tones_centroid": 2.538462172585466,
+      "pos_music_vs_tones_bold": -0.2732711546509614,
+      "neg_music_vs_tones_bold": 0.42643785797934947,
+      "pos_music_vs_neg_music_bold": -0.6997090126303109,
+      "pos_music_vs_pos_nonmusic_bold": -0.7782812239094214,
+      "pos_music_vs_tones_power_high": 0.04779616792439796,
+      "music_domain_mean_bold": -0.010049565373496577,
+      "nonmusic_domain_mean_bold": 0.1020083629272201,
+      "music_vs_nonmusic_bold": -0.11205792830071667,
+      "run_power_high_mean": 0.15801625862907695,
+      "run_centroid_mean": 3.8528395047572004
+    },
+    {
+      "subject": "sub-mdd10",
+      "group": "MDD",
+      "age": 19,
+      "sex": "F",
+      "positive_music_mean_bold": 0.14875406044902223,
+      "positive_music_peak_amp": 0.44346808393796283,
+      "positive_music_power_high": 0.1417735780525369,
+      "positive_music_centroid": 1.3809527437966296,
+      "negative_music_mean_bold": -0.0885648765798771,
+      "negative_music_peak_amp": 0.13615945478280386,
+      "negative_music_power_high": 0.11707684705937897,
+      "negative_music_centroid": 1.3155749526272755,
+      "positive_nonmusic_mean_bold": 0.058054356598718576,
+      "positive_nonmusic_peak_amp": 0.3034071233123541,
+      "positive_nonmusic_power_high": 0.23749154168014655,
+      "positive_nonmusic_centroid": 1.5828843130413142,
+      "negative_nonmusic_mean_bold": 0.07759192816870794,
+      "negative_nonmusic_peak_amp": 0.19566783541813493,
+      "negative_nonmusic_power_high": 0.147986147067184,
+      "negative_nonmusic_centroid": 1.5714234881112032,
+      "tones_mean_bold": -0.07200630740877592,
+      "tones_peak_amp": 0.1712491344884038,
+      "tones_power_high": 0.05540957406464907,
+      "tones_centroid": 2.067987623327633,
+      "pos_music_vs_tones_bold": 0.22076036785779815,
+      "neg_music_vs_tones_bold": -0.016558569171101184,
+      "pos_music_vs_neg_music_bold": 0.23731893702889933,
+      "pos_music_vs_pos_nonmusic_bold": 0.09069970385030365,
+      "pos_music_vs_tones_power_high": 0.08636400398788784,
+      "music_domain_mean_bold": 0.030094591934572562,
+      "nonmusic_domain_mean_bold": 0.06782314238371326,
+      "music_vs_nonmusic_bold": -0.037728550449140696,
+      "run_power_high_mean": 0.08599555993776176,
+      "run_centroid_mean": 3.3213261198544557
     }
   ],
   "psd_examples": {
@@ -2195,68 +4110,7 @@ BOOK_BUNDLE = {
       ]
     }
   },
-  "peri_examples": {
-    "Control_music": {
-      "subject": "sub-control01",
-      "peri": [
-        0.1983679160475731,
-        0.11039134860038757,
-        -0.16735467314720154,
-        -0.18947987537831068,
-        -0.22166730090975761,
-        -0.087783582508564,
-        0.049674034118652344,
-        -0.14596284925937653,
-        0.12770423293113708,
-        0.17937910556793213
-      ]
-    },
-    "Control_nonmusic": {
-      "subject": "sub-control01",
-      "peri": [
-        0.11346996203064919,
-        -0.20871440693736076,
-        -0.2416716068983078,
-        -0.13464055582880974,
-        0.02436681091785431,
-        -0.07257339637726545,
-        0.10552128031849861,
-        0.04024863243103027,
-        0.16902071610093117,
-        0.25809283554553986
-      ]
-    },
-    "MDD_music": {
-      "subject": "sub-mdd01",
-      "peri": [
-        -0.10425789840519428,
-        -0.10009212233126163,
-        -0.00911794789135456,
-        0.06718272715806961,
-        0.04701795428991318,
-        0.17456019297242165,
-        0.13405737280845642,
-        -0.15095814317464828,
-        -0.13671477511525154,
-        -0.030293703079223633
-      ]
-    },
-    "MDD_nonmusic": {
-      "subject": "sub-mdd01",
-      "peri": [
-        -0.13903505355119705,
-        -0.03321614861488342,
-        0.11087030172348022,
-        0.06845954060554504,
-        -0.018646039068698883,
-        0.1978657878935337,
-        0.25860151648521423,
-        0.010503299534320831,
-        0.05714592710137367,
-        0.3041984150186181
-      ]
-    }
-  },
+  "peri_examples": {},
   "timeseries_examples": {
     "sub-control01_music": {
       "subject": "sub-control01",
@@ -5076,6 +6930,174 @@ BOOK_BUNDLE = {
         1.388912558555603,
         1.3919413089752197,
         1.775146245956421
+      ]
+    }
+  },
+  "condition_peri_examples": {
+    "Control_negative_music": {
+      "subject": "sub-control01",
+      "trial_type": "negative_music",
+      "peri": [
+        -0.12152473628520966,
+        -0.2582263648509979,
+        -0.5611342787742615,
+        -0.5705273505300283,
+        -0.5184921845793724,
+        -0.590400829911232,
+        -0.3598776161670685,
+        -0.5322473049163818,
+        -0.28491947054862976,
+        -0.18126091361045837
+      ]
+    },
+    "Control_positive_music": {
+      "subject": "sub-control01",
+      "trial_type": "positive_music",
+      "peri": [
+        0.5182605683803558,
+        0.47900906205177307,
+        0.2264249324798584,
+        0.19156759977340698,
+        0.07515758275985718,
+        0.414833664894104,
+        0.45922568440437317,
+        0.24032160639762878,
+        0.5403279364109039,
+        0.5400191247463226,
+        0.4066307991743088
+      ]
+    },
+    "Control_tones": {
+      "subject": "sub-control01",
+      "trial_type": "tones",
+      "peri": [
+        0.14434222579002381,
+        -0.03810350064188239,
+        -0.2298481583595276,
+        -0.2419580638408661,
+        -0.0795520305633545,
+        -0.04522581696510315,
+        -0.07089851915836336,
+        0.07665742188692111,
+        0.14580649197101575,
+        -0.14691413424909117,
+        -0.010931992530822754
+      ]
+    },
+    "Control_negative_nonmusic": {
+      "subject": "sub-control01",
+      "trial_type": "negative_nonmusic",
+      "peri": [
+        0.49859569221735,
+        0.21462009847164154,
+        0.16155871748924255,
+        0.17690426111221313,
+        0.43723229318857193,
+        0.38454912044107914,
+        0.31369317322969437,
+        0.36829841136932373,
+        0.715770311653614,
+        0.6661624312400818,
+        0.5689246281981468
+      ]
+    },
+    "Control_positive_nonmusic": {
+      "subject": "sub-control01",
+      "trial_type": "positive_nonmusic",
+      "peri": [
+        -0.27165576815605164,
+        -0.6320489123463631,
+        -0.6449019312858582,
+        -0.4461853727698326,
+        -0.3884986713528633,
+        -0.52969591319561,
+        -0.10265061259269714,
+        -0.2878011465072632,
+        -0.3777288794517517,
+        -0.14997676014900208
+      ]
+    },
+    "MDD_negative_music": {
+      "subject": "sub-mdd01",
+      "trial_type": "negative_music",
+      "peri": [
+        0.24253571033477783,
+        0.23846611380577087,
+        0.31870799884200096,
+        0.26278066635131836,
+        0.4364486634731293,
+        0.7130041494965553,
+        0.41076692938804626,
+        0.21188578009605408,
+        0.292114719748497,
+        0.25509729981422424,
+        0.35604631900787354
+      ]
+    },
+    "MDD_positive_music": {
+      "subject": "sub-mdd01",
+      "trial_type": "positive_music",
+      "peri": [
+        -0.4510515071451664,
+        -0.43865035846829414,
+        -0.3369438946247101,
+        -0.12841521203517914,
+        -0.3424127548933029,
+        -0.36388376355171204,
+        -0.14265218377113342,
+        -0.5138020664453506,
+        -0.5655442699790001,
+        -0.3156847059726715
+      ]
+    },
+    "MDD_tones": {
+      "subject": "sub-mdd01",
+      "trial_type": "tones",
+      "peri": [
+        -0.1543421506881714,
+        -0.11021266818046574,
+        -0.11667030628770592,
+        -0.25876608848571775,
+        -0.2646403431892395,
+        -0.06094682812690735,
+        0.13930978335440158,
+        -0.05458628654479973,
+        -0.05779775738716131,
+        0.10854919016361242,
+        0.16747510433197021
+      ]
+    },
+    "MDD_negative_nonmusic": {
+      "subject": "sub-mdd01",
+      "trial_type": "negative_nonmusic",
+      "peri": [
+        -0.41912324726581573,
+        -0.42907923460006714,
+        -0.20160233974456787,
+        -0.15881243348121643,
+        -0.2715999335050583,
+        0.0073507726192474365,
+        -0.039334654808044434,
+        -0.34494879841804504,
+        -0.3149157613515854,
+        0.028461366891860962
+      ]
+    },
+    "MDD_positive_nonmusic": {
+      "subject": "sub-mdd01",
+      "trial_type": "positive_nonmusic",
+      "peri": [
+        0.14105314016342163,
+        0.3626469373703003,
+        0.4233429431915283,
+        0.2957315146923065,
+        0.23430785536766052,
+        0.38838080316782,
+        0.5565376877784729,
+        0.3659553974866867,
+        0.42920761555433273,
+        0.5799354631453753,
+        0.8250493165105581
       ]
     }
   }
