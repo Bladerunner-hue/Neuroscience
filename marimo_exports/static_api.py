@@ -95,8 +95,10 @@ def build_health(docs: Path | None = None) -> dict[str, Any]:
             "bakeoff": "api/bakeoff.json",
             "tf_results": "api/tf_results.json",
             "openapi": "api/openapi.json",
+            "architecture": "api/architecture.json",
             "explorer": "api/",
         },
+        "live_server": "uvicorn app:app  # /book/* marimo + /api/* REST",
     }
 
 
@@ -162,6 +164,32 @@ def build_tf_results() -> dict[str, Any]:
     return b.get("tf_results") or {}
 
 
+def build_architecture() -> dict[str, Any]:
+    """Static copy of the live /api/architecture payload (subset)."""
+    return {
+        "dataset": {
+            "id": "ds000171",
+            "url": "https://openneuro.org/datasets/ds000171",
+            "tr_sec": 3.0,
+        },
+        "layers": {
+            "notebooks": "marimo_notebooks/",
+            "live": "uvicorn app:app → /book/* + /api/*",
+            "pages": "docs/wasm + docs/api (static)",
+        },
+        "cross_ref_openneuro": [
+            "ds002725",
+            "ds003085",
+            "ds003720",
+            "ds004142",
+            "ds005700",
+            "ds006564",
+        ],
+        "docs": "ARCHITECTURE.md",
+        "github_pages": "https://bladerunner-hue.github.io/Neuroscience/",
+    }
+
+
 def build_openapi(*, pages_base: str = ".") -> dict[str, Any]:
     """Minimal OpenAPI 3 doc pointing at static JSON (GitHub Pages) paths."""
     return {
@@ -170,10 +198,10 @@ def build_openapi(*, pages_base: str = ".") -> dict[str, Any]:
             "title": "Neuroscience book API (static GitHub Pages mirror)",
             "description": (
                 "Frozen snapshot of the FastAPI feature API for OpenNeuro ds000171. "
-                "GitHub Pages serves these as static JSON; local `uvicorn` serves live "
-                "routes at the same paths without the `.json` suffix."
+                "GitHub Pages serves these as static JSON; local `uvicorn app:app` serves live "
+                "routes (plus marimo /book/*) without the `.json` suffix."
             ),
-            "version": "1.1.0",
+            "version": "1.2.0",
         },
         "servers": [
             {"url": pages_base, "description": "This static site (relative)"},
@@ -190,6 +218,13 @@ def build_openapi(*, pages_base: str = ".") -> dict[str, Any]:
                 "get": {
                     "summary": "PSD method + cohort counts",
                     "operationId": "meta",
+                    "responses": {"200": {"description": "OK"}},
+                }
+            },
+            "/architecture.json": {
+                "get": {
+                    "summary": "Stack map + cross-ref datasets",
+                    "operationId": "architecture",
                     "responses": {"200": {"description": "OK"}},
                 }
             },
@@ -338,6 +373,7 @@ def export_static_api(out_dir: Path | None = None, *, docs: Path | None = None) 
     payloads: dict[str, Any] = {
         "health.json": build_health(docs),
         "meta.json": build_meta(),
+        "architecture.json": build_architecture(),
         "features/spectral.json": build_features_spectral(clean=False),
         "features/spectral_clean.json": build_features_spectral(clean=True),
         "features/subject.json": build_features_subject(),

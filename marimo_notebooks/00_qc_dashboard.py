@@ -4,7 +4,7 @@ Reactive marimo + Polars + @mo.cache. Public WASM chapter (no TensorFlow / MNE).
 """
 
 # /// script
-# requires-python = ">=3.11"
+# requires-python = ">=3.12,<3.13"
 # dependencies = ["marimo", "numpy", "pandas", "polars", "matplotlib", "scikit-learn", "scipy"]
 # ///
 
@@ -36,6 +36,7 @@ def _():
         load_cleaned_spectral_features,
         load_spectral_features,
         load_spectral_features_polars,
+        pandas_to_polars,
         set_global_style,
     )
     from spectral_methods import (
@@ -70,6 +71,7 @@ def _():
         multitaper_psd,
         np,
         pd,
+        pandas_to_polars,
         pl,
         plt,
         spectral_feats,
@@ -143,7 +145,14 @@ def _(mo):
 
 
 @app.cell
-def _(load_book_bundle, load_spectral_features_polars, load_spectral_features, mo, pl):
+def _(
+    load_book_bundle,
+    load_spectral_features_polars,
+    load_spectral_features,
+    mo,
+    pandas_to_polars,
+    pl,
+):
     @mo.cache
     def load_runs_pl():
         pl_df = load_spectral_features_polars()
@@ -154,7 +163,8 @@ def _(load_book_bundle, load_spectral_features_polars, load_spectral_features, m
         if df is None or getattr(df, "empty", True):
             return pl.DataFrame()
         drop = [c for c in ("psd_f", "psd_pxx") if c in df.columns]
-        return pl.from_pandas(df.drop(columns=drop, errors="ignore"))
+        # WASM-safe: never pl.from_pandas (needs pyarrow for nullable dtypes)
+        return pandas_to_polars(df.drop(columns=drop, errors="ignore"))
 
     runs_pl = load_runs_pl()
     bundle = load_book_bundle()
@@ -177,6 +187,8 @@ def _(
     key_insight_card,
     mo,
     np,
+    pd,
+    pandas_to_polars,
     pl,
     runs_pl,
     spike_thr,
@@ -185,8 +197,11 @@ def _(
     def compute_qc(df_pl: pl.DataFrame, contamination: float, flat_q_: float, spike_thr_: float):
         if df_pl.height == 0:
             return df_pl, {}
+        # to_pandas is fine on small QC tables; back to polars without pyarrow
         pdf = df_pl.to_pandas()
-        # ensure QC columns exist (recompute IF even if prepare already flagged)
+        for c in pdf.columns:
+            if str(pdf[c].dtype) in ("Int64", "Float64", "boolean"):
+                pdf[c] = pd.to_numeric(pdf[c], errors="coerce")
         qc_feats = [
             c
             for c in [
@@ -203,47 +218,49 @@ def _(
         ]
         stats = {"n": len(pdf), "qc_feats": qc_feats}
         if len(qc_feats) >= 2 and len(pdf) >= 5:
-            X = pdf[qc_feats].apply(lambda s: s.astype(float))
+            X = pdf[qc_feats].apply(lambda s: pd.to_numeric(s, errors="coerce"))
             X = X.fillna(X.median(numeric_only=True))
-            Xs = StandardScaler().fit_transform(X.values)
+            Xs = StandardScaler().fit_transform(X.values.astype(float))
             iso = IsolationForest(
                 n_estimators=200,
                 contamination=float(contamination),
                 random_state=42,
             )
             pred = iso.fit_predict(Xs)
-            pdf["qc_outlier"] = (pred == -1).astype(int)
-            pdf["qc_score"] = -iso.score_samples(Xs)  # higher = more anomalous
+            pdf["qc_outlier"] = (pred == -1).astype(np.int64)
+            pdf["qc_score"] = -iso.score_samples(Xs)
         else:
-            pdf["qc_outlier"] = 0
+            pdf["qc_outlier"] = np.int64(0)
             pdf["qc_score"] = 0.0
 
         if "spectral_flatness" in pdf.columns:
             thr_f = float(pdf["spectral_flatness"].quantile(float(flat_q_)))
-            pdf["qc_high_flatness"] = (pdf["spectral_flatness"] >= thr_f).astype(int)
+            pdf["qc_high_flatness"] = (pdf["spectral_flatness"] >= thr_f).astype(np.int64)
             stats["flatness_thr"] = thr_f
         else:
-            pdf["qc_high_flatness"] = 0
+            pdf["qc_high_flatness"] = np.int64(0)
         if "ts_spike_frac" in pdf.columns:
-            pdf["qc_high_spike"] = (pdf["ts_spike_frac"] > float(spike_thr_)).astype(int)
+            pdf["qc_high_spike"] = (pdf["ts_spike_frac"] > float(spike_thr_)).astype(
+                np.int64
+            )
         else:
-            pdf["qc_high_spike"] = 0
+            pdf["qc_high_spike"] = np.int64(0)
         if "tsnr" in pdf.columns:
             med, sd = pdf["tsnr"].median(), pdf["tsnr"].std()
-            pdf["qc_low_tsnr"] = (pdf["tsnr"] < med - sd).astype(int)
+            pdf["qc_low_tsnr"] = (pdf["tsnr"] < med - sd).astype(np.int64)
             stats["tsnr_thr"] = float(med - sd) if sd == sd else None
         else:
-            pdf["qc_low_tsnr"] = 0
+            pdf["qc_low_tsnr"] = np.int64(0)
 
         pdf["qc_flag_any"] = (
             (pdf["qc_outlier"] == 1)
             | (pdf["qc_high_flatness"] == 1)
             | (pdf["qc_high_spike"] == 1)
             | (pdf["qc_low_tsnr"] == 1)
-        ).astype(int)
+        ).astype(np.int64)
         stats["n_outlier"] = int(pdf["qc_outlier"].sum())
         stats["n_flag_any"] = int(pdf["qc_flag_any"].sum())
-        return pl.from_pandas(pdf), stats
+        return pandas_to_polars(pdf), stats
 
     qc_pl, qc_stats = compute_qc(
         runs_pl, float(cont.value), float(flat_q.value), float(spike_thr.value)

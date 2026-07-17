@@ -21,9 +21,17 @@ openneuro-py
 tensorflow[and-cuda]==2.20
 # tensorflow-probability  # optional
 
+# God-mode Spark (Tungsten/Catalyst honour — CPU only in JVM)
+pyspark>=4.1.1
+pyarrow
+msgspec
+typer[all]
+# Optional Spark Connect client pin (use with docker-compose.spark.yml):
+# pyspark[connect]==3.5.1
+
 # Optional / research (not required for the book)
 # mne  # production adaptive multitaper: prepare_real_features.py --psd mne
-# pyspark[connect]
+# cupy  # optional CUDA FFT in pre_ingest only (outside Spark)
 # nilearn
 # mlflow
 # jupyterlab

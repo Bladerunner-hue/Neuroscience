@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 """Serve the GitHub Pages book locally (docs/ after export --sync-docs).
 
-Prefer FastAPI (static WASM + /api/* feature endpoints):
+Prefer full stack (FastAPI REST + marimo ASGI + WASM static):
+  python marimo_exports/serve.py --book
+  # or: uvicorn app:app --port 8000
+
+Static-only FastAPI (WASM + /api/* without live marimo):
   python marimo_exports/serve.py --fastapi
-  # or: uvicorn marimo_exports.fastapi_app:app --port 8765
 
 Plain static fallback (no API):
   python marimo_exports/serve.py
@@ -12,7 +15,9 @@ from __future__ import annotations
 
 import argparse
 import http.server
+import os
 import socketserver
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -31,16 +36,37 @@ def main() -> None:
     p.add_argument(
         "--fastapi",
         action="store_true",
-        help="Use FastAPI app (WASM book + /api/health, /api/features/*)",
+        help="Static docs FastAPI (WASM + /api/* JSON; no live marimo)",
+    )
+    p.add_argument(
+        "--book",
+        action="store_true",
+        help="Full app.py: live marimo /book/* + REST + static docs",
     )
     args = p.parse_args()
+
+    if args.book:
+        import uvicorn
+
+        # Ensure notebook imports resolve
+        nb = str(ROOT / "marimo_notebooks")
+        if nb not in sys.path:
+            sys.path.insert(0, nb)
+        os.environ.setdefault("PYTHONPATH", nb)
+        print(f"Full book API + marimo on http://127.0.0.1:{args.port}/")
+        print(f"  Live:   http://127.0.0.1:{args.port}/book/")
+        print(f"  REST:   http://127.0.0.1:{args.port}/api/health")
+        print(f"  WASM:   http://127.0.0.1:{args.port}/wasm/00_qc_dashboard/")
+        uvicorn.run("app:app", host="127.0.0.1", port=args.port, reload=False)
+        return
 
     if args.fastapi:
         import uvicorn
 
-        print(f"FastAPI book + API on http://127.0.0.1:{args.port}/")
+        print(f"FastAPI static book + API on http://127.0.0.1:{args.port}/")
         print(f"  Health:  http://127.0.0.1:{args.port}/api/health")
         print(f"  QC Ch0:  http://127.0.0.1:{args.port}/wasm/00_qc_dashboard/")
+        print("  Tip: --book for live marimo chapters at /book/")
         uvicorn.run(
             "marimo_exports.fastapi_app:app",
             host="127.0.0.1",

@@ -90,18 +90,53 @@ Push to `main` (paths under `marimo_notebooks/**`, `docs/**`, or the export scri
 
 ## Architecture (what is kept)
 
+Full write-up: **[ARCHITECTURE.md](ARCHITECTURE.md)** · machine-readable: `GET /api/architecture`
+
 ```
 marimo_notebooks/     ← SOURCE OF TRUTH (public book + local TF chapter)
+app.py                ← FastAPI + marimo.create_asgi_app() (/book + /api)
 scripts/
-  prepare_real_features.py
+  prepare_real_features.py   # adaptive multitaper + tSNR + QC
   run_ml_bakeoff.py
+  run_tf_offline.py
   gen_book_data.py
-  run_notebook.sh
-data/processed/       ← committed feature store + ml_bakeoff.json
-docs/                 ← GitHub Pages (gallery + wasm/)
-marimo_exports/       ← export_wasm.py, serve.py
+data/processed/       ← committed feature store + ml_bakeoff.json + tf_results.json
+docs/                 ← GitHub Pages (gallery + wasm/shared-assets + api/*.json)
+marimo_exports/       ← export_wasm.py, static_api.py, serve.py, fastapi_app.py
 archives/             ← old pipelines, legacy src/notebooks (not active)
 ```
+
+### Local production gateway (recommended)
+
+```bash
+export PYTHONPATH=marimo_notebooks:.
+uvicorn app:app --reload --port 8000
+# Live marimo:  http://127.0.0.1:8000/book/00_qc_dashboard/
+# REST OpenAPI: http://127.0.0.1:8000/docs
+# Static WASM:  http://127.0.0.1:8000/wasm/02_eda_univariate/
+# or: python marimo_exports/serve.py --book --port 8000
+```
+
+### God-mode PySpark CLI (`neuro-tal-cli`)
+
+Honour mode: Tungsten/Catalyst only (no RAPIDS, no Python UDFs).
+
+```bash
+python -m cli.neuro_tal_cli status
+python -m cli.neuro_tal_cli prepare --datasets ds000171,ds002725
+python -m cli.neuro_tal_cli train --epochs 30
+python -m cli.neuro_tal_cli viz          # marimo 07 batch
+python -m cli.neuro_tal_cli stream-seed && python -m cli.neuro_tal_cli stream-file --once
+python -m cli.neuro_tal_cli stream-monitor   # marimo 08 streaming
+python -m cli.neuro_tal_cli serve            # app.py
+```
+
+| Route | Role |
+|-------|------|
+| `/book/*` | Live reactive marimo (server Python) |
+| `/api/*` | Features, QC, bake-off, TF metrics, `predict/group` |
+| `/` · `/wasm/*` | Same static site as GitHub Pages |
+| Pages `/api/*.json` | Frozen mirror when there is no Python host |
 
 ## Scientific pipeline (short)
 
@@ -111,6 +146,14 @@ archives/             ← old pipelines, legacy src/notebooks (not active)
 4. **13-model LOOCV bake-off** (RF / LogReg / GBM / …) → confusion + explainability  
 5. **TensorFlow** (local): STFT Conv2D + dense MLPs on cleaned runs; head-to-head vs bake-off winners  
 6. RecSys priors: personalise by valence + spectral engagement, not genre alone  
+
+### Cross-reference OpenNeuro sets
+
+[ds002725](https://openneuro.org/datasets/ds002725) (EEG–fMRI music) ·
+[ds003085](https://openneuro.org/datasets/ds003085) (emotional music dynamics) ·
+[ds003720](https://openneuro.org/datasets/ds003720) (genre) ·
+[ds004142](https://openneuro.org/datasets/ds004142) (reward NF) ·
+see [ARCHITECTURE.md](ARCHITECTURE.md) for the full table.
 
 ## Data
 

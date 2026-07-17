@@ -1,0 +1,142 @@
+{
+  "ds000171": {
+    "title": "Emotional musical vs nonmusical stimuli in depression",
+    "role": "primary",
+    "why": "Core MDD vs Control music/tones design",
+    "url": "https://openneuro.org/datasets/ds000171",
+    "meta_include": [
+      "dataset_description.json",
+      "participants.tsv",
+      "README",
+      "CHANGES"
+    ],
+    "id": "ds000171",
+    "local_path": "data/raw/ds000171",
+    "downloaded_meta": true,
+    "downloaded_bold_subjects": [],
+    "n_subjects_on_disk": 39,
+    "status": "ok",
+    "n_bold_files": 195
+  },
+  "ds002725": {
+    "title": "Joint EEG-fMRI affective music",
+    "role": "cross_ref",
+    "why": "Multimodal spectral / ERP validation",
+    "url": "https://openneuro.org/datasets/ds002725",
+    "meta_include": [
+      "dataset_description.json",
+      "participants.tsv",
+      "README"
+    ],
+    "bold_include_globs": [
+      "sub-*/func/*bold.nii.gz",
+      "sub-*/func/*events.tsv",
+      "sub-*/anat/*T1w.nii.gz"
+    ],
+    "id": "ds002725",
+    "local_path": "data/raw/ds002725",
+    "downloaded_meta": true,
+    "downloaded_bold_subjects": [],
+    "n_subjects_on_disk": 1,
+    "status": "ok",
+    "n_bold_files": 5
+  },
+  "ds003085": {
+    "title": "Temporal dynamics of emotional music",
+    "role": "cross_ref",
+    "why": "Happy/sad music block design",
+    "url": "https://openneuro.org/datasets/ds003085",
+    "meta_include": [
+      "dataset_description.json",
+      "participants.tsv",
+      "README"
+    ],
+    "bold_include_globs": [
+      "sub-*/func/*bold.nii.gz",
+      "sub-*/func/*events.tsv"
+    ],
+    "id": "ds003085",
+    "local_path": "data/raw/ds003085",
+    "downloaded_meta": false,
+    "downloaded_bold_subjects": [],
+    "n_subjects_on_disk": 0,
+    "status": "ok",
+    "error": "Could not find path in the dataset:\n- participants.tsv\nThere were no similar filenames found in the metadata. Please check your includes.",
+    "n_bold_files": 0
+  },
+  "ds003720": {
+    "title": "Music genre fMRI",
+    "role": "cross_ref",
+    "why": "Genre-specific auditory structure",
+    "url": "https://openneuro.org/datasets/ds003720",
+    "meta_include": [
+      "dataset_description.json",
+      "participants.tsv",
+      "README"
+    ],
+    "id": "ds003720",
+    "local_path": "data/raw/ds003720",
+    "downloaded_meta": false,
+    "downloaded_bold_subjects": [],
+    "n_subjects_on_disk": 0,
+    "status": "ok",
+    "error": "Could not find path in the dataset:\n- participants.tsv\nThere were no similar filenames found in the metadata. Please check your includes.",
+    "n_bold_files": 0
+  },
+  "ds004142": {
+    "title": "rt-fMRI neurofeedback reward valence",
+    "role": "cross_ref",
+    "why": "Reward saliency / valence",
+    "url": "https://openneuro.org/datasets/ds004142",
+    "meta_include": [
+      "dataset_description.json",
+      "participants.tsv",
+      "README"
+    ],
+    "id": "ds004142",
+    "local_path": "data/raw/ds004142",
+    "downloaded_meta": true,
+    "downloaded_bold_subjects": [],
+    "n_subjects_on_disk": 0,
+    "status": "ok",
+    "n_bold_files": 0
+  },
+  "ds005700": {
+    "title": "NeuroEmo emotion recognition",
+    "role": "cross_ref",
+    "why": "Emotion labels including depressed",
+    "url": "https://openneuro.org/datasets/ds005700",
+    "meta_include": [
+      "dataset_description.json",
+      "participants.tsv",
+      "README"
+    ],
+    "id": "ds005700",
+    "local_path": "data/raw/ds005700",
+    "downloaded_meta": false,
+    "downloaded_bold_subjects": [],
+    "n_subjects_on_disk": 0,
+    "status": "ok",
+    "error": "Could not find path in the dataset:\n- participants.tsv\nThere were no similar filenames found in the metadata. Please check your includes.",
+    "n_bold_files": 0
+  },
+  "ds006564": {
+    "title": "Naturalistic film + musical soundtracks",
+    "role": "cross_ref",
+    "why": "Depression/anxiety traits + music",
+    "url": "https://openneuro.org/datasets/ds006564",
+    "meta_include": [
+      "dataset_description.json",
+      "participants.tsv",
+      "README"
+    ],
+    "id": "ds006564",
+    "local_path": "data/raw/ds006564",
+    "downloaded_meta": false,
+    "downloaded_bold_subjects": [],
+    "n_subjects_on_disk": 0,
+    "status": "ok",
+    "error": "Could not find path in the dataset:\n- participants.tsv\nThere were no similar filenames found in the metadata. Please check your includes.",
+    "n_bold_files": 0
+  }
+}

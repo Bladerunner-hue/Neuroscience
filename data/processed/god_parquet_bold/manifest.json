@@ -1,0 +1,10 @@
+{
+  "n_epoch_rows": 199,
+  "n_spectral_rows": 199,
+  "datasets": [
+    "ds000171",
+    "ds002725"
+  ],
+  "backend": "scipy",
+  "out": "data/processed/god_parquet_bold"
+}

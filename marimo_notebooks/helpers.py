@@ -283,17 +283,93 @@ def filter_clean_runs(
     return out.copy()
 
 
+def pandas_to_polars(pdf: pd.DataFrame):
+    """Convert pandas → Polars without requiring pyarrow (WASM / Pyodide safe).
+
+    ``pl.from_pandas`` needs pyarrow when columns use nullable extension dtypes
+    (e.g. ``Int64``, ``boolean``). GitHub Pages WASM does not ship pyarrow.
+    """
+    try:
+        import polars as pl
+    except ImportError:  # pragma: no cover
+        return None
+    if pdf is None or getattr(pdf, "empty", True):
+        return pl.DataFrame()
+
+    # Fast path: list-of-dicts from book_bundle (no pandas intermediate)
+    # Prefer building from cleaned numpy/object columns.
+    data: dict = {}
+    for c in pdf.columns:
+        s = pdf[c]
+        dtype = str(s.dtype)
+        try:
+            if dtype in ("Int64", "Int32", "UInt64", "UInt32", "boolean", "Float64", "Float32"):
+                # nullable extension dtypes → plain float/bool (NaN for missing ints)
+                if "boolean" in dtype.lower() or dtype == "bool":
+                    data[c] = [
+                        None if pd.isna(v) else bool(v) for v in s.tolist()
+                    ]
+                else:
+                    data[c] = pd.to_numeric(s, errors="coerce").astype("float64").tolist()
+            elif pd.api.types.is_integer_dtype(s) or pd.api.types.is_float_dtype(s):
+                data[c] = pd.to_numeric(s, errors="coerce").astype("float64").tolist()
+            elif pd.api.types.is_bool_dtype(s):
+                data[c] = s.astype("bool").tolist()
+            elif pd.api.types.is_datetime64_any_dtype(s):
+                data[c] = s.astype("datetime64[ns]").astype(str).tolist()
+            else:
+                # strings / objects / nested lists (psd_f as list or JSON str)
+                vals = []
+                for v in s.tolist():
+                    if v is None or (isinstance(v, float) and np.isnan(v)):
+                        vals.append(None)
+                    elif isinstance(v, (list, dict, tuple)):
+                        vals.append(v)
+                    else:
+                        try:
+                            if pd.isna(v):
+                                vals.append(None)
+                            else:
+                                vals.append(v if not isinstance(v, (np.generic,)) else v.item())
+                        except (TypeError, ValueError):
+                            vals.append(str(v))
+                data[c] = vals
+        except Exception:
+            data[c] = [None if (v is None or (isinstance(v, float) and np.isnan(v))) else str(v) for v in s.tolist()]
+
+    try:
+        return pl.DataFrame(data)
+    except Exception:
+        # Last resort: stringify everything
+        simple = {
+            c: [None if v is None else str(v) for v in col]
+            for c, col in data.items()
+        }
+        return pl.DataFrame(simple)
+
+
 def load_spectral_features_polars():
-    """Polars loader for reactive QC / EDA (falls back to empty frame)."""
+    """Polars loader for reactive QC / EDA (WASM-safe, no pyarrow required)."""
     try:
         import polars as pl
     except ImportError:  # pragma: no cover
         return None
     proc = _find_processed()
     if proc and (proc / "spectral_features.csv").exists():
-        return pl.read_csv(proc / "spectral_features.csv")
+        try:
+            return pl.read_csv(proc / "spectral_features.csv")
+        except Exception:
+            pass
+    # Prefer list-of-dicts from embedded book_bundle (no pandas → no pyarrow)
+    bundle = load_book_bundle()
+    rows = bundle.get("spectral_features") or []
+    if rows:
+        try:
+            return pl.DataFrame(rows)
+        except Exception:
+            return pandas_to_polars(pd.DataFrame(rows))
     pdf = load_spectral_features()
-    return pl.from_pandas(pdf) if not pdf.empty else pl.DataFrame()
+    return pandas_to_polars(pdf)
 
 
 def load_condition_features_polars():
@@ -303,9 +379,18 @@ def load_condition_features_polars():
         return None
     proc = _find_processed()
     if proc and (proc / "condition_features.csv").exists():
-        return pl.read_csv(proc / "condition_features.csv")
-    pdf = load_condition_features()
-    return pl.from_pandas(pdf) if not pdf.empty else pl.DataFrame()
+        try:
+            return pl.read_csv(proc / "condition_features.csv")
+        except Exception:
+            pass
+    bundle = load_book_bundle()
+    rows = bundle.get("condition_features") or []
+    if rows:
+        try:
+            return pl.DataFrame(rows)
+        except Exception:
+            return pandas_to_polars(pd.DataFrame(rows))
+    return pandas_to_polars(load_condition_features())
 
 
 def load_subject_features_polars():
@@ -315,9 +400,18 @@ def load_subject_features_polars():
         return None
     proc = _find_processed()
     if proc and (proc / "subject_features.csv").exists():
-        return pl.read_csv(proc / "subject_features.csv")
-    pdf = load_subject_features()
-    return pl.from_pandas(pdf) if not pdf.empty else pl.DataFrame()
+        try:
+            return pl.read_csv(proc / "subject_features.csv")
+        except Exception:
+            pass
+    bundle = load_book_bundle()
+    rows = bundle.get("subject_features") or []
+    if rows:
+        try:
+            return pl.DataFrame(rows)
+        except Exception:
+            return pandas_to_polars(pd.DataFrame(rows))
+    return pandas_to_polars(load_subject_features())
 
 
 def load_bold_timeseries() -> pd.DataFrame:

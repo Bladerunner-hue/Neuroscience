@@ -23,9 +23,20 @@ mlruns/
 mlflow.db*
 notebooks/html/
 
-# Local editor
+# Local editor / agent tooling (never commit)
 .vscode/
 .idea/
+.continue/
+.grok/
+.claude/
+.cursor/
+.codex/
+.aider*
+AGENTS.md
+CLAUDE.md
+
+# Accidental absolute-path dumps
+home/
 
 # marimo runtime (sessions are regenerated; keep folder via export)
 marimo_notebooks/__marimo__/
@@ -35,5 +46,16 @@ marimo_notebooks/__pycache__/
 # docs/wasm/
 # marimo_exports/wasm/
 
-# Continue local stubs
-.continue/mcpServers/
+# Spark local spill + Hadoop CRC sidecars
+.spark-tmp/
+*.crc
+
+# God-mode TF training artifacts (regenerate via CLI)
+checkpoints/
+saved_model/
+logs/
+
+# Streaming runtime (checkpoints can be large / local)
+data/processed/stream_checkpoints/
+data/processed/stream_inbox/
+data/processed/stream_features/

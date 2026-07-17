@@ -1,0 +1,75 @@
+# Classic Spark Connect + optional Kafka (CPU / Tungsten only — no RAPIDS)
+#
+# Batch god-mode:
+#   docker compose -f docker-compose.spark.yml up -d spark-connect
+#   python -m cli.neuro_tal_cli prepare --connect
+#
+# Streaming + Kafka:
+#   docker compose -f docker-compose.spark.yml --profile kafka up -d
+#   python -m cli.neuro_tal_cli stream-kafka --bootstrap localhost:9092
+#
+# File streaming (no Kafka):
+#   python -m cli.neuro_tal_cli stream-seed
+#   python -m cli.neuro_tal_cli stream-file --once
+#
+# Stop:
+#   docker compose -f docker-compose.spark.yml --profile kafka down
+
+services:
+  spark-connect:
+    image: apache/spark:3.5.1
+    container_name: neuro-spark-connect
+    command: >
+      /opt/spark/sbin/start-connect-server.sh
+      --packages org.apache.spark:spark-connect_2.12:3.5.1,org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.1
+      --conf spark.sql.adaptive.enabled=true
+      --conf spark.sql.adaptive.coalescePartitions.enabled=true
+      --conf spark.sql.adaptive.skewJoin.enabled=true
+      --conf spark.sql.execution.arrow.pyspark.enabled=true
+      --conf spark.sql.streaming.schemaInference=true
+      --conf spark.driver.memory=4g
+    ports:
+      - "15002:15002"
+      - "4040:4040"
+    volumes:
+      - ./data/processed:/data/processed:rw
+      - ./data/raw:/data/raw:ro
+      - ./.spark-tmp:/tmp/spark-tmp
+    environment:
+      - SPARK_NO_DAEMONIZE=true
+    working_dir: /opt/spark
+    networks:
+      - neuro-spark
+
+  zookeeper:
+    profiles: ["kafka"]
+    image: confluentinc/cp-zookeeper:7.5.0
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+    networks:
+      - neuro-spark
+
+  kafka:
+    profiles: ["kafka"]
+    image: confluentinc/cp-kafka:7.5.0
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+    networks:
+      - neuro-spark
+
+networks:
+  neuro-spark:
+    driver: bridge
