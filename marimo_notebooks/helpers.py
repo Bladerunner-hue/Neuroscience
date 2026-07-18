@@ -38,6 +38,11 @@ PROCESSED_DIR = Path("data/processed")
 
 BOOK_CHAPTERS: list[tuple[str, str, str]] = [
     (
+        "00_data_browser",
+        "0 · Data browser",
+        "Feature tables shared with HTML /explore and the static API.",
+    ),
+    (
         "00_qc_dashboard",
         "0 · QC Dashboard",
         "tSNR, multitaper PSD, IsolationForest, clean-run export.",
@@ -51,12 +56,22 @@ BOOK_CHAPTERS: list[tuple[str, str, str]] = [
     ("03_eda_multivariate", "III · Algorithm Lab", "Bake-off, best model, confusion, explainability, RecSys."),
     ("04_feature_engineering", "IV · Features & Music Effects", "Inventory, harmonization, spatial proxies, PCA."),
     ("05_tf_results", "V · Neural Net Results", "Precomputed TensorFlow CNN/MLP metrics (trained offline)."),
+    (
+        "09_multi_dataset_analysis",
+        "IX · Multi-dataset scale",
+        "Cross-cohort god summary, registry, TF metrics (Spark/TF host jobs).",
+    ),
 ]
 BOOK_LOCAL_ONLY = [
     (
         "00_data_landscape",
         "0-local · Data Landscape",
         "Multi-source inventory, scientific value, consistency (Polars + optional Spark Connect).",
+    ),
+    (
+        "00_data_browser",
+        "0-local · Data browser",
+        "Same /api/table store as HTML /explore (disk · API · WASM).",
     ),
     (
         "06_tf_spectrogram_model",

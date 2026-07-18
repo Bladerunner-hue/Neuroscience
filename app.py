@@ -61,23 +61,38 @@ if str(ROOT) not in sys.path:
 
 from marimo_exports.static_api import (  # noqa: E402
     build_bakeoff,
+    build_datasets,
     build_features_condition,
+    build_features_events,
+    build_features_participants,
     build_features_spectral,
     build_features_subject,
     build_health,
+    build_local_files,
     build_meta,
     build_qc,
+    build_surfaces,
+    build_table,
     build_tf_results,
 )
 
 # Public chapters (TF train stays local-only)
 PUBLIC_CHAPTERS: list[tuple[str, str, str]] = [
+    ("00_data_browser", "0 · Data browser", "Tables shared with /explore HTML"),
     ("00_qc_dashboard", "0 · QC Dashboard", "tSNR, multitaper, IsolationForest"),
     ("01_pre_flight", "I · Cohort & Design", "Who was scanned, paradigm"),
     ("02_eda_univariate", "II · Spectral Power", "Band power & PSDs"),
     ("03_eda_multivariate", "III · Algorithm Lab", "LOOCV bake-off"),
     ("04_feature_engineering", "IV · Features & Music Effects", "Contrasts & PCA"),
     ("05_tf_results", "V · Neural Net Results", "Precomputed TF metrics"),
+    ("09_multi_dataset_analysis", "IX · Multi-dataset scale", "God summary · registry · TF view"),
+]
+# Local-only marimo (full Python; also listed in /api/surfaces)
+LOCAL_CHAPTERS: list[tuple[str, str, str]] = [
+    ("00_data_landscape", "0-local · Data Landscape", "Multi-set inventory + tables"),
+    ("00_data_browser", "0-local · Data browser", "Same tables as /explore HTML"),
+    ("06_tf_spectrogram_model", "V-local · TF Train", "Train on host; metrics via API"),
+    ("07_spark_god_mode", "VII · Spark God Mode", "Catalyst multi-set (host)"),
 ]
 
 app = FastAPI(
@@ -157,64 +172,65 @@ def api_tf():
 @app.get("/api/architecture")
 def api_architecture():
     """Machine-readable map of the repo stack (for dashboards and tooling)."""
-    return {
-        "dataset": {
-            "id": "ds000171",
-            "name": "Neural Processing of Emotional Musical and Nonmusical Stimuli in Depression",
-            "url": "https://openneuro.org/datasets/ds000171",
-            "tr_sec": 3.0,
-            "design": "30 s blocks · positive/negative music vs nonmusic · tones control",
-        },
-        "layers": {
-            "raw": "data/raw/ds000171/ (gitignored BIDS NIfTI)",
-            "processed": "data/processed/*.csv + book_bundle.json (committed)",
-            "scripts": [
-                "scripts/prepare_real_features.py  # NIfTI → adaptive multitaper PSD + tSNR + QC",
-                "scripts/run_ml_bakeoff.py         # 13-model LOOCV → ml_bakeoff.json",
-                "scripts/run_tf_offline.py         # STFT Conv2D / MLP → tf_results.json",
-                "scripts/gen_book_data.py          # embed book_bundle into book_data.py",
-            ],
-            "notebooks": "marimo_notebooks/00–05 public · 06 TF local",
-            "wasm": "docs/wasm/ + shared-assets/ (GitHub Pages)",
-            "static_api": "docs/api/*.json (frozen FastAPI mirror)",
-            "live_api": "this FastAPI process (uvicorn app:app)",
-        },
-        "psd_methods": ["welch", "uniform multitaper", "adaptive multitaper", "mne adaptive (optional)"],
-        "qc": ["tsnr", "spectral_flatness", "spectral_entropy", "band_snr_high", "IsolationForest"],
-        "cross_ref_openneuro": [
-            {
-                "id": "ds002725",
-                "why": "Joint EEG-fMRI affective music — multimodal spectral validation",
-                "url": "https://openneuro.org/datasets/ds002725",
-            },
-            {
-                "id": "ds003085",
-                "why": "Temporal dynamics of emotional music (BOLD)",
-                "url": "https://openneuro.org/datasets/ds003085",
-            },
-            {
-                "id": "ds003720",
-                "why": "Music genre fMRI — auditory / genre spectral structure",
-                "url": "https://openneuro.org/datasets/ds003720",
-            },
-            {
-                "id": "ds004142",
-                "why": "rt-fMRI neurofeedback reward saliency / valence",
-                "url": "https://openneuro.org/datasets/ds004142",
-            },
-            {
-                "id": "ds005700",
-                "why": "NeuroEmo emotion recognition (includes depressed label)",
-                "url": "https://openneuro.org/datasets/ds005700",
-            },
-            {
-                "id": "ds006564",
-                "why": "Naturalistic film + musical soundtracks; depression/anxiety traits",
-                "url": "https://openneuro.org/datasets/ds006564",
-            },
-        ],
-        "github_pages": "https://bladerunner-hue.github.io/Neuroscience/",
-    }
+    from marimo_exports.static_api import build_architecture
+
+    arch = build_architecture()
+    arch["surface"] = "fastapi-live"
+    arch["explore"] = "/explore/"
+    arch["book"] = "/book/"
+    return arch
+
+
+@app.get("/api/datasets")
+def api_datasets():
+    return build_datasets()
+
+
+@app.get("/api/surfaces")
+def api_surfaces():
+    """Marimo + non-marimo visualization surfaces."""
+    return build_surfaces()
+
+
+@app.get("/api/local/files")
+def api_local_files(
+    include_raw_niftis: bool = Query(False, description="Include every NIfTI path (huge)"),
+):
+    """Browse host ``data/`` for the HTML explorer and marimo api_client."""
+    return build_local_files(include_raw_niftis=include_raw_niftis)
+
+
+@app.get("/api/table/{name}")
+def api_table(
+    name: str,
+    limit: int | None = Query(None, ge=1, le=50_000),
+):
+    """Unified tables for marimo WASM, live marimo, and /explore HTML."""
+    data = build_table(name, limit=limit)
+    if data.get("error"):
+        raise HTTPException(404, data["error"])
+    return data
+
+
+@app.get("/api/features/participants")
+def api_participants():
+    return build_features_participants()
+
+
+@app.get("/api/features/events")
+def api_events():
+    return build_features_events()
+
+
+@app.get("/api/god_run_summary")
+def api_god_run_summary():
+    """Multi-set Catalyst summary for explore + WASM (no full parquet)."""
+    path = PROCESSED / "god_run_summary.json"
+    if not path.exists():
+        return {"n_runs": 0, "records": [], "by_dataset_group": [], "datasets": []}
+    import json
+
+    return json.loads(path.read_text(encoding="utf-8"))
 
 
 @app.post("/api/predict/group")
@@ -365,7 +381,7 @@ def _build_marimo_asgi():
         include_code=False,
         show_tracebacks=True,
     )
-    for stem, _title, _desc in PUBLIC_CHAPTERS:
+    for stem, _title, _desc in PUBLIC_CHAPTERS + LOCAL_CHAPTERS:
         nb = NOTEBOOKS / f"{stem}.py"
         if not nb.exists():
             continue
@@ -397,8 +413,9 @@ def _book_index_html(*, marimo_ok: bool, err: str | None) -> str:
 <p>Server-side reactive Python (full scipy / sklearn). For the public browser-only
 book see <a href="/">gallery</a> / WASM.</p>
 <ul>{items}</ul>
-<p><a href="/docs">OpenAPI</a> · <a href="/api/health">/api/health</a> ·
-<a href="/api/architecture">/api/architecture</a></p>
+<p><a href="/explore/">HTML data explorer</a> (non-marimo) ·
+<a href="/docs">OpenAPI</a> · <a href="/api/surfaces">/api/surfaces</a> ·
+<a href="/api/health">/api/health</a></p>
 </body></html>"""
 
 
@@ -426,21 +443,52 @@ def book_index():
 
 @app.get("/api/book")
 def api_book_catalog():
-    return {
-        "marimo_mounted": _MARIMO_OK,
-        "error": _MARIMO_ERR,
-        "chapters": [
+    chapters = []
+    for stem, title, desc in PUBLIC_CHAPTERS:
+        chapters.append(
             {
                 "stem": stem,
                 "title": title,
                 "description": desc,
+                "scope": "public",
                 "live_url": f"/book/{stem}/",
                 "wasm_url": f"/wasm/{stem}/",
                 "exists": (NOTEBOOKS / f"{stem}.py").exists(),
             }
-            for stem, title, desc in PUBLIC_CHAPTERS
-        ],
+        )
+    for stem, title, desc in LOCAL_CHAPTERS:
+        chapters.append(
+            {
+                "stem": stem,
+                "title": title,
+                "description": desc,
+                "scope": "local",
+                "live_url": f"/book/{stem}/",
+                "wasm_url": None,
+                "exists": (NOTEBOOKS / f"{stem}.py").exists(),
+            }
+        )
+    return {
+        "marimo_mounted": _MARIMO_OK,
+        "error": _MARIMO_ERR,
+        "explore_url": "/explore/",
+        "chapters": chapters,
     }
+
+
+@app.get("/explore", response_class=HTMLResponse)
+@app.get("/explore/", response_class=HTMLResponse)
+def explore_ui():
+    """Non-marimo HTML table browser (same /api/table payloads as WASM/marimo)."""
+    explore = DOCS / "explore" / "index.html"
+    if explore.exists():
+        return HTMLResponse(explore.read_text(encoding="utf-8"))
+    # fallback minimal
+    return HTMLResponse(
+        "<h1>Explorer missing</h1><p>Expected docs/explore/index.html</p>"
+        "<p><a href='/api/surfaces'>/api/surfaces</a> · "
+        "<a href='/api/table/spectral'>/api/table/spectral</a></p>"
+    )
 
 
 # Mount after exact /book routes so the catalog is not swallowed

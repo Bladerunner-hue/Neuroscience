@@ -30,14 +30,35 @@
     </p>
 
     <div class="border border-stone-800 rounded-2xl p-5 mb-12 bg-stone-900/40">
-      <p class="text-sm text-stone-400 leading-relaxed">
+      <p class="text-sm text-stone-400 leading-relaxed mb-4">
         <span class="text-stone-200 font-medium">How to read this book.</span>
         Each chapter is a reactive marimo notebook exported to WebAssembly. First load may take 15–40 seconds while scientific packages install.
         Figures and tables use a processed feature store extracted from downloaded NIfTI runs (whole-brain mean BOLD, Welch PSD, event-locked peaks).
       </p>
+      <div class="flex flex-wrap gap-3 text-sm">
+        <a href="explore/" class="rounded-lg bg-emerald-800/80 hover:bg-emerald-700 px-3 py-1.5 text-stone-100">HTML data explorer</a>
+        <a href="api/" class="rounded-lg border border-stone-700 hover:border-emerald-700/50 px-3 py-1.5 text-stone-300">Static API JSON</a>
+        <a href="wasm/00_data_browser/" class="rounded-lg border border-stone-700 hover:border-emerald-700/50 px-3 py-1.5 text-stone-300">WASM tables</a>
+        <span class="text-stone-600 text-xs self-center">Live marimo: <code class="text-stone-500">uvicorn app:app</code> → /book/</span>
+      </div>
+      <p class="text-xs text-stone-500 mt-3 leading-relaxed">
+        <strong class="text-stone-400">Three viz surfaces, one feature store:</strong>
+        marimo WASM chapters · live marimo under <code class="text-stone-400">/book/</code> · non-marimo HTML explorer under <code class="text-stone-400">/explore/</code>
+        (same <code class="text-stone-400">/api/table/*</code> payloads). Heavy TF/Spark stay on the host; metrics still appear in tables here.
+      </p>
     </div>
 
     <ol class="space-y-4 mb-14">
+      <li>
+        <a href="wasm/00_data_browser/?v=20260718a" class="card block rounded-2xl border border-stone-800 bg-gradient-to-br from-cyan-950/40 to-stone-900/80 p-6 hover:border-cyan-700/50">
+          <div class="flex items-baseline justify-between gap-4 mb-2">
+            <span class="text-cyan-400/80 text-xs tracking-widest uppercase">Chapter 0 · tables</span>
+            <span class="text-stone-600 text-xs">same API as HTML explore</span>
+          </div>
+          <h2 class="serif text-2xl md:text-3xl text-stone-50 mb-2">Data browser</h2>
+          <p class="text-stone-400 text-sm leading-relaxed">Marimo tables for spectral / subject / QC / multi-set registry — identical payloads to the non-marimo <code class="text-stone-500 text-xs">explore/</code> UI and static <code class="text-stone-500 text-xs">api/table/*</code>.</p>
+        </a>
+      </li>
       <li>
         <a href="wasm/00_qc_dashboard/?v=20260716f" class="card block rounded-2xl border border-stone-800 bg-gradient-to-br from-teal-950/40 to-stone-900/80 p-6 hover:border-teal-700/50">
           <div class="flex items-baseline justify-between gap-4 mb-2">
@@ -98,6 +119,16 @@
           <p class="text-stone-400 text-sm leading-relaxed">TensorFlow trains on a local machine; this page only shows precomputed STFT-CNN / MLP metrics, confusion matrices, and sklearn vs deep comparison — no TF in the browser.</p>
         </a>
       </li>
+      <li>
+        <a href="wasm/09_multi_dataset_analysis/?v=20260718a" class="card block rounded-2xl border border-stone-800 bg-gradient-to-br from-fuchsia-950/40 to-stone-900/80 p-6 hover:border-fuchsia-700/50">
+          <div class="flex items-baseline justify-between gap-4 mb-2">
+            <span class="text-fuchsia-400/80 text-xs tracking-widest uppercase">Chapter IX</span>
+            <span class="text-stone-600 text-xs">multi-set · god summary · TF view</span>
+          </div>
+          <h2 class="serif text-2xl md:text-3xl text-stone-50 mb-2">Multi-dataset scale</h2>
+          <p class="text-stone-400 text-sm leading-relaxed">Cross-cohort registry and god-mode spectral summary (ds000171 + cross-refs). Spark/TF run on the host; this chapter visualizes precomputed tables for bigger analysis without a JVM in the browser.</p>
+        </a>
+      </li>
     </ol>
 
     <div class="border border-stone-800 rounded-2xl p-6 mb-10 bg-gradient-to-br from-indigo-950/40 to-stone-900/80">
@@ -121,7 +152,11 @@
         <li><a class="text-indigo-300 hover:underline" href="api/features/spectral_clean.json">api/features/spectral_clean.json</a></li>
         <li><a class="text-indigo-300 hover:underline" href="api/qc.json">api/qc.json</a></li>
         <li><a class="text-indigo-300 hover:underline" href="api/bakeoff.json">api/bakeoff.json</a></li>
+        <li><a class="text-indigo-300 hover:underline" href="api/datasets.json">api/datasets.json</a></li>
+        <li><a class="text-indigo-300 hover:underline" href="api/table/spectral.json">api/table/spectral.json</a></li>
+        <li><a class="text-indigo-300 hover:underline" href="api/surfaces.json">api/surfaces.json</a></li>
         <li><a class="text-indigo-300 hover:underline" href="api/openapi.json">api/openapi.json</a></li>
+        <li><a class="text-indigo-300 hover:underline" href="explore/">explore/</a> — HTML tables (non-marimo)</li>
       </ul>
     </div>
 

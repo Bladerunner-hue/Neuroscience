@@ -37,18 +37,23 @@ NOTEBOOK_DIR = ROOT / "marimo_notebooks"
 HELPERS = NOTEBOOK_DIR / "helpers.py"
 SPECTRAL = NOTEBOOK_DIR / "spectral_methods.py"
 BOOK_DATA = NOTEBOOK_DIR / "book_data.py"
+API_CLIENT = NOTEBOOK_DIR / "api_client.py"
+MULTI_CATALOG = NOTEBOOK_DIR / "multi_dataset_catalog.py"
 EXPORT_DIR = ROOT / "marimo_exports" / "wasm"
 DOCS_DIR = ROOT / "docs"
 DOCS_WASM = DOCS_DIR / "wasm"
 
 # WASM book chapters (TF trains offline; 05 shows precomputed results only)
+# Multi-set tables come from static /api + embedded book_bundle / god_run_summary.
 CANDIDATES = [
+    "00_data_browser.py",  # shared tables · same /api/table as HTML explore
     "00_qc_dashboard.py",
     "01_pre_flight.py",
     "02_eda_univariate.py",
     "03_eda_multivariate.py",
     "04_feature_engineering.py",
     "05_tf_results.py",  # precomputed TF/NN page — no tensorflow package in browser
+    "09_multi_dataset_analysis.py",  # multi-set god summary + TF metrics (no Spark JVM in browser)
 ]
 
 
@@ -80,12 +85,15 @@ def _inject_modules(
     helpers_src: str,
     book_bundle_json: str | None,
     spectral_src: str | None = None,
+    api_client_src: str | None = None,
+    multi_catalog_src: str | None = None,
+    god_summary_json: str | None = None,
+    datasets_json: str | None = None,
 ) -> str:
-    """Register helpers + spectral_methods + book_data in sys.modules for Pyodide.
+    """Register helpers + spectral_methods + book_data (+ API helpers) for Pyodide.
 
-    helpers/spectral_methods: exec Python source (must be valid Python).
-    book_data: NEVER exec a dict literal — load JSON via base64 + json.loads
-    so JSON true/false/null cannot become NameErrors.
+    helpers/spectral_methods/api_client/catalog: exec Python source.
+    book_data / god_summary / datasets: JSON via base64 + json.loads.
     """
     helpers_lit = _b64_chunks(helpers_src)
     loads = f'''
@@ -106,6 +114,26 @@ def _inject_modules(
         exec(compile(_spectral_src, "spectral_methods.py", "exec"), _spectral_mod.__dict__)
         _sys.modules["spectral_methods"] = _spectral_mod
 '''
+    if api_client_src:
+        api_lit = _b64_chunks(api_client_src)
+        loads += f'''
+    if "api_client" not in _sys.modules:
+        _api_b64 = {api_lit}
+        _api_src = _b64.b64decode("".join(_api_b64)).decode("utf-8")
+        _api_mod = _types.ModuleType("api_client")
+        exec(compile(_api_src, "api_client.py", "exec"), _api_mod.__dict__)
+        _sys.modules["api_client"] = _api_mod
+'''
+    if multi_catalog_src:
+        cat_lit = _b64_chunks(multi_catalog_src)
+        loads += f'''
+    if "multi_dataset_catalog" not in _sys.modules:
+        _cat_b64 = {cat_lit}
+        _cat_src = _b64.b64decode("".join(_cat_b64)).decode("utf-8")
+        _cat_mod = _types.ModuleType("multi_dataset_catalog")
+        exec(compile(_cat_src, "multi_dataset_catalog.py", "exec"), _cat_mod.__dict__)
+        _sys.modules["multi_dataset_catalog"] = _cat_mod
+'''
     if book_bundle_json:
         bundle_lit = _b64_chunks(book_bundle_json.encode("utf-8"))
         loads += f'''
@@ -117,6 +145,39 @@ def _inject_modules(
         _book_mod.BOOK_BUNDLE = _json.loads(_book_json)
         _sys.modules["book_data"] = _book_mod
 '''
+    # Attach multi-set summaries onto book_data if present
+    extras = []
+    if god_summary_json:
+        extras.append(("GOD_RUN_SUMMARY", god_summary_json))
+    if datasets_json:
+        extras.append(("DATASETS_REGISTRY", datasets_json))
+    if extras and book_bundle_json:
+        for attr, raw in extras:
+            lit = _b64_chunks(raw.encode("utf-8") if isinstance(raw, str) else raw)
+            loads += f'''
+    if "book_data" in _sys.modules:
+        import json as _json2
+        _{attr}_b64 = {lit}
+        setattr(_sys.modules["book_data"], "{attr}", _json2.loads(_b64.b64decode("".join(_{attr}_b64)).decode("utf-8")))
+'''
+    elif extras:
+        # create book_data shell
+        loads += '''
+    if "book_data" not in _sys.modules:
+        import json as _json
+        _book_mod = _types.ModuleType("book_data")
+        _book_mod.BOOK_BUNDLE = {}
+        _sys.modules["book_data"] = _book_mod
+'''
+        for attr, raw in extras:
+            lit = _b64_chunks(raw.encode("utf-8") if isinstance(raw, str) else raw)
+            loads += f'''
+    if "book_data" in _sys.modules:
+        import json as _json2
+        _{attr}_b64 = {lit}
+        setattr(_sys.modules["book_data"], "{attr}", _json2.loads(_b64.b64decode("".join(_{attr}_b64)).decode("utf-8")))
+'''
+
     bootstrap = (
         '''
     # --- injected by export_wasm.py: local modules for WASM/Pyodide (base64) ---
@@ -236,7 +297,13 @@ def export_one(notebook: Path, mode: str, tmp_dir: Path) -> bool:
 
     helpers_src = HELPERS.read_text(encoding="utf-8")
     spectral_src = SPECTRAL.read_text(encoding="utf-8") if SPECTRAL.exists() else None
+    api_src = API_CLIENT.read_text(encoding="utf-8") if API_CLIENT.exists() else None
+    cat_src = MULTI_CATALOG.read_text(encoding="utf-8") if MULTI_CATALOG.exists() else None
     book_bundle_json = _load_book_bundle_json()
+    god_path = ROOT / "data" / "processed" / "god_run_summary.json"
+    god_summary_json = god_path.read_text(encoding="utf-8") if god_path.exists() else None
+    reg_path = ROOT / "data" / "processed" / "dataset_registry.json"
+    datasets_json = reg_path.read_text(encoding="utf-8") if reg_path.exists() else None
 
     nb_src = notebook.read_text(encoding="utf-8")
     packed = _inject_modules(
@@ -244,6 +311,10 @@ def export_one(notebook: Path, mode: str, tmp_dir: Path) -> bool:
         helpers_src=helpers_src,
         book_bundle_json=book_bundle_json,
         spectral_src=spectral_src,
+        api_client_src=api_src,
+        multi_catalog_src=cat_src,
+        god_summary_json=god_summary_json,
+        datasets_json=datasets_json,
     )
     _validate_packed(packed, notebook)
     if re.search(r'BOOK_BUNDLE\s*=\s*\{[^}]*\btrue\b', packed):
@@ -258,6 +329,8 @@ def export_one(notebook: Path, mode: str, tmp_dir: Path) -> bool:
     if book_bundle_json and "_book_json_b64" not in packed:
         print(f"   ❌ book_bundle JSON missing from packed {notebook.name}")
         return False
+    if api_src and "api_client" not in packed:
+        print(f"   ⚠️  api_client not in packed {notebook.name} (optional for older cells)")
 
     tmp_nb = tmp_dir / notebook.name
     tmp_nb.write_text(packed, encoding="utf-8")
@@ -463,6 +536,12 @@ def sync_docs() -> None:
 
     export_static_api(DOCS_DIR / "api", docs=DOCS_DIR)
     print("   synced → docs/api/ (GitHub Pages FastAPI mirror)")
+
+    explore = DOCS_DIR / "explore" / "index.html"
+    if explore.exists():
+        print(f"   ✅ docs/explore/index.html present ({explore.stat().st_size} B)")
+    else:
+        print("   ⚠️  docs/explore/index.html missing — non-marimo explore UI won't ship on Pages")
 
 
 def verify_exports(docs: bool = True) -> bool:

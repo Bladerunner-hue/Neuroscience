@@ -82,8 +82,11 @@ Legacy Jupyter / old `src/neuro` lives under `archives/` and is **inactive**.
 |---------|----------------|--------|
 | Authoring | `marimo edit marimo_notebooks/03_….py` | full local |
 | **Live book + API** | `uvicorn app:app --port 8000` | full local |
+| **HTML explorer** | `http://127.0.0.1:8000/explore/` | same `/api/table/*` as marimo (no Pyodide) |
 | Static book | `python marimo_exports/serve.py --fastapi` | serves `docs/` |
-| GitHub Pages | https://bladerunner-hue.github.io/Neuroscience/ | none (WASM + static JSON) |
+| GitHub Pages | https://bladerunner-hue.github.io/Neuroscience/ | WASM + static JSON + explore |
+
+Internal how-to: **[docs/internal/marimo-static-dual-viz-system.md](docs/internal/marimo-static-dual-viz-system.md)**
 
 ### FastAPI routes (`app.py`)
 

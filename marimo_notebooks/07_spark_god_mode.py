@@ -97,16 +97,51 @@ def _(ROOT, json, mo, pd, reg_path):
                 {
                     "dataset": k,
                     "role": v.get("role"),
+                    "match_level": v.get("match_level"),
                     "status": v.get("status"),
                     "n_subjects_on_disk": v.get("n_subjects_on_disk"),
-                    "why": (v.get("why") or "")[:60],
+                    "n_bold_files": v.get("n_bold_files"),
+                    "why": (v.get("why") or "")[:72],
                 }
             )
         _blocks.append(mo.ui.table(pd.DataFrame(rows)))
+        _blocks.append(
+            mo.md(
+                "Public WASM view of the same multi-set summary: "
+                "`09_multi_dataset_analysis` / [HTML explore](/explore/). "
+                "Rebuild Pages: `python marimo_exports/export_wasm.py --sync-docs`."
+            )
+        )
     else:
         _blocks.append(
             mo.md("*No registry yet — run `python scripts/download_openneuro_cohorts.py`.*")
         )
+    # Catalyst run_level with pure Spark if available
+    run_level = ROOT / "data" / "processed" / "god_features" / "run_level"
+    if run_level.exists():
+        try:
+            from spark_session import get_spark, read_parquet_spark
+            from pyspark.sql import functions as F
+
+            spark, info = get_spark(prefer_connect=True, allow_local=True)
+            if spark is not None:
+                df = read_parquet_spark(spark, run_level)
+                roll = (
+                    df.groupBy("dataset", "group")
+                    .agg(
+                        F.count(F.lit(1)).alias("n_runs"),
+                        F.avg("power_high").alias("mean_power_high"),
+                        F.avg("tsnr").alias("mean_tsnr"),
+                        F.stddev_pop("power_high").alias("std_power_high"),
+                    )
+                    .orderBy("dataset", "group")
+                )
+                _blocks.append(mo.md(f"### Catalyst rollup · Spark `{info.mode}` {info.version}"))
+                _blocks.append(mo.ui.table(roll.toPandas().round(4)))
+                # honour: no collect of full frame — only small agg
+                spark.stop()
+        except Exception as exc:
+            _blocks.append(mo.md(f"*Spark rollup skipped: `{type(exc).__name__}: {exc}`*"))
     mo.vstack(_blocks)
     return
 

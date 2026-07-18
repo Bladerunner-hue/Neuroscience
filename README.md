@@ -53,20 +53,55 @@ Full narrative: open the landscape notebook (below).
 
 | Notebook | Chapter | GitHub Pages |
 |----------|---------|--------------|
-| `00_data_landscape.py` | 0-local · **Data landscape** (started with / added / analysis) | ❌ local |
+| `00_data_browser.py` | 0 · **Data browser** (= HTML `explore/`) | ✅ WASM |
 | `00_qc_dashboard.py` | 0 · QC Dashboard | ✅ WASM |
 | `01_pre_flight.py` | I · Cohort & Design | ✅ WASM |
 | `02_eda_univariate.py` | II · Spectral Power | ✅ WASM |
 | `03_eda_multivariate.py` | III · Algorithm Lab | ✅ WASM |
 | `04_feature_engineering.py` | IV · Features & Music Effects | ✅ WASM |
-| `05_tf_results.py` | V · Neural Net Results | ✅ WASM (precomputed) |
-| `06_tf_spectrogram_model.py` | V-local · Train TensorFlow | ❌ local |
-| `07_spark_god_mode.py` | VII · Spark God Mode | ❌ local |
-| `helpers.py` · `multi_dataset_catalog.py` · `spark_session.py` | Shared | — |
+| `05_tf_results.py` | V · Neural Net Results | ✅ WASM (precomputed TF) |
+| `09_multi_dataset_analysis.py` | IX · Multi-dataset scale | ✅ WASM |
+| `docs/explore/` | **HTML tables** (non-marimo) | ✅ static |
+| `00_data_landscape.py` | 0-local · full landscape + Spark | ❌ local host |
+| `06_tf_spectrogram_model.py` | V-local · TF train | ❌ local host |
+| `07_spark_god_mode.py` | VII · Spark God Mode | ❌ local host |
+| `helpers.py` · `api_client.py` · `multi_dataset_catalog.py` | Shared (injected into WASM) | — |
 
 Legacy Jupyter / old `src/neuro` → `archives/` (inactive).
 
 ---
+
+## Visualization surfaces (marimo **and** non-marimo)
+
+One feature store (`data/processed/` + `/api/table/*`), three UIs:
+
+| Surface | URL (local FastAPI) | Needs |
+|---------|---------------------|--------|
+| **Marimo WASM** (public book) | `/wasm/00_qc_dashboard/` … | Browser only |
+| **Marimo live** (full Python) | `/book/<chapter>/` | `uvicorn app:app` |
+| **HTML data explorer** (no Pyodide) | `/explore/` | FastAPI **or** static `docs/explore/` + `docs/api/` |
+
+```bash
+pip install -r requirements.txt
+export PYTHONPATH=marimo_notebooks
+uvicorn app:app --reload --port 8000
+# open http://127.0.0.1:8000/explore/     ← tables without marimo
+#      http://127.0.0.1:8000/book/        ← live marimo chapters
+#      http://127.0.0.1:8000/wasm/…      ← same as GitHub Pages
+#      http://127.0.0.1:8000/api/table/spectral
+```
+
+WASM can reach a host API with `NEURO_API_BASE=http://127.0.0.1:8000` (see `marimo_notebooks/api_client.py`).
+
+### Keep `.py` marimo vs host jobs
+
+| Keep marimo `.py` (viz) | Host job + view via API/explore |
+|-------------------------|----------------------------------|
+| 00–05 public chapters (WASM + tables/plots) | `scripts/run_tf_offline.py` → `/api/tf_results` + Ch V / explore |
+| `00_data_landscape`, `00_data_browser` | Spark Catalyst scripts → god parquet → explore / landscape |
+| Light interactive demos | Heavy train / multi-set Spark on machine, not in browser |
+
+**Do not drop marimo** for viz-heavy chapters — WASM export is the public book. Non-marimo HTML covers “I just want tables” without waiting for Pyodide.
 
 ## Install (pip only)
 
@@ -76,8 +111,6 @@ python3.12 -m venv .venv && source .venv/bin/activate   # recommended
 pip install -r requirements.txt
 # includes: marimo, polars, pandas, openneuro-py, nibabel, pyspark, scikit-learn, tensorflow, …
 ```
-
-No Docker required for data download, features, marimo, or Spark Connect (native server optional).
 
 ---
 
@@ -125,4 +158,16 @@ WASM embeds helpers + spectral_methods + book_bundle (no NIfTI / no TF in browse
 
 ## Architecture
 
-Full write-up: **[ARCHITECTURE.md](ARCHITECTURE.md)** · data map: **[data/README.md](data/README.md)**
+Full write-up: **[ARCHITECTURE.md](ARCHITECTURE.md)** · data map: **[data/README.md](data/README.md)**  
+**Dual viz (marimo + HTML explore + Pages):** **[docs/internal/marimo-static-dual-viz-system.md](docs/internal/marimo-static-dual-viz-system.md)**
+
+### Pages deploy
+
+CI: `.github/workflows/deploy-pages.yml` builds WASM, freezes `docs/api/**`, verifies `docs/explore/`, smokes static HTTP + FastAPI, uploads `docs/` to GitHub Pages.
+
+```bash
+# Local Pages-like static check
+python marimo_exports/static_api.py
+python -m http.server 8766 --directory docs
+# open http://127.0.0.1:8766/explore/  and  /wasm/00_data_browser/
+```

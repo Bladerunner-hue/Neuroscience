@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Data explorer · Music, Reward &amp; Depression</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { font-family: "Source Sans 3", system-ui, sans-serif; }
+    table { border-collapse: collapse; width: 100%; font-size: 12px; }
+    th, td { border: 1px solid #334155; padding: 4px 8px; text-align: left; max-width: 14rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    th { background: #1e293b; position: sticky; top: 0; z-index: 1; }
+    tr:nth-child(even) { background: #0f172a; }
+    .serif { font-family: Georgia, "Cormorant Garamond", serif; }
+  </style>
+</head>
+<body class="bg-[#0f1419] text-stone-200 min-h-screen">
+  <div class="max-w-7xl mx-auto px-4 py-8">
+    <header class="mb-8 flex flex-wrap gap-4 items-start justify-between">
+      <div>
+        <p class="text-emerald-500/90 text-xs tracking-[0.2em] uppercase mb-2">Shared viz · marimo + non-marimo</p>
+        <h1 class="serif text-3xl md:text-4xl text-stone-50 mb-2">Data explorer</h1>
+        <p class="text-stone-400 text-sm max-w-2xl leading-relaxed">
+          Browse the same feature tables as the marimo WASM book. Pure HTML — no Pyodide.
+          Works on <strong class="text-stone-300">GitHub Pages</strong> (static JSON) and local
+          <code class="text-stone-500 text-xs">uvicorn app:app</code> (live API).
+        </p>
+      </div>
+      <nav class="text-sm space-y-1 text-right">
+        <div><a class="text-emerald-400 hover:underline" href="../">Gallery</a></div>
+        <div><a class="text-emerald-400 hover:underline" href="../wasm/00_qc_dashboard/">WASM Ch 0 QC</a></div>
+        <div><a class="text-emerald-400 hover:underline" href="../wasm/00_data_browser/">WASM data browser</a></div>
+        <div><a class="text-emerald-400 hover:underline" href="../wasm/09_multi_dataset_analysis/">WASM multi-set</a></div>
+        <div><a class="text-emerald-400 hover:underline" href="../api/">API JSON</a></div>
+      </nav>
+    </header>
+
+    <section class="border border-stone-800 rounded-xl p-4 mb-6 bg-stone-900/50 flex flex-wrap gap-3 items-end">
+      <label class="text-xs text-stone-400 block">
+        API base (optional)
+        <input id="apiBase" class="mt-1 block w-80 max-w-full rounded bg-stone-950 border border-stone-700 px-2 py-1.5 text-sm text-stone-100"
+          placeholder="auto: ../api  ·  or http://127.0.0.1:8000" />
+      </label>
+      <label class="text-xs text-stone-400 block">
+        Table
+        <select id="tableSel" class="mt-1 block rounded bg-stone-950 border border-stone-700 px-2 py-1.5 text-sm">
+          <option value="spectral">spectral (run PSD)</option>
+          <option value="spectral_clean">spectral_clean</option>
+          <option value="subject">subject (+ R)</option>
+          <option value="condition">condition epochs</option>
+          <option value="qc">run_qc</option>
+          <option value="participants">participants</option>
+          <option value="events">events_summary</option>
+          <option value="datasets">datasets registry</option>
+          <option value="tf_results">tf_results</option>
+          <option value="bakeoff">ml_bakeoff</option>
+          <option value="god_run_summary">god_run_summary</option>
+        </select>
+      </label>
+      <label class="text-xs text-stone-400 block">
+        Limit rows
+        <input id="rowLimit" type="number" value="200" min="10" max="5000"
+          class="mt-1 block w-24 rounded bg-stone-950 border border-stone-700 px-2 py-1.5 text-sm" />
+      </label>
+      <button id="btnLoad" class="rounded-lg bg-emerald-700 hover:bg-emerald-600 px-4 py-2 text-sm font-medium">
+        Load table
+      </button>
+      <button id="btnFiles" class="rounded-lg bg-stone-700 hover:bg-stone-600 px-4 py-2 text-sm">
+        List files
+      </button>
+      <button id="btnSurfaces" class="rounded-lg bg-stone-700 hover:bg-stone-600 px-4 py-2 text-sm">
+        Surfaces
+      </button>
+      <p id="status" class="text-xs text-stone-500 w-full"></p>
+    </section>
+
+    <section class="grid md:grid-cols-3 gap-4 mb-6">
+      <div class="border border-stone-800 rounded-xl p-4 bg-stone-900/40 md:col-span-1">
+        <h2 class="text-sm font-semibold text-stone-200 mb-2">Visualization paths</h2>
+        <ul class="text-xs text-stone-400 space-y-2 leading-relaxed">
+          <li><strong class="text-stone-300">Marimo WASM</strong> — <code class="text-emerald-500/80">../wasm/…</code></li>
+          <li><strong class="text-stone-300">This explorer</strong> — pure HTML + <code class="text-emerald-500/80">../api/</code></li>
+          <li><strong class="text-stone-300">Live host</strong> — <code class="text-emerald-500/80">uvicorn app:app</code> · <code class="text-emerald-500/80">/book/</code></li>
+        </ul>
+      </div>
+      <div class="border border-stone-800 rounded-xl p-4 bg-stone-900/40 md:col-span-2 overflow-auto max-h-48">
+        <h2 class="text-sm font-semibold text-stone-200 mb-2">Meta</h2>
+        <pre id="metaBox" class="text-[11px] text-stone-400 whitespace-pre-wrap">Load a table to see source metadata…</pre>
+      </div>
+    </section>
+
+    <section class="border border-stone-800 rounded-xl overflow-auto max-h-[70vh] bg-stone-950/80">
+      <div id="tableWrap" class="p-2 text-stone-500 text-sm">No table loaded yet.</div>
+    </section>
+  </div>
+
+  <script>
+    /**
+     * API base resolution (GitHub Pages project sites + local FastAPI):
+     * - Always prefer relative "../api" so /Neuroscience/explore/ → /Neuroscience/api/
+     * - Absolute /api only works on host root (uvicorn), NOT on github.io/user/repo/
+     * - Override: input or localStorage neuro_api_base (e.g. http://127.0.0.1:8000)
+     */
+    function defaultBase() {
+      const saved = localStorage.getItem("neuro_api_base");
+      if (saved) return saved;
+      // Relative parent of /explore/ → site root (docs/) where api/ lives
+      return "..";
+    }
+
+    function baseUrl() {
+      const v = document.getElementById("apiBase").value.trim();
+      if (v) return v.replace(/\/$/, "");
+      return defaultBase();
+    }
+
+    function candidateUrls(path) {
+      // path: table/spectral | local/files | surfaces | god_run_summary
+      const b = baseUrl();
+      const p = path.replace(/^\//, "");
+      const urls = [];
+
+      function push(u) {
+        if (u && !urls.includes(u)) urls.push(u);
+      }
+
+      if (b.startsWith("http://") || b.startsWith("https://")) {
+        // Live FastAPI origin
+        push(`${b}/api/${p}`);
+        push(`${b}/api/${p}.json`);
+        if (p.startsWith("table/")) {
+          const name = p.slice(6);
+          push(`${b}/api/table/${name}.json`);
+          push(`${b}/api/features/${name}.json`);
+        }
+      } else {
+        // Relative static (GitHub Pages or static file server of docs/)
+        const root = b || "..";
+        push(`${root}/api/${p}`);
+        push(`${root}/api/${p}.json`);
+        if (p.startsWith("table/")) {
+          const name = p.slice(6);
+          push(`${root}/api/table/${name}.json`);
+          push(`${root}/api/features/${name}.json`);
+          // legacy feature names
+          if (name === "spectral_clean") push(`${root}/api/features/spectral_clean.json`);
+          if (name === "spectral") push(`${root}/api/features/spectral.json`);
+          if (name === "subject") push(`${root}/api/features/subject.json`);
+          if (name === "condition") push(`${root}/api/features/condition.json`);
+          if (name === "qc") push(`${root}/api/qc.json`);
+          if (name === "bakeoff") push(`${root}/api/bakeoff.json`);
+          if (name === "tf_results") push(`${root}/api/tf_results.json`);
+          if (name === "datasets") push(`${root}/api/datasets.json`);
+        }
+        if (p === "local/files") push(`${root}/api/local/files.json`);
+        if (p === "surfaces") push(`${root}/api/surfaces.json`);
+        if (p === "god_run_summary") push(`${root}/api/god_run_summary.json`);
+        // Live FastAPI on same host (when base is .. but server is uvicorn)
+        // also try absolute /api when not on github.io
+        if (!location.hostname.endsWith("github.io")) {
+          push(`/api/${p}`);
+          push(`/api/${p}.json`);
+          if (p.startsWith("table/")) {
+            const name = p.slice(6);
+            push(`/api/table/${name}`);
+            push(`/api/table/${name}.json`);
+          }
+        }
+      }
+      return urls;
+    }
+
+    async function getJson(path) {
+      const urls = candidateUrls(path);
+      let lastErr = "no urls";
+      for (const url of urls) {
+        try {
+          const r = await fetch(url, { headers: { Accept: "application/json" } });
+          if (!r.ok) {
+            lastErr = `${r.status} ${url}`;
+            continue;
+          }
+          const ct = (r.headers.get("content-type") || "").toLowerCase();
+          const text = await r.text();
+          // reject HTML error pages
+          if (text.trimStart().startsWith("<!") || text.trimStart().startsWith("<html")) {
+            lastErr = `HTML not JSON: ${url}`;
+            continue;
+          }
+          try {
+            return { data: JSON.parse(text), url };
+          } catch (e) {
+            lastErr = `JSON parse ${url}: ${e}`;
+          }
+        } catch (e) {
+          lastErr = `${url}: ${e}`;
+        }
+      }
+      throw new Error(lastErr || "fetch failed");
+    }
+
+    function setStatus(msg, ok) {
+      const el = document.getElementById("status");
+      el.textContent = msg;
+      el.className = "text-xs w-full " + (ok ? "text-emerald-500/90" : "text-amber-400/90");
+    }
+
+    function normalizeRecords(data, name) {
+      if (!data) return [];
+      if (Array.isArray(data.records)) return data.records;
+      if (Array.isArray(data)) return data;
+      if (name === "god_run_summary" || data.by_dataset_group) {
+        if (Array.isArray(data.by_dataset_group) && data.by_dataset_group.length)
+          return data.by_dataset_group;
+        if (Array.isArray(data.records)) return data.records;
+      }
+      if (data.datasets && typeof data.datasets === "object" && !Array.isArray(data.datasets)) {
+        return Object.entries(data.datasets).map(([k, v]) =>
+          typeof v === "object" && v ? { dataset: k, ...v } : { dataset: k, value: v }
+        );
+      }
+      if (typeof data === "object") return [data];
+      return [];
+    }
+
+    function renderTable(records) {
+      const wrap = document.getElementById("tableWrap");
+      if (!records || !records.length) {
+        wrap.innerHTML = "<p class='p-4 text-stone-500'>Empty table.</p>";
+        return;
+      }
+      const flat = records.map((row) => {
+        if (row && typeof row === "object" && !Array.isArray(row)) {
+          const o = {};
+          for (const [k, v] of Object.entries(row)) {
+            if (v !== null && typeof v === "object") o[k] = JSON.stringify(v).slice(0, 120);
+            else o[k] = v;
+          }
+          return o;
+        }
+        return { value: row };
+      });
+      const cols = [...new Set(flat.flatMap((r) => Object.keys(r)))].slice(0, 40);
+      let html = "<table><thead><tr>" + cols.map((c) => `<th>${c}</th>`).join("") + "</tr></thead><tbody>";
+      const lim = Math.min(flat.length, Number(document.getElementById("rowLimit").value) || 200);
+      for (let i = 0; i < lim; i++) {
+        const r = flat[i];
+        html += "<tr>" + cols.map((c) => {
+          let v = r[c];
+          if (v === undefined || v === null) v = "";
+          const s = String(v);
+          return `<td title="${s.replace(/"/g, "&quot;")}">${s}</td>`;
+        }).join("") + "</tr>";
+      }
+      html += "</tbody></table>";
+      wrap.innerHTML = html;
+    }
+
+    async function loadTable() {
+      const name = document.getElementById("tableSel").value;
+      const limit = Number(document.getElementById("rowLimit").value) || 200;
+      setStatus("Loading " + name + "…", true);
+      try {
+        const path = name === "god_run_summary" ? "god_run_summary" : `table/${name}`;
+        const { data, url } = await getJson(path);
+        let records = normalizeRecords(data, name);
+        const n = data.n ?? records.length;
+        records = records.slice(0, limit);
+        renderTable(records);
+        document.getElementById("metaBox").textContent = JSON.stringify(
+          { url, key: data.key || name, n, returned: records.length, surface: "html-explore-static-or-live" },
+          null,
+          2
+        );
+        setStatus(`Loaded ${records.length} / ${n} rows ← ${url}`, true);
+      } catch (e) {
+        setStatus("Failed: " + e.message, false);
+      }
+    }
+
+    async function loadFiles() {
+      setStatus("Listing files…", true);
+      try {
+        const { data, url } = await getJson("local/files");
+        const files = data.files || [];
+        renderTable(files);
+        document.getElementById("metaBox").textContent = JSON.stringify(
+          { url, n: data.n, root: data.root },
+          null,
+          2
+        );
+        setStatus(`Listed ${files.length} paths ← ${url}`, true);
+      } catch (e) {
+        setStatus("files list failed: " + e.message, false);
+      }
+    }
+
+    async function loadSurfaces() {
+      try {
+        const { data, url } = await getJson("surfaces");
+        document.getElementById("metaBox").textContent = JSON.stringify(data, null, 2);
+        const ch = (data.chapters || [])
+          .map((c) => {
+            const wasm = c.wasm_url
+              ? ` · <a class="text-emerald-400" href="..${c.wasm_url}">wasm</a>`
+              : "";
+            return `<li class="mb-1"><span class="text-stone-200">${c.title}</span> · ${c.kind}${wasm}</li>`;
+          })
+          .join("");
+        const nm = (data.non_marimo || [])
+          .map((n) => {
+            let href = n.url || "#";
+            if (href.startsWith("/explore")) href = "./";
+            else if (href.startsWith("/api")) href = "../api/";
+            else if (href.startsWith("/")) href = ".." + href;
+            return `<li><a class="text-emerald-400" href="${href}">${n.title}</a> — ${n.why}</li>`;
+          })
+          .join("");
+        document.getElementById("tableWrap").innerHTML =
+          `<div class="p-4 text-xs"><h3 class="text-stone-200 mb-2 text-sm">Chapters</h3><ul>${ch}</ul>` +
+          `<h3 class="text-stone-200 mt-4 mb-2 text-sm">Non-marimo</h3><ul>${nm}</ul></div>`;
+        setStatus("Surfaces ← " + url, true);
+      } catch (e) {
+        setStatus("surfaces: " + e.message, false);
+      }
+    }
+
+    document.getElementById("apiBase").value = localStorage.getItem("neuro_api_base") || "";
+    document.getElementById("apiBase").addEventListener("change", (e) => {
+      localStorage.setItem("neuro_api_base", e.target.value.trim());
+    });
+    document.getElementById("btnLoad").onclick = loadTable;
+    document.getElementById("btnFiles").onclick = loadFiles;
+    document.getElementById("btnSurfaces").onclick = loadSurfaces;
+    loadTable();
+  </script>
+</body>
+</html>

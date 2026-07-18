@@ -23,12 +23,18 @@ from fastapi.staticfiles import StaticFiles
 
 from marimo_exports.static_api import (
     build_bakeoff,
+    build_datasets,
     build_features_condition,
+    build_features_events,
+    build_features_participants,
     build_features_spectral,
     build_features_subject,
     build_health,
+    build_local_files,
     build_meta,
     build_qc,
+    build_surfaces,
+    build_table,
     build_tf_results,
 )
 
@@ -102,6 +108,39 @@ def tf_results():
     if not data:
         raise HTTPException(404, "tf_results.json missing — run run_tf_offline.py")
     return data
+
+
+@app.get("/api/datasets")
+def datasets():
+    return build_datasets()
+
+
+@app.get("/api/surfaces")
+def surfaces():
+    return build_surfaces()
+
+
+@app.get("/api/local/files")
+def local_files(include_raw_niftis: bool = False):
+    return build_local_files(include_raw_niftis=include_raw_niftis)
+
+
+@app.get("/api/table/{name}")
+def table(name: str, limit: int | None = Query(None, ge=1, le=50_000)):
+    data = build_table(name, limit=limit)
+    if data.get("error"):
+        raise HTTPException(404, data["error"])
+    return data
+
+
+@app.get("/api/features/participants")
+def features_participants():
+    return build_features_participants()
+
+
+@app.get("/api/features/events")
+def features_events():
+    return build_features_events()
 
 
 @app.get("/api")

@@ -96,7 +96,11 @@ def build_health(docs: Path | None = None) -> dict[str, Any]:
             "tf_results": "api/tf_results.json",
             "openapi": "api/openapi.json",
             "architecture": "api/architecture.json",
-            "explorer": "api/",
+            "datasets": "api/datasets.json",
+            "local_files": "api/local/files.json",
+            "surfaces": "api/surfaces.json",
+            "table": "api/table/{name}.json",
+            "explorer": "explore/",
         },
         "live_server": "uvicorn app:app  # /book/* marimo + /api/* REST",
     }
@@ -174,19 +178,251 @@ def build_architecture() -> dict[str, Any]:
         },
         "layers": {
             "notebooks": "marimo_notebooks/",
-            "live": "uvicorn app:app → /book/* + /api/*",
-            "pages": "docs/wasm + docs/api (static)",
+            "live": "uvicorn app:app → /book/* + /api/* + /explore/",
+            "pages": "docs/wasm + docs/api + docs/explore (static)",
+            "viz": {
+                "marimo_wasm": "/wasm/<chapter>/",
+                "marimo_live": "/book/<chapter>/",
+                "html_explorer": "/explore/",
+            },
         },
         "cross_ref_openneuro": [
             "ds002725",
             "ds003085",
             "ds003720",
             "ds004142",
+            "ds004894",
             "ds005700",
             "ds006564",
         ],
         "docs": "ARCHITECTURE.md",
         "github_pages": "https://bladerunner-hue.github.io/Neuroscience/",
+    }
+
+
+def build_features_participants() -> dict[str, Any]:
+    rows = _read_csv_records("participants_clean.csv")
+    return {"n": len(rows), "records": rows}
+
+
+def build_features_events() -> dict[str, Any]:
+    rows = _read_csv_records("events_summary.csv")
+    return {"n": len(rows), "records": rows}
+
+
+def build_datasets() -> dict[str, Any]:
+    """Multi-dataset registry for landscape + explore UI."""
+    reg_path = PROCESSED / "dataset_registry.json"
+    datasets: Any = {}
+    if reg_path.exists():
+        datasets = json.loads(reg_path.read_text(encoding="utf-8"))
+    else:
+        try:
+            sys_path_nb = ROOT / "marimo_notebooks"
+            if str(sys_path_nb) not in __import__("sys").path:
+                __import__("sys").path.insert(0, str(sys_path_nb))
+            from multi_dataset_catalog import MULTI_DATASET_CATALOG
+
+            datasets = MULTI_DATASET_CATALOG
+        except Exception:
+            datasets = {}
+    return {
+        "n": len(datasets) if isinstance(datasets, dict) else 0,
+        "datasets": datasets,
+        "data_root": "data/raw/<OpenNeuro-id>/",
+        "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+    }
+
+
+def build_local_files(*, include_raw_niftis: bool = False) -> dict[str, Any]:
+    """Index of repo data files for the HTML explorer (sizes only for large NIfTI)."""
+    data = ROOT / "data"
+    files: list[dict[str, Any]] = []
+    if not data.exists():
+        return {"n": 0, "files": [], "root": str(ROOT)}
+    for sub in ("processed", "raw"):
+        base = data / sub
+        if not base.exists():
+            continue
+        for p in sorted(base.rglob("*")):
+            if not p.is_file():
+                continue
+            suf = p.suffix.lower()
+            if suf in {".nii", ".gz"} and not include_raw_niftis:
+                # collapse: count only, skip listing every run (explore uses registry)
+                continue
+            if p.name in {".git", ".gitattributes"} or ".git" in p.parts:
+                continue
+            try:
+                sz = p.stat().st_size
+            except OSError:
+                sz = 0
+            rel = str(p.relative_to(ROOT)).replace("\\", "/")
+            files.append(
+                {
+                    "path": rel,
+                    "name": p.name,
+                    "layer": sub,
+                    "suffix": suf,
+                    "bytes": sz,
+                    "previewable": suf in {".csv", ".json", ".tsv", ".txt", ".md"}
+                    and sz < 12_000_000,
+                    "table_key": _table_key_for(rel),
+                }
+            )
+    # raw BIDS summary rows
+    raw = data / "raw"
+    if raw.exists():
+        for ds in sorted(raw.glob("ds*")):
+            if not ds.is_dir():
+                continue
+            n_bold = sum(1 for _ in ds.rglob("*bold.nii.gz"))
+            n_sub = sum(1 for _ in ds.glob("sub-*") if _.is_dir())
+            files.append(
+                {
+                    "path": str(ds.relative_to(ROOT)).replace("\\", "/"),
+                    "name": ds.name,
+                    "layer": "raw",
+                    "suffix": "dir",
+                    "bytes": 0,
+                    "previewable": False,
+                    "table_key": None,
+                    "n_subjects": n_sub,
+                    "n_bold_files": n_bold,
+                    "kind": "bids_dataset",
+                }
+            )
+    return {
+        "n": len(files),
+        "files": files,
+        "root": str(ROOT),
+        "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+    }
+
+
+def _table_key_for(rel: str) -> str | None:
+    name = Path(rel).name
+    mapping = {
+        "spectral_features.csv": "spectral",
+        "cleaned_spectral_features.csv": "spectral_clean",
+        "subject_features.csv": "subject",
+        "condition_features.csv": "condition",
+        "run_qc.csv": "qc",
+        "participants_clean.csv": "participants",
+        "events_summary.csv": "events",
+        "ml_bakeoff.json": "bakeoff",
+        "tf_results.json": "tf_results",
+        "dataset_registry.json": "datasets",
+    }
+    return mapping.get(name)
+
+
+def build_table(name: str, *, limit: int | None = None) -> dict[str, Any]:
+    """Unified table payload for marimo + HTML explorer."""
+    key = name.replace("-", "_").lower().strip()
+    builders = {
+        "spectral": lambda: build_features_spectral(clean=False),
+        "spectral_clean": lambda: build_features_spectral(clean=True),
+        "subject": build_features_subject,
+        "condition": build_features_condition,
+        "qc": build_qc,
+        "participants": build_features_participants,
+        "events": build_features_events,
+        "bakeoff": build_bakeoff,
+        "tf_results": build_tf_results,
+        "datasets": build_datasets,
+    }
+    if key not in builders:
+        return {"n": 0, "records": [], "error": f"unknown table {name!r}", "key": key}
+    data = builders[key]()
+    if key in ("bakeoff", "tf_results", "datasets"):
+        # not always records-shaped
+        if isinstance(data, dict) and "records" not in data:
+            return {"n": 1, "records": [data], "key": key, "shape": "object"}
+    records = data.get("records") if isinstance(data, dict) else data
+    if not isinstance(records, list):
+        records = [data]
+    n = len(records)
+    if limit is not None and limit > 0:
+        records = records[:limit]
+    return {
+        "n": n,
+        "returned": len(records),
+        "records": records,
+        "key": key,
+        "limit": limit,
+    }
+
+
+def build_surfaces() -> dict[str, Any]:
+    """Catalog of visualization surfaces (marimo + non-marimo)."""
+    notebooks = ROOT / "marimo_notebooks"
+    public = [
+        ("00_data_browser", "0 · Data browser", "marimo"),
+        ("00_qc_dashboard", "0 · QC Dashboard", "marimo"),
+        ("01_pre_flight", "I · Cohort & Design", "marimo"),
+        ("02_eda_univariate", "II · Spectral Power", "marimo"),
+        ("03_eda_multivariate", "III · Algorithm Lab", "marimo"),
+        ("04_feature_engineering", "IV · Features", "marimo"),
+        ("05_tf_results", "V · Neural Net Results", "marimo"),
+        ("09_multi_dataset_analysis", "IX · Multi-dataset scale", "marimo"),
+    ]
+    local_only = [
+        ("00_data_landscape", "0-local · Data Landscape", "marimo-local"),
+        ("06_tf_spectrogram_model", "V-local · TF Train", "marimo-local+cli"),
+        ("07_spark_god_mode", "VII · Spark God Mode", "marimo-local+cli"),
+        ("08_spark_streaming", "VIII · Streaming", "cli+marimo-local"),
+    ]
+    wasm_stems = {s for s, _, _ in public}
+    chapters = []
+    for stem, title, kind in public + local_only:
+        chapters.append(
+            {
+                "stem": stem,
+                "title": title,
+                "kind": kind,
+                "exists": (notebooks / f"{stem}.py").exists(),
+                "live_url": f"/book/{stem}/" if "marimo" in kind else None,
+                "wasm_url": f"/wasm/{stem}/" if stem in wasm_stems else None,
+                "viz": "marimo" if "marimo" in kind else "cli",
+            }
+        )
+    return {
+        "explorer_url": "/explore/",
+        "api_url": "/api/",
+        "live_book_url": "/book/",
+        "gallery_url": "/",
+        "chapters": chapters,
+        "non_marimo": [
+            {
+                "title": "HTML data explorer",
+                "url": "/explore/",
+                "why": "Browse feature tables without marimo/Pyodide",
+            },
+            {
+                "title": "Static API (JSON)",
+                "url": "/api/",
+                "why": "Machine-readable tables for any front-end",
+            },
+            {
+                "title": "OpenAPI / Swagger",
+                "url": "/docs",
+                "why": "Interactive REST when FastAPI is running",
+            },
+        ],
+        "policy": {
+            "keep_marimo_py": [
+                "00–05 public chapters (reactive viz + WASM export)",
+                "00_data_landscape (local multi-set inventory)",
+            ],
+            "marimo_plus_api": [
+                "05_tf_results — viz in marimo; train offline → API/JSON",
+                "06_tf_spectrogram_model — train on host; view metrics via /api/tf_results + explore",
+            ],
+            "cli_or_local_marimo": [
+                "07/08 Spark — Catalyst jobs on host; status tables via /api or explore",
+            ],
+        },
     }
 
 
@@ -381,6 +617,24 @@ def export_static_api(out_dir: Path | None = None, *, docs: Path | None = None) 
         "qc.json": build_qc(),
         "bakeoff.json": build_bakeoff(),
         "tf_results.json": build_tf_results(),
+        "datasets.json": build_datasets(),
+        "surfaces.json": build_surfaces(),
+        "local/files.json": build_local_files(),
+        "features/participants.json": build_features_participants(),
+        "features/events.json": build_features_events(),
+        "table/spectral.json": build_table("spectral"),
+        "table/subject.json": build_table("subject"),
+        "table/condition.json": build_table("condition"),
+        "table/qc.json": build_table("qc"),
+        "table/participants.json": build_table("participants"),
+        "table/tf_results.json": build_table("tf_results"),
+        "table/datasets.json": build_table("datasets"),
+        "table/bakeoff.json": build_table("bakeoff"),
+        "god_run_summary.json": (
+            json.loads((PROCESSED / "god_run_summary.json").read_text(encoding="utf-8"))
+            if (PROCESSED / "god_run_summary.json").exists()
+            else {"n_runs": 0, "records": [], "by_dataset_group": []}
+        ),
         "openapi.json": build_openapi(pages_base="."),
     }
 
