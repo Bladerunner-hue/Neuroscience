@@ -37,7 +37,10 @@ jobs:
           python -m pip install --upgrade pip
           # Pin marimo so Vite chunk hashes match a known-good frontend (avoids
           # "Failed to fetch dynamically imported module" after partial deploys).
-          pip install "marimo[recommended]==0.23.10" numpy pandas polars scipy matplotlib plotly scikit-learn seaborn pyarrow
+          pip install \
+            "marimo[recommended]==0.23.10" \
+            numpy pandas polars scipy matplotlib plotly scikit-learn seaborn pyarrow \
+            fastapi "uvicorn[standard]" httpx
 
       - name: Ensure multi-set summary for WASM embeds
         run: |
@@ -214,9 +217,9 @@ jobs:
           cleanup() { kill $PID 2>/dev/null || true; }
           trap cleanup EXIT
           # GitHub Pages-like paths under site root = docs/
-          curl -sf http://127.0.0.1:8766/index.html | head -c 200 >/dev/null
-          curl -sf http://127.0.0.1:8766/explore/ | head -c 200 >/dev/null
-          curl -sf http://127.0.0.1:8766/explore/index.html | head -c 200 >/dev/null
+          curl -sf -o /dev/null http://127.0.0.1:8766/index.html
+          curl -sf -o /dev/null http://127.0.0.1:8766/explore/index.html
+          curl -sf -o /dev/null http://127.0.0.1:8766/explore/
           curl -sf http://127.0.0.1:8766/api/health.json | python -c "import sys,json; assert json.load(sys.stdin)['status']=='ok'"
           curl -sf http://127.0.0.1:8766/api/table/spectral.json | python -c "import sys,json; d=json.load(sys.stdin); assert d.get('n',0)>0 or len(d.get('records')or[])>0"
           curl -sf http://127.0.0.1:8766/api/datasets.json | python -c "import sys,json; d=json.load(sys.stdin); assert d.get('n',0)>=1"
@@ -228,7 +231,7 @@ jobs:
       - name: Local FastAPI smoke (marimo + explore + API)
         run: |
           set -euo pipefail
-          pip install fastapi uvicorn "marimo[recommended]==0.23.10" -q
+          pip install fastapi "uvicorn[standard]" httpx -q
           export PYTHONPATH=marimo_notebooks
           python - <<'PY'
           from fastapi.testclient import TestClient

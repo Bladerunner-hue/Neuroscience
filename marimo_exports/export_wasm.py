@@ -506,17 +506,39 @@ def share_wasm_assets(root: Path) -> bool:
 
 
 def sync_docs() -> None:
+    """Copy WASM chapters + shared-assets + static API into docs/ for GitHub Pages.
+
+    Chapter HTML uses ``../shared-assets/…`` relative to ``docs/wasm/<chapter>/``,
+    which resolves to **``docs/shared-assets/``** (not ``docs/wasm/shared-assets/``).
+    """
     DOCS_WASM.mkdir(parents=True, exist_ok=True)
     if DOCS_WASM.exists():
         for child in list(DOCS_WASM.iterdir()):
             if child.is_dir() and not (EXPORT_DIR / child.name).exists():
-                # keep shared-assets if present under export
-                if child.name == "shared-assets" and (EXPORT_DIR / "shared-assets").exists():
+                if child.name == "shared-assets":
+                    # always refresh from export below
+                    shutil.rmtree(child)
                     continue
                 shutil.rmtree(child)
                 print(f"   removed stale docs/wasm/{child.name}")
+
+    export_shared = EXPORT_DIR / "shared-assets"
     for child in EXPORT_DIR.iterdir():
         if not child.is_dir():
+            continue
+        if child.name == "shared-assets":
+            # Place at docs/shared-assets so ../shared-assets from wasm/* resolves
+            dest = DOCS_DIR / "shared-assets"
+            if dest.exists():
+                shutil.rmtree(dest)
+            shutil.copytree(child, dest)
+            print(f"   synced → docs/shared-assets ({len(list(dest.iterdir()))} files)")
+            # Also keep a copy under docs/wasm/ for older links / CI probes
+            dest_wasm = DOCS_WASM / "shared-assets"
+            if dest_wasm.exists():
+                shutil.rmtree(dest_wasm)
+            shutil.copytree(child, dest_wasm)
+            print("   synced → docs/wasm/shared-assets (mirror)")
             continue
         dest = DOCS_WASM / child.name
         if dest.exists():
@@ -530,7 +552,6 @@ def sync_docs() -> None:
     try:
         from marimo_exports.static_api import export_static_api
     except ImportError:
-        # running as script from repo root
         sys.path.insert(0, str(ROOT))
         from marimo_exports.static_api import export_static_api  # type: ignore
 
@@ -577,12 +598,18 @@ def verify_exports(docs: bool = True) -> bool:
 
     base = DOCS_WASM if docs else EXPORT_DIR
     print(f"\n=== HTML export checks under {base} ===")
-    shared = base / "shared-assets"
+    # Pages resolves ../shared-assets from docs/wasm/<ch>/ → docs/shared-assets
+    if docs:
+        shared = DOCS_DIR / "shared-assets"
+        if not shared.is_dir():
+            shared = DOCS_WASM / "shared-assets"
+    else:
+        shared = base / "shared-assets"
     if not shared.is_dir() or not any(shared.glob("run-page-*.js")):
-        print(f"  ❌ missing shared-assets with run-page-*.js under {base}")
+        print(f"  ❌ missing shared-assets with run-page-*.js at {shared}")
         ok = False
     else:
-        print(f"  ✅ shared-assets ({len(list(shared.iterdir()))} files)")
+        print(f"  ✅ shared-assets ({len(list(shared.iterdir()))} files) at {shared}")
 
     for name in CANDIDATES:
         stem = Path(name).stem
