@@ -22,12 +22,14 @@ tensorflow[and-cuda]==2.20
 # tensorflow-probability  # optional
 
 # God-mode Spark (Tungsten/Catalyst honour — CPU only in JVM)
-pyspark>=4.1.1
+# Pin == server major.minor from scripts/start_local_spark_connect.sh (native, no Docker)
+pyspark==4.1.1
 pyarrow
 msgspec
 typer[all]
-# Optional Spark Connect client pin (use with docker-compose.spark.yml):
-# pyspark[connect]==3.5.1
+# Optional multi-dataset ACID store (match Spark 4.1.x; enable when scaling)
+# delta-spark==4.0.0
+# deltalake
 
 # Optional / research (not required for the book)
 # mne  # production adaptive multitaper: prepare_real_features.py --psd mne

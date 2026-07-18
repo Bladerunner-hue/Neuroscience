@@ -18,7 +18,8 @@ Usage::
     # Local master (default — works without Spark Connect server)
     python scripts/god_mode_bold_to_tfdata.py
 
-    # Spark Connect (docker compose up spark-connect)
+    # Spark Connect (native — no Docker)
+    #   ./scripts/start_local_spark_connect.sh
     python scripts/god_mode_bold_to_tfdata.py --remote sc://localhost:15002
 
     # Skip TFRecords (Spark-only feature tables)

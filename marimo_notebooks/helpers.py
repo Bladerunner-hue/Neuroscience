@@ -54,9 +54,24 @@ BOOK_CHAPTERS: list[tuple[str, str, str]] = [
 ]
 BOOK_LOCAL_ONLY = [
     (
+        "00_data_landscape",
+        "0-local · Data Landscape",
+        "Multi-source inventory, scientific value, consistency (Polars + optional Spark Connect).",
+    ),
+    (
         "06_tf_spectrogram_model",
         "V-local · Train TensorFlow",
         "Retrain STFT CNN + MLPs locally (optional); results ship via 05.",
+    ),
+    (
+        "07_spark_god_mode",
+        "VII · Spark God Mode",
+        "Catalyst multi-dataset rollups + TFRecords hand-off (native Connect).",
+    ),
+    (
+        "08_spark_streaming",
+        "VIII · Spark Streaming",
+        "Structured Streaming file/Kafka path with checkpoints.",
     ),
 ]
 
@@ -532,6 +547,302 @@ def load_run_qc() -> pd.DataFrame:
         ]
         return sf[cols]
     return pd.DataFrame()
+
+
+def load_dataset_registry() -> dict:
+    """OpenNeuro multi-cohort registry (primary + cross-refs)."""
+    for root in REPO_CANDIDATES:
+        p = root / "data" / "processed" / "dataset_registry.json"
+        if p.exists():
+            return json.loads(p.read_text())
+    return {}
+
+
+def inventory_data_sources() -> list[dict]:
+    """Catalog raw BIDS, processed feature store, and god-mode parquet tables.
+
+    Each row documents *what exists*, *scale*, and *scientific role* so chapters
+    can open with a multi-source view before QC / spectral analysis.
+    """
+    proc = _find_processed()
+    rows: list[dict] = []
+
+    # --- registry / raw BIDS ---
+    reg = load_dataset_registry()
+    for ds_id, meta in reg.items():
+        local = None
+        for root in REPO_CANDIDATES:
+            cand = root / str(meta.get("local_path") or f"data/raw/{ds_id}")
+            if cand.exists():
+                local = cand
+                break
+        rows.append(
+            {
+                "layer": "raw_bids",
+                "name": ds_id,
+                "artifact": str(meta.get("local_path") or f"data/raw/{ds_id}"),
+                "exists": bool(local and local.exists()),
+                "n_rows": int(meta.get("n_subjects_on_disk") or 0),
+                "n_extra": int(meta.get("n_bold_files") or 0),
+                "role": meta.get("role") or "cross_ref",
+                "scientific_value": meta.get("why") or meta.get("title") or "",
+                "status": meta.get("status") or ("ok" if local else "missing"),
+            }
+        )
+    if not reg:
+        # primary only if registry absent
+        for root in REPO_CANDIDATES:
+            p = root / "data" / "raw" / "ds000171"
+            if p.exists():
+                rows.append(
+                    {
+                        "layer": "raw_bids",
+                        "name": "ds000171",
+                        "artifact": "data/raw/ds000171",
+                        "exists": True,
+                        "n_rows": 0,
+                        "n_extra": 0,
+                        "role": "primary",
+                        "scientific_value": "Core MDD vs Control music/tones design",
+                        "status": "ok",
+                    }
+                )
+                break
+
+    # --- classic feature store (book / WASM path) ---
+    feature_specs = [
+        (
+            "spectral_features.csv",
+            "run_level PSD bands + tSNR/QC",
+            "Per-run spectral energy; unit of QC and univariate EDA",
+        ),
+        (
+            "cleaned_spectral_features.csv",
+            "IsolationForest-gated runs",
+            "Analysis-ready runs after QC filters",
+        ),
+        (
+            "condition_features.csv",
+            "trial_type epochs",
+            "Music vs nonmusic vs tones contrasts",
+        ),
+        (
+            "subject_features.csv",
+            "subject-wide + responder score R",
+            "ML bake-off / personalized music effect",
+        ),
+        (
+            "run_qc.csv",
+            "tSNR / flatness / spike / IF flags",
+            "Run-level quality gate before claims",
+        ),
+        (
+            "participants_clean.csv",
+            "demographics + group",
+            "Cohort composition and stratification",
+        ),
+        (
+            "events_summary.csv",
+            "block design inventory",
+            "Stimulus timing / trial_type coverage",
+        ),
+        (
+            "spatial_connectivity.csv",
+            "pseudo-ROI band coherence",
+            "Anterior–posterior / L–R spatial proxies",
+        ),
+        (
+            "bold_timeseries.csv",
+            "mean BOLD z traces",
+            "Time-domain examples / peri-stimulus plots",
+        ),
+        (
+            "ml_bakeoff.json",
+            "LOOCV leaderboards",
+            "Classical ML gold standard on small n",
+        ),
+        (
+            "tf_results.json",
+            "offline CNN/MLP metrics",
+            "Neural baselines without retrain",
+        ),
+        (
+            "book_bundle.json",
+            "WASM embed payload",
+            "Browser book without local NIfTI",
+        ),
+    ]
+    if proc is not None:
+        for fname, content, value in feature_specs:
+            path = proc / fname
+            n_rows = 0
+            if path.exists() and path.suffix == ".csv":
+                try:
+                    n_rows = sum(1 for _ in path.open()) - 1
+                except OSError:
+                    n_rows = 0
+            elif path.exists() and path.suffix == ".json":
+                try:
+                    blob = json.loads(path.read_text())
+                    n_rows = len(blob) if isinstance(blob, (list, dict)) else 1
+                except Exception:
+                    n_rows = 1
+            rows.append(
+                {
+                    "layer": "feature_store",
+                    "name": fname,
+                    "artifact": f"data/processed/{fname}",
+                    "exists": path.exists(),
+                    "n_rows": int(n_rows),
+                    "n_extra": int(path.stat().st_size) if path.exists() else 0,
+                    "role": "primary_book",
+                    "scientific_value": f"{content} — {value}",
+                    "status": "ok" if path.exists() else "missing",
+                }
+            )
+
+    # --- god-mode / multi-dataset scale path ---
+    god_specs = [
+        (
+            "god_parquet_bold/run_spectral",
+            "multi-dataset run spectral parquet",
+            "Horizontal scale: same schema across OpenNeuro cohorts",
+        ),
+        (
+            "god_parquet_bold/epoch_ts",
+            "epoch time-series arrays",
+            "Block-locked BOLD for streaming / TF hand-off",
+        ),
+        (
+            "god_features/run_level",
+            "Catalyst run features",
+            "Spark-rolled run metrics (no Python UDFs)",
+        ),
+        (
+            "god_features/subject_level",
+            "Catalyst subject rollups",
+            "Music vs nonmusic contrasts at subject grain",
+        ),
+        (
+            "god_features/run_qc",
+            "Catalyst QC table",
+            "Distributed QC flags aligned to multi-set schema",
+        ),
+        (
+            "dataset_registry.json",
+            "cohort inventory",
+            "What is on disk vs planned cross-refs",
+        ),
+    ]
+    for rel, content, value in god_specs:
+        path = None
+        for root in REPO_CANDIDATES:
+            cand = root / "data" / "processed" / rel
+            if cand.exists():
+                path = cand
+                break
+        n_rows = 0
+        n_extra = 0
+        if path is not None:
+            if path.is_dir():
+                parts = list(path.glob("**/*.parquet"))
+                n_extra = sum(p.stat().st_size for p in parts)
+                try:
+                    import pyarrow.parquet as pq
+
+                    n_rows = int(pq.ParquetDataset(str(path)).read().num_rows)
+                except Exception:
+                    n_rows = len(parts)
+            elif path.suffix == ".json":
+                try:
+                    blob = json.loads(path.read_text())
+                    n_rows = len(blob) if isinstance(blob, dict) else 1
+                    n_extra = path.stat().st_size
+                except Exception:
+                    n_extra = path.stat().st_size
+        rows.append(
+            {
+                "layer": "god_mode",
+                "name": rel.split("/")[-1],
+                "artifact": f"data/processed/{rel}",
+                "exists": path is not None and path.exists(),
+                "n_rows": int(n_rows),
+                "n_extra": int(n_extra),
+                "role": "scale_path",
+                "scientific_value": f"{content} — {value}",
+                "status": "ok" if path is not None and path.exists() else "missing",
+            }
+        )
+
+    return rows
+
+
+def inventory_dataframe() -> pd.DataFrame:
+    """Pandas inventory table (small) for marimo tables / Polars conversion."""
+    return pd.DataFrame(inventory_data_sources())
+
+
+def data_sources_scientific_md() -> str:
+    """Markdown primer: what each layer brings to the music–reward question."""
+    return """
+### Why multiple sources (scientific logic)
+
+| Layer | Grain | What it contributes to the claim |
+|-------|-------|----------------------------------|
+| **raw BIDS** (`ds000171` + cross-refs) | subject / run NIfTI + events | Ground truth timing, demographics, full BOLD field |
+| **feature store** (CSV / book_bundle) | run · condition · subject | Reproducible spectral biomarkers for the *public* book |
+| **god-mode parquet** | multi-dataset run / epoch | Same schema at larger *n*; Catalyst rollups without re-writing WASM |
+| **ML / TF JSON** | subject metrics | Classical LOOCV + neural baselines (frozen evidence) |
+
+**Primary design (ds000171):** 39 participants (19 MDD, 20 never-depressed Control) × emotional **music** vs **nonmusic** / tones (Siemens Skyra 3T).
+Cross-refs (ds002725 EEG-fMRI music, ds003085 happy/sad dynamics, ds004894 HR–insula, ds006564 naturalistic, ds003720 genre, …) test whether spectral signatures *generalize* — they do **not** replace the primary clinical contrast.
+
+**Consistency rule:** multi-dataset tables share keys `(dataset, subject, task, run)`; spectral columns use the same band definitions as `prepare_real_features.py`. Spark only *rolls up* pre-ingested parquet — multitaper stays outside the JVM. Delta Lake is optional for ACID multi-set stores.
+
+See `multi_dataset_catalog.py` for ranked integration metadata.
+"""
+
+
+def load_god_run_level_polars():
+    """Multi-dataset Catalyst run_level table (Polars), or empty."""
+    try:
+        import polars as pl
+    except ImportError:
+        return None
+    for root in REPO_CANDIDATES:
+        p = root / "data" / "processed" / "god_features" / "run_level"
+        if p.exists():
+            try:
+                return pl.read_parquet(str(p))
+            except Exception:
+                try:
+                    import pyarrow.parquet as pq
+
+                    return pl.from_arrow(pq.read_table(p))
+                except Exception:
+                    pass
+    return pl.DataFrame() if "pl" in dir() else None
+
+
+def primary_cohort_summary() -> dict:
+    """Quick stats from processed primary feature store."""
+    sf = load_spectral_features()
+    parts = load_participants_df()
+    subj = load_subject_features()
+    out: dict = {
+        "n_spectral_runs": int(len(sf)) if sf is not None else 0,
+        "n_participants_meta": int(len(parts)) if parts is not None else 0,
+        "n_subject_features": int(len(subj)) if subj is not None else 0,
+    }
+    if sf is not None and not sf.empty:
+        if "group" in sf.columns:
+            out["runs_by_group"] = sf["group"].value_counts().to_dict()
+        if "task" in sf.columns:
+            out["runs_by_task"] = sf["task"].value_counts().to_dict()
+        for c in ("tsnr", "power_high", "spectral_flatness"):
+            if c in sf.columns:
+                out[f"mean_{c}"] = float(pd.to_numeric(sf[c], errors="coerce").mean())
+    return out
 
 
 def data_dictionary_md() -> str:

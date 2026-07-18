@@ -5,7 +5,7 @@ pre-ingested Parquet and demos the tf.data hand-off.
 """
 
 # /// script
-# requires-python = ">=3.11"
+# requires-python = ">=3.12,<3.13"
 # dependencies = ["marimo", "numpy", "pandas", "matplotlib", "pyspark", "pyarrow", "msgspec", "tensorflow"]
 # ///
 
@@ -77,8 +77,8 @@ python scripts/pre_ingest_bold_to_parquet.py --datasets ds000171
 # optional multi-set:
 # python scripts/pre_ingest_bold_to_parquet.py --datasets ds000171,ds002725 --max-runs 4
 python scripts/god_mode_bold_to_tfdata.py --smoke-tfdata
-# Spark Connect:
-# docker compose -f docker-compose.spark.yml up -d
+# Native Spark Connect (no Docker — matches PySpark 4.1.1):
+# ./scripts/start_local_spark_connect.sh
 # python scripts/god_mode_bold_to_tfdata.py --remote sc://localhost:15002
 ```
 """

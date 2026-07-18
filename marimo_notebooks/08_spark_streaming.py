@@ -49,7 +49,8 @@ python -m cli.neuro_tal_cli stream-file --once
 # continuous:
 # python -m cli.neuro_tal_cli stream-file --trigger-seconds 5
 # Kafka:
-# docker compose -f docker-compose.spark.yml --profile kafka up -d
+# Prefer native Connect for batch / file streaming:
+# ./scripts/start_local_spark_connect.sh
 # python -m cli.neuro_tal_cli stream-kafka --bootstrap localhost:9092
 ```
 """

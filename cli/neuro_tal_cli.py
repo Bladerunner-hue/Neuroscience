@@ -349,12 +349,14 @@ def status():
         "god_tfrecords": ROOT / "data" / "processed" / "god_tfrecords",
         "meta": _meta_path(),
         "chapter_07": ROOT / "marimo_notebooks" / "07_spark_god_mode.py",
-        "docker_compose": ROOT / "docker-compose.spark.yml",
+        "start_connect_sh": ROOT / "scripts" / "start_local_spark_connect.sh",
+        "data_landscape": ROOT / "marimo_notebooks" / "00_data_landscape.py",
     }
     typer.echo("=== neuro-tal god-mode status ===")
     for k, p in checks.items():
         ok = p.exists()
         typer.echo(f"  {'✓' if ok else '·'} {k}: {p.relative_to(ROOT)}")
+    typer.echo("hint: native Connect via ./scripts/start_local_spark_connect.sh (pip pyspark; no Docker)")
     if meta:
         typer.echo("meta: " + json.dumps(meta, indent=2)[:800])
     honour = (meta or {}).get("honour") or {

@@ -1,20 +1,16 @@
-# Local raw BIDS (not committed)
+# `data/raw/` — OpenNeuro BIDS trees
 
-Place OpenNeuro [ds000171](https://openneuro.org/datasets/ds000171) here as a BIDS tree:
+One directory per dataset ID. **Canonical primary:** `ds000171/`.
 
-```text
-data/raw/ds000171/
-  participants.tsv
-  sub-*/anat/*.nii.gz
-  sub-*/func/*_bold.nii.gz
-  sub-*/func/*_events.tsv
-```
+| Folder | Role | On disk (typical) | OpenNeuro |
+|--------|------|-------------------|-----------|
+| `ds000171/` | **Primary** MDD music/nonmusic | Full BOLD (~21 G) | https://openneuro.org/datasets/ds000171 |
+| `ds002725/` | EEG-fMRI affective music | Meta + sample BOLD | https://openneuro.org/datasets/ds002725 |
+| `ds003085/` | Happy/sad music dynamics | Meta / STATUS | https://openneuro.org/datasets/ds003085 |
+| `ds003720/` | Genre listening baseline | Meta / STATUS | https://openneuro.org/datasets/ds003720 |
+| `ds004142/` | Reward valence nf | Meta | https://openneuro.org/datasets/ds004142 |
+| `ds004894/` | Music + HR + insula | Stub / STATUS | https://openneuro.org/datasets/ds004894 |
+| `ds005700/` | NeuroEmo visual emotion | Meta / STATUS | https://openneuro.org/datasets/ds005700 |
+| `ds006564/` | Naturalistic film+music | Meta / STATUS | https://openneuro.org/datasets/ds006564 |
 
-Everything under `data/raw/ds000171/` is **gitignored** (including nested DataLad/git-annex clones). Only `data/processed/` is tracked for the public book, WASM chapters, and the static FastAPI mirror under `docs/api/`.
-
-```bash
-# After download / unlock:
-python scripts/prepare_real_features.py --psd adaptive
-python scripts/run_ml_bakeoff.py
-python marimo_exports/export_wasm.py --sync-docs --verify
-```
+See each folder’s `STATUS.txt` for download commands. Do **not** place loose `sub-*` trees at the `raw/` root — always under `raw/<ds_id>/`.

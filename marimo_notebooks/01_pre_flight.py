@@ -66,6 +66,9 @@ def _(data_provenance_md, hypothesis_card, mo):
 ### Music, reward, and depression — reading real BOLD against a clinical question
 
 OpenNeuro **ds000171** (Lepping et al.): never-depressed controls and participants with major depressive disorder listening to emotional **music** and **non-musical** auditory material.
+
+Local multi-source inventory (cross-refs, god-mode parquet, Spark Connect consistency):  
+`marimo edit marimo_notebooks/00_data_landscape.py` — run that chapter **before** deep QC when you care about the full data range.
 """
             ),
             mo.md(data_provenance_md()),
