@@ -29,29 +29,42 @@ def _():
         book_nav,
         callout,
         hypothesis_card,
+        load_multi_dataset_runs,
+        load_raw_participants,
         load_tf_results,
+        multi_dataset_run_ids,
+        multi_studies_overview_md,
         pandas_to_polars,
         set_global_style,
+        studies_dataframe,
     )
     from api_client import connectivity_banner_md, load_datasets_registry, load_table, surface_label
+    from multi_dataset_catalog import MULTI_DATASET_CATALOG, integration_roadmap_md
 
     set_global_style()
     return (
         CONTROL_COLOR,
         MDD_COLOR,
+        MULTI_DATASET_CATALOG,
         MUSIC_COLOR,
         book_nav,
         callout,
         connectivity_banner_md,
         hypothesis_card,
+        integration_roadmap_md,
         load_datasets_registry,
+        load_multi_dataset_runs,
+        load_raw_participants,
         load_table,
         load_tf_results,
         mo,
+        multi_dataset_run_ids,
+        multi_studies_overview_md,
         np,
         pd,
         pandas_to_polars,
         plt,
+        studies_dataframe,
         surface_label,
     )
 
@@ -101,11 +114,29 @@ Also open the **HTML explorer** (no Pyodide): [explore/](../../explore/) · live
 
 
 @app.cell
-def _(load_datasets_registry, mo, pandas_to_polars, pd):
+def _(
+    MULTI_DATASET_CATALOG,
+    integration_roadmap_md,
+    load_datasets_registry,
+    load_multi_dataset_runs,
+    load_raw_participants,
+    mo,
+    multi_dataset_run_ids,
+    multi_studies_overview_md,
+    pandas_to_polars,
+    pd,
+    studies_dataframe,
+):
     reg = load_datasets_registry()
+    studies = studies_dataframe()
+    multi = load_multi_dataset_runs()
+    ds_ids = multi_dataset_run_ids()
+    # Prefer live studies_dataframe (raw + registry + catalog); fall back to API registry
     ds = reg.get("datasets") or {}
     rows = []
-    if isinstance(ds, dict):
+    if studies is not None and not getattr(studies, "empty", True):
+        rows = studies.to_dict(orient="records")
+    elif isinstance(ds, dict):
         for k, v in ds.items():
             if not isinstance(v, dict):
                 continue
@@ -122,13 +153,51 @@ def _(load_datasets_registry, mo, pandas_to_polars, pd):
                 }
             )
     df = pandas_to_polars(pd.DataFrame(rows)) if rows else None
-    mo.vstack(
-        [
-            mo.md(f"## 1. Dataset registry · source `{reg.get('source')}`"),
-            mo.ui.table(df, selection=None, page_size=12) if df is not None else mo.md("*No registry.*"),
-        ]
-    )
-    return df, reg
+
+    # Per-study scientific + disk detail from catalog
+    detail_rows = []
+    for ds_id, cat in sorted(
+        MULTI_DATASET_CATALOG.items(), key=lambda kv: kv[1].get("priority", 99)
+    ):
+        live = next((r for r in rows if r.get("dataset") == ds_id), {}) if rows else {}
+        n_part = 0
+        try:
+            p = load_raw_participants(ds_id)
+            n_part = int(len(p)) if p is not None and not p.empty else 0
+        except Exception:
+            n_part = 0
+        detail_rows.append(
+            {
+                "dataset": ds_id,
+                "priority": cat.get("priority"),
+                "role": cat.get("role"),
+                "match": cat.get("match_level"),
+                "status": live.get("status") or "—",
+                "n_subjects_disk": live.get("n_subjects_on_disk"),
+                "n_bold": live.get("n_bold_files"),
+                "n_participants_tsv": n_part,
+                "in_spectral_multiset": ds_id in ds_ids,
+                "short_title": cat.get("short_title"),
+                "tasks": ", ".join(cat.get("tasks") or [])[:60],
+                "why_neuro": (cat.get("why_neuro") or "")[:100],
+            }
+        )
+    detail = pandas_to_polars(pd.DataFrame(detail_rows)) if detail_rows else None
+
+    blocks = [
+        mo.md(f"## 1. Dataset registry · source `{reg.get('source')}`"),
+        mo.md(multi_studies_overview_md()),
+        mo.ui.table(df, selection=None, page_size=12) if df is not None else mo.md("*No registry.*"),
+        mo.md("### Catalog + disk integration (all studies)"),
+        mo.ui.table(detail, selection=None, page_size=12) if detail is not None else mo.md("*No catalog.*"),
+        mo.md(integration_roadmap_md()),
+    ]
+    if multi is not None and not getattr(multi, "empty", True) and "dataset" in multi.columns:
+        n_by = multi.groupby("dataset").size().reset_index(name="n_spectral_runs")
+        blocks.append(mo.md("### Spectral multi-set run counts"))
+        blocks.append(mo.ui.table(pandas_to_polars(n_by), selection=None))
+    mo.vstack(blocks)
+    return df, multi, reg, studies
 
 
 @app.cell

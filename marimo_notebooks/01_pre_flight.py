@@ -29,9 +29,15 @@ def _():
         key_insight_card,
         load_bold_timeseries,
         load_events_summary,
+        load_multi_dataset_runs,
         load_participants_df,
+        load_raw_participants,
         load_spectral_features,
+        multi_dataset_run_ids,
+        multi_studies_overview_md,
+        pandas_to_polars,
         set_global_style,
+        studies_dataframe,
     )
 
     set_global_style()
@@ -46,12 +52,18 @@ def _():
         key_insight_card,
         load_bold_timeseries,
         load_events_summary,
+        load_multi_dataset_runs,
         load_participants_df,
+        load_raw_participants,
         load_spectral_features,
         mo,
+        multi_dataset_run_ids,
+        multi_studies_overview_md,
         np,
+        pandas_to_polars,
         pd,
         plt,
+        studies_dataframe,
     )
 
 
@@ -313,6 +325,78 @@ Peri-stimulus windows after music-related onsets; time of maximum mean BOLD.
 
 
 @app.cell
+def _(
+    load_multi_dataset_runs,
+    load_raw_participants,
+    mo,
+    multi_dataset_run_ids,
+    multi_studies_overview_md,
+    pandas_to_polars,
+    pd,
+    studies_dataframe,
+):
+    studies = studies_dataframe()
+    multi = load_multi_dataset_runs()
+    ds_ids = multi_dataset_run_ids()
+    blocks = [
+        mo.md(
+            r"""
+## Related OpenNeuro studies (multi-dataset)
+
+The public book claims are powered by **ds000171**. Additional cohorts under
+`data/raw/` extend music / affect / multimodal coverage for generalization checks.
+"""
+        ),
+        mo.md(multi_studies_overview_md()),
+    ]
+    if studies is not None and not getattr(studies, "empty", True):
+        cols = [
+            c
+            for c in (
+                "dataset",
+                "role",
+                "match_level",
+                "status",
+                "n_subjects_on_disk",
+                "n_bold_files",
+                "n_nominal",
+                "short_title",
+                "modality",
+                "url",
+            )
+            if c in studies.columns
+        ]
+        blocks.append(mo.ui.table(pandas_to_polars(studies[cols]), selection=None, page_size=12))
+
+    # Show participants meta for every study that has participants.tsv
+    part_blocks = []
+    for ds in (studies["dataset"].tolist() if studies is not None and not studies.empty else []):
+        if ds == "ds000171":
+            continue
+        p = load_raw_participants(str(ds))
+        if p is not None and not p.empty:
+            part_blocks.append(
+                mo.md(f"**`{ds}` participants.tsv** · n={len(p)}")
+            )
+            part_blocks.append(mo.ui.table(pandas_to_polars(p.head(8)), selection=None, page_size=8))
+    if part_blocks:
+        blocks.append(mo.md("### Cross-ref demographics on disk"))
+        blocks.extend(part_blocks)
+
+    if multi is not None and not getattr(multi, "empty", True) and "dataset" in multi.columns:
+        n_by = multi.groupby("dataset").size().reset_index(name="n_runs")
+        blocks.append(
+            mo.md(
+                f"### Spectral multi-set coverage  \n"
+                f"Runs with extracted PSD features: **{', '.join(f'`{d}`' for d in ds_ids)}**"
+            )
+        )
+        blocks.append(mo.ui.table(pandas_to_polars(n_by), selection=None))
+    mo.vstack(blocks)
+    return multi, studies
+
+
+@app.cell
 def _(book_nav, clinical_relevance_card, mo):
     mo.vstack(
         [
@@ -323,6 +407,7 @@ def _(book_nav, clinical_relevance_card, mo):
 1. **Stimulus specificity** — always contrast music vs non-music.
 2. **Temporal locking** — event files turn continuous BOLD into trial-aware features.
 3. **Provenance** — browser builds use the same processed tables extracted from real NIfTI.
+4. **Multi-dataset** — cross-refs under `data/raw/` test whether spectral signatures generalize beyond one scanner/cohort.
 """
             ),
             mo.md(

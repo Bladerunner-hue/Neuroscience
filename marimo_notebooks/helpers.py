@@ -839,6 +839,238 @@ def load_god_run_level_polars():
     return pl.DataFrame() if "pl" in dir() else None
 
 
+def _repo_root() -> Path | None:
+    for root in REPO_CANDIDATES:
+        if (root / "data").exists() or (root / "marimo_notebooks").exists():
+            return root
+    return None
+
+
+def _load_god_run_summary_dict() -> dict:
+    """Disk / book_data god_run_summary (WASM-safe summary path)."""
+    for root in REPO_CANDIDATES:
+        p = root / "data" / "processed" / "god_run_summary.json"
+        if p.exists():
+            try:
+                return json.loads(p.read_text(encoding="utf-8"))
+            except Exception:
+                pass
+    try:
+        import book_data as bd  # type: ignore
+
+        if hasattr(bd, "GOD_RUN_SUMMARY") and bd.GOD_RUN_SUMMARY:
+            return dict(bd.GOD_RUN_SUMMARY)
+    except Exception:
+        pass
+    return {}
+
+
+def studies_table_rows() -> list[dict]:
+    """One row per OpenNeuro study under data/raw + registry/catalog metadata.
+
+    Used by marimo chapters so every page can surface cross-ref cohorts, not only
+    the primary ds000171 feature store.
+    """
+    reg = load_dataset_registry()
+    cat: dict = {}
+    try:
+        from multi_dataset_catalog import MULTI_DATASET_CATALOG
+
+        cat = MULTI_DATASET_CATALOG
+    except Exception:
+        pass
+
+    root = _repo_root()
+    raw_ids: set[str] = set()
+    if root is not None:
+        raw = root / "data" / "raw"
+        if raw.exists():
+            raw_ids = {
+                p.name
+                for p in raw.iterdir()
+                if p.is_dir() and p.name.startswith("ds")
+            }
+
+    ids = sorted(
+        set(reg.keys()) | set(cat.keys()) | raw_ids,
+        key=lambda d: (cat.get(d, {}).get("priority", reg.get(d, {}).get("priority", 99)), d),
+    )
+    rows: list[dict] = []
+    for ds_id in ids:
+        meta = dict(reg.get(ds_id) or {})
+        c = cat.get(ds_id) or {}
+        local_path = meta.get("local_path") or f"data/raw/{ds_id}"
+        on_disk = False
+        if root is not None:
+            on_disk = (root / local_path).exists() or (root / "data" / "raw" / ds_id).exists()
+        n_sub = int(meta.get("n_subjects_on_disk") or 0)
+        n_bold = int(meta.get("n_bold_files") or 0)
+        status = meta.get("status")
+        if not status:
+            if not on_disk:
+                status = "missing"
+            elif n_bold > 0 or n_sub > 0 or meta.get("downloaded_meta"):
+                status = "ok"
+            else:
+                status = "stub"
+        rows.append(
+            {
+                "dataset": ds_id,
+                "priority": c.get("priority", meta.get("priority")),
+                "role": meta.get("role") or c.get("role") or "cross_ref",
+                "match_level": meta.get("match_level") or c.get("match_level"),
+                "short_title": meta.get("short_title")
+                or c.get("short_title")
+                or meta.get("title")
+                or c.get("title")
+                or ds_id,
+                "status": status,
+                "n_subjects_on_disk": n_sub,
+                "n_bold_files": n_bold,
+                "n_nominal": meta.get("n_participants_nominal")
+                or c.get("n_participants_nominal"),
+                "modality": ", ".join(
+                    meta.get("modality") or c.get("modality") or []
+                )
+                or "—",
+                "local_path": local_path,
+                "url": meta.get("url") or c.get("url"),
+                "why": (meta.get("why") or c.get("why_neuro") or "")[:180],
+                "integration": (meta.get("integration") or c.get("integration") or "")[
+                    :160
+                ],
+                "on_disk": on_disk,
+            }
+        )
+    return rows
+
+
+def studies_dataframe() -> pd.DataFrame:
+    """Pandas table of all catalogued / on-disk OpenNeuro studies."""
+    return pd.DataFrame(studies_table_rows())
+
+
+def multi_dataset_run_ids() -> list[str]:
+    """Dataset IDs that appear in multi-set spectral runs (god path or summary)."""
+    df = load_multi_dataset_runs()
+    if df is None or getattr(df, "empty", True) or "dataset" not in df.columns:
+        return ["ds000171"]
+    return sorted(df["dataset"].astype(str).unique().tolist())
+
+
+def load_multi_dataset_runs() -> pd.DataFrame:
+    """Unified run-level spectral table with a ``dataset`` column.
+
+    Priority:
+      1. ``god_features/run_level`` parquet (Catalyst multi-set)
+      2. ``god_run_summary.json`` embedded records
+      3. Primary book ``spectral_features.csv`` tagged as ds000171
+    """
+    # 1) God parquet
+    try:
+        pl_df = load_god_run_level_polars()
+        if pl_df is not None and getattr(pl_df, "height", 0):
+            pdf = pl_df.to_pandas()
+            if "dataset" not in pdf.columns:
+                pdf["dataset"] = "ds000171"
+            return pdf
+    except Exception:
+        pass
+
+    # 2) Summary JSON (WASM-safe)
+    god = _load_god_run_summary_dict()
+    recs = god.get("records") or []
+    if recs:
+        pdf = pd.DataFrame(recs)
+        if "dataset" not in pdf.columns:
+            pdf["dataset"] = "ds000171"
+        return pdf
+
+    # 3) Primary feature store
+    sf = load_spectral_features()
+    if sf is None or getattr(sf, "empty", True):
+        return pd.DataFrame()
+    out = sf.copy()
+    if "dataset" not in out.columns:
+        out.insert(0, "dataset", "ds000171")
+    return out
+
+
+def load_multi_dataset_runs_polars():
+    """Polars multi-set runs (empty frame if unavailable)."""
+    try:
+        import polars as pl
+    except ImportError:  # pragma: no cover
+        return None
+    pl_df = load_god_run_level_polars()
+    if pl_df is not None and getattr(pl_df, "height", 0):
+        if "dataset" not in pl_df.columns:
+            pl_df = pl_df.with_columns(pl.lit("ds000171").alias("dataset"))
+        return pl_df
+    pdf = load_multi_dataset_runs()
+    return pandas_to_polars(pdf) if pdf is not None else pl.DataFrame()
+
+
+def load_raw_participants(ds_id: str = "ds000171") -> pd.DataFrame:
+    """Read participants.tsv (or participants_clean for primary) for any study."""
+    if ds_id == "ds000171":
+        try:
+            clean = load_participants_df()
+            if clean is not None and not clean.empty:
+                return clean
+        except Exception:
+            pass
+    root = _repo_root()
+    if root is None:
+        return pd.DataFrame()
+    candidates = [
+        root / "data" / "raw" / ds_id / "participants.tsv",
+        root / "data" / "raw" / ds_id / ds_id / "participants.tsv",
+    ]
+    for p in candidates:
+        if p.exists():
+            try:
+                return pd.read_csv(p, sep="\t")
+            except Exception:
+                continue
+    return pd.DataFrame()
+
+
+def multi_studies_overview_md() -> str:
+    """Short markdown block listing every study under data/raw for chapter intros."""
+    rows = studies_table_rows()
+    if not rows:
+        return (
+            "### OpenNeuro studies\n\n"
+            "*No multi-dataset registry yet — run "
+            "`python scripts/refresh_dataset_registry.py`.*"
+        )
+    lines = [
+        "### OpenNeuro studies in this book",
+        "",
+        "| Dataset | Role | Status | Subjects | BOLD | Focus |",
+        "|---------|------|--------|---------:|-----:|-------|",
+    ]
+    for r in rows:
+        focus = (r.get("short_title") or "")[:42]
+        lines.append(
+            f"| [`{r['dataset']}`]({r.get('url') or '#'}) | {r.get('role')} | "
+            f"**{r.get('status')}** | {r.get('n_subjects_on_disk')} | "
+            f"{r.get('n_bold_files')} | {focus} |"
+        )
+    multi_ids = multi_dataset_run_ids()
+    lines.extend(
+        [
+            "",
+            f"**Spectral multi-set runs available for:** "
+            f"{', '.join(f'`{d}`' for d in multi_ids)}  ",
+            "Primary clinical claims use **ds000171**; cross-refs test generalization.  ",
+            "Explore: `00_data_landscape` · `09_multi_dataset_analysis` · `/explore/`.",
+        ]
+    )
+    return "\n".join(lines)
+
+
 def primary_cohort_summary() -> dict:
     """Quick stats from processed primary feature store."""
     sf = load_spectral_features()
@@ -883,20 +1115,32 @@ def data_provenance_md() -> str:
     n_runs = b.get("n_bold_runs", 0)
     n_subj = b.get("n_subjects_with_bold", 0)
     src = b.get("source", "unknown")
+    studies = studies_table_rows()
+    n_studies = len(studies)
+    multi_ids = multi_dataset_run_ids()
+    multi_note = (
+        ", ".join(f"`{d}`" for d in multi_ids)
+        if multi_ids
+        else "`ds000171` only"
+    )
     return f"""
 ### Data provenance
 
 | | |
 |---|---|
-| **Dataset** | OpenNeuro [ds000171](https://openneuro.org/datasets/ds000171) — Lepping et al. |
+| **Primary dataset** | OpenNeuro [ds000171](https://openneuro.org/datasets/ds000171) — Lepping et al. |
+| **OpenNeuro studies on disk / registry** | **{n_studies}** (see multi-set table below) |
+| **Multi-set spectral runs** | {multi_note} |
 | **Full cohort (metadata)** | **{n_full}** participants |
 | **Subjects with BOLD in this book** | **{n_subj}** |
-| **BOLD runs processed** | **{n_runs}** |
+| **BOLD runs processed (primary store)** | **{n_runs}** |
 | **Spatial proxies** | Anterior/posterior, L/R, S/I slabs + A–P coherence |
 | **PSD** | Multitaper (adaptive default) + Welch baseline · tSNR QC · method=`{b.get("psd_method", "?")}` |
 | **Cleaned runs** | **{b.get("n_cleaned_runs", "—")}** (IsolationForest-gated) |
 | **Feature store** | `data/processed/` · WASM embed (helpers + spectral_methods + book_bundle JSON) |
 | **Source** | `{src}` |
+
+{multi_studies_overview_md()}
 
 {data_dictionary_md()}
 """

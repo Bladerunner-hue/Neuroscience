@@ -31,8 +31,12 @@ def _():
         hypothesis_card,
         key_insight_card,
         load_condition_features,
+        load_multi_dataset_runs,
         load_participants_df,
         load_spectral_features,
+        multi_dataset_run_ids,
+        pandas_to_polars,
+        studies_dataframe,
         load_subject_features,
         set_global_style,
     )
@@ -51,8 +55,12 @@ def _():
         hypothesis_card,
         key_insight_card,
         load_condition_features,
+        load_multi_dataset_runs,
         load_participants_df,
         load_spectral_features,
+        multi_dataset_run_ids,
+        pandas_to_polars,
+        studies_dataframe,
         load_subject_features,
         mo,
         np,
@@ -89,33 +97,39 @@ This chapter is the **analysis control room**. Before modeling (Chapter III exte
 
 @app.cell
 def _(
-    CONTROL_COLOR,
-    MDD_COLOR,
     load_condition_features,
+    load_multi_dataset_runs,
     load_participants_df,
     load_spectral_features,
     load_subject_features,
     mo,
+    multi_dataset_run_ids,
     pd,
-    plt,
+    pandas_to_polars,
+    studies_dataframe,
 ):
     parts = load_participants_df()
     runs = load_spectral_features()
     cond = load_condition_features()
     subj = load_subject_features()
+    multi = load_multi_dataset_runs()
+    studies = studies_dataframe()
+    ds_ids = multi_dataset_run_ids()
 
     mo.md("## 1. Data inventory (what we actually use)")
 
+    n_multi = int(len(multi)) if multi is not None and not getattr(multi, "empty", True) else 0
+    n_studies = int(len(studies)) if studies is not None and not getattr(studies, "empty", True) else 0
     inv = pd.DataFrame(
         [
             {
-                "layer": "Full cohort metadata",
+                "layer": "Full cohort metadata (primary)",
                 "n": len(parts),
                 "grain": "participant",
                 "used_for": "Demographics, harmonization (age/sex)",
             },
             {
-                "layer": "BOLD runs processed",
+                "layer": "BOLD runs processed (primary store)",
                 "n": len(runs),
                 "grain": "run (task×subject)",
                 "used_for": "Welch PSD + spatial pseudo-ROI high-band + A–P coherence",
@@ -132,20 +146,52 @@ def _(
                 "grain": "subject",
                 "used_for": "ML bake-off, contrasts, RecSys responder scores",
             },
+            {
+                "layer": "OpenNeuro studies (raw + registry)",
+                "n": n_studies,
+                "grain": "dataset",
+                "used_for": "Cross-ref inventory under data/raw/",
+            },
+            {
+                "layer": "Multi-set spectral runs (god)",
+                "n": n_multi,
+                "grain": "dataset × subject × task × run",
+                "used_for": f"Scale path: {', '.join(ds_ids)}",
+            },
         ]
     )
     bold_subs = sorted(runs["subject"].unique()) if not runs.empty else []
-    mo.vstack(
-        [
-            mo.ui.table(inv),
-            mo.md(
-                f"**Subjects with BOLD in the feature store:** `{', '.join(bold_subs)}`  \n"
-                f"Full cohort remains n={len(parts)} (Control={int((parts.group_short=='Control').sum())}, "
-                f"MDD={int((parts.group_short=='MDD').sum())})."
-            ),
+    blocks = [
+        mo.ui.table(inv),
+        mo.md(
+            f"**Subjects with BOLD in the feature store:** `{', '.join(bold_subs)}`  \n"
+            f"Full cohort remains n={len(parts)} (Control={int((parts.group_short=='Control').sum())}, "
+            f"MDD={int((parts.group_short=='MDD').sum())})."
+        ),
+    ]
+    if studies is not None and not getattr(studies, "empty", True):
+        sc = [
+            c
+            for c in (
+                "dataset",
+                "role",
+                "status",
+                "match_level",
+                "n_subjects_on_disk",
+                "n_bold_files",
+                "short_title",
+                "modality",
+            )
+            if c in studies.columns
         ]
-    )
-    return cond, parts, runs, subj
+        blocks.append(mo.md("### OpenNeuro studies integrated in the book"))
+        blocks.append(mo.ui.table(pandas_to_polars(studies[sc]), selection=None, page_size=12))
+    if multi is not None and not getattr(multi, "empty", True) and "dataset" in multi.columns:
+        n_by = multi.groupby("dataset").size().reset_index(name="n_runs")
+        blocks.append(mo.md("### Multi-set feature coverage by dataset"))
+        blocks.append(mo.ui.table(pandas_to_polars(n_by), selection=None))
+    mo.vstack(blocks)
+    return cond, multi, parts, runs, studies, subj
 
 
 @app.cell

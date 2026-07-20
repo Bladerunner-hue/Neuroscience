@@ -25,14 +25,26 @@ def _():
         records_to_polars,
         surface_label,
     )
+    from helpers import (
+        load_multi_dataset_runs,
+        multi_dataset_run_ids,
+        multi_studies_overview_md,
+        pandas_to_polars,
+        studies_dataframe,
+    )
 
     return (
         connectivity_banner_md,
         load_datasets_registry,
         load_local_files_index,
+        load_multi_dataset_runs,
         load_table,
         mo,
+        multi_dataset_run_ids,
+        multi_studies_overview_md,
+        pandas_to_polars,
         records_to_polars,
+        studies_dataframe,
         surface_label,
     )
 
@@ -109,11 +121,26 @@ def _(load_table, mo, prefer_api, records_to_polars, table_name):
 
 
 @app.cell
-def _(load_datasets_registry, load_local_files_index, mo, records_to_polars):
+def _(
+    load_datasets_registry,
+    load_local_files_index,
+    load_multi_dataset_runs,
+    mo,
+    multi_dataset_run_ids,
+    multi_studies_overview_md,
+    pandas_to_polars,
+    records_to_polars,
+    studies_dataframe,
+):
     reg = load_datasets_registry()
     files = load_local_files_index()
+    studies = studies_dataframe()
+    multi = load_multi_dataset_runs()
+    ds_ids = multi_dataset_run_ids()
     ds = reg.get("datasets") or {}
-    if isinstance(ds, dict):
+    if studies is not None and not getattr(studies, "empty", True):
+        ds_rows = studies.to_dict(orient="records")
+    elif isinstance(ds, dict):
         ds_rows = [{"dataset": k, **(v if isinstance(v, dict) else {"value": v})} for k, v in ds.items()]
     else:
         ds_rows = []
@@ -122,12 +149,42 @@ def _(load_datasets_registry, load_local_files_index, mo, records_to_polars):
         {k: f.get(k) for k in ("path", "layer", "bytes", "previewable", "table_key", "n_bold_files", "kind")}
         for f in (files.get("files") or [])[:200]
     ]
-    mo.vstack(
+    blocks = [
+        mo.md(multi_studies_overview_md()),
+        mo.md(f"## Datasets registry · source `{reg.get('source')}`"),
+        mo.ui.table(records_to_polars(ds_rows), selection=None, page_size=12)
+        if ds_rows
+        else mo.md("*No registry.*"),
+    ]
+    if multi is not None and not getattr(multi, "empty", True):
+        show = [
+            c
+            for c in (
+                "dataset",
+                "subject",
+                "group",
+                "task",
+                "run",
+                "tsnr",
+                "power_high",
+                "spectral_centroid",
+            )
+            if c in multi.columns
+        ]
+        blocks.append(
+            mo.md(
+                f"## Multi-set spectral runs · datasets `{', '.join(ds_ids)}` · n={len(multi)}"
+            )
+        )
+        blocks.append(
+            mo.ui.table(
+                pandas_to_polars(multi[show].head(50).round(4) if show else multi.head(50)),
+                selection=None,
+                page_size=15,
+            )
+        )
+    blocks.extend(
         [
-            mo.md(f"## Datasets registry · source `{reg.get('source')}`"),
-            mo.ui.table(records_to_polars(ds_rows), selection=None, page_size=12)
-            if ds_rows
-            else mo.md("*No registry.*"),
             mo.md(f"## Local files index · source `{files.get('source')}` · n={files.get('n', len(fl))}"),
             mo.ui.table(records_to_polars(fl), selection=None, page_size=15)
             if fl
@@ -137,6 +194,7 @@ def _(load_datasets_registry, load_local_files_index, mo, records_to_polars):
             ),
         ]
     )
+    mo.vstack(blocks)
     return
 
 

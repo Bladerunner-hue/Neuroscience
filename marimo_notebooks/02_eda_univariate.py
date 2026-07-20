@@ -32,8 +32,12 @@ def _():
         key_insight_card,
         load_cleaned_spectral_features,
         load_condition_features,
+        load_multi_dataset_runs,
         load_spectral_features,
+        multi_dataset_run_ids,
+        pandas_to_polars,
         set_global_style,
+        studies_dataframe,
     )
 
     set_global_style()
@@ -52,11 +56,15 @@ def _():
         key_insight_card,
         load_cleaned_spectral_features,
         load_condition_features,
+        load_multi_dataset_runs,
         load_spectral_features,
         mo,
+        multi_dataset_run_ids,
         np,
+        pandas_to_polars,
         pd,
         plt,
+        studies_dataframe,
     )
 
 
@@ -402,6 +410,115 @@ def _(CONTROL_COLOR, MDD_COLOR, cond, json, mo, np, plt):
 
 
 @app.cell
+def _(
+    CONTROL_COLOR,
+    HIGHLIGHT,
+    MDD_COLOR,
+    MUSIC_COLOR,
+    load_multi_dataset_runs,
+    mo,
+    multi_dataset_run_ids,
+    pd,
+    pandas_to_polars,
+    plt,
+    studies_dataframe,
+):
+    multi = load_multi_dataset_runs()
+    studies = studies_dataframe()
+    ds_ids = multi_dataset_run_ids()
+    blocks = [
+        mo.md(
+            f"""
+## Cross-dataset spectral compare
+
+Beyond primary ds000171, multi-set runs (god path / summary) currently include:
+**{', '.join(f'`{d}`' for d in ds_ids)}**.
+
+Cross-refs do **not** replace the clinical contrast — they check whether high-band /
+tSNR structure is in a comparable range after schema alignment.
+"""
+        )
+    ]
+    if studies is not None and not getattr(studies, "empty", True):
+        sc = [
+            c
+            for c in ("dataset", "role", "status", "n_bold_files", "short_title", "match_level")
+            if c in studies.columns
+        ]
+        blocks.append(mo.ui.table(pandas_to_polars(studies[sc]), selection=None, page_size=10))
+
+    if multi is not None and not getattr(multi, "empty", True) and "dataset" in multi.columns:
+        metric_cols = [c for c in ("power_high", "power_mid", "power_low", "tsnr", "spectral_centroid") if c in multi.columns]
+        if metric_cols:
+            by_ds = multi.groupby("dataset", as_index=False)[metric_cols].mean(numeric_only=True)
+            by_ds["n_runs"] = multi.groupby("dataset").size().values
+            blocks.append(mo.md("### Band / QC means by dataset"))
+            blocks.append(mo.ui.table(pandas_to_polars(by_ds.round(4)), selection=None))
+
+        if "power_high" in multi.columns:
+            fig_x, axes_x = plt.subplots(1, 2, figsize=(10, 3.8))
+            ds_list = sorted(multi["dataset"].astype(str).unique())
+            colors = [CONTROL_COLOR, MUSIC_COLOR, MDD_COLOR, HIGHLIGHT]
+            for ax, col, title in zip(
+                axes_x,
+                ["power_high", "tsnr"] if "tsnr" in multi.columns else ["power_high", "power_high"],
+                ["power_high by dataset", "tSNR by dataset"],
+            ):
+                if col not in multi.columns:
+                    continue
+                data, labels = [], []
+                for ds in ds_list:
+                    v = pd.to_numeric(
+                        multi.loc[multi["dataset"].astype(str) == ds, col], errors="coerce"
+                    ).dropna()
+                    if len(v):
+                        data.append(v.values)
+                        labels.append(ds)
+                if data:
+                    bp = ax.boxplot(data, labels=labels, patch_artist=True)
+                    for i, patch in enumerate(bp["boxes"]):
+                        patch.set_facecolor(colors[i % len(colors)])
+                        patch.set_alpha(0.65)
+                    ax.set_title(title)
+                    ax.tick_params(axis="x", labelrotation=20)
+                    ax.grid(True, axis="y", alpha=0.3)
+            fig_x.tight_layout()
+            blocks.append(fig_x)
+
+        show = [
+            c
+            for c in (
+                "dataset",
+                "subject",
+                "group",
+                "task",
+                "run",
+                "power_high",
+                "tsnr",
+                "spectral_centroid",
+            )
+            if c in multi.columns
+        ]
+        blocks.append(mo.md("### Multi-set run sample"))
+        blocks.append(
+            mo.ui.table(
+                pandas_to_polars(multi[show].head(30).round(4) if show else multi.head(30)),
+                selection=None,
+                page_size=12,
+            )
+        )
+    else:
+        blocks.append(
+            mo.md(
+                "*No multi-set spectral table — pre-ingest cross-ref BOLD "
+                "(`pre_ingest_bold_to_parquet.py --datasets ds000171,ds002725`).*"
+            )
+        )
+    mo.vstack(blocks)
+    return multi, studies
+
+
+@app.cell
 def _(book_nav, clinical_relevance_card, mo):
     mo.vstack(
         [
@@ -413,7 +530,8 @@ def _(book_nav, clinical_relevance_card, mo):
 2. **Positive vs negative music** can diverge in mean BOLD and peak shape.  
 3. **Tones** are the within-subject baseline for music effects (`pos music − tones`).  
 4. Peri-stimulus waveforms show **when** engagement peaks after onset.  
-5. Expanded BOLD subset + Chapter III **algorithm bake-off** turn these univariate maps into ranked, explainable models for RecSys priors.
+5. Expanded BOLD subset + Chapter III **algorithm bake-off** turn these univariate maps into ranked, explainable models for RecSys priors.  
+6. **Cross-dataset** rows (god multi-set) check that spectral scales transfer to healthy / multimodal music cohorts.
 """
             ),
             mo.md(

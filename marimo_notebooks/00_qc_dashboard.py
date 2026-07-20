@@ -34,10 +34,13 @@ def _():
         load_book_bundle,
         load_bold_timeseries,
         load_cleaned_spectral_features,
+        load_multi_dataset_runs,
         load_spectral_features,
         load_spectral_features_polars,
+        multi_dataset_run_ids,
         pandas_to_polars,
         set_global_style,
+        studies_dataframe,
     )
     from spectral_methods import (
         adaptive_multitaper_psd,
@@ -65,9 +68,11 @@ def _():
         load_book_bundle,
         load_bold_timeseries,
         load_cleaned_spectral_features,
+        load_multi_dataset_runs,
         load_spectral_features,
         load_spectral_features_polars,
         mo,
+        multi_dataset_run_ids,
         multitaper_psd,
         np,
         pd,
@@ -75,6 +80,7 @@ def _():
         pl,
         plt,
         spectral_feats,
+        studies_dataframe,
         welch_psd,
     )
 
@@ -644,6 +650,111 @@ Production offline can also use **MNE** `psd_array_multitaper(adaptive=True, low
         )
     mo.vstack(_blocks)
     return
+
+
+@app.cell
+def _(
+    CONTROL_COLOR,
+    MDD_COLOR,
+    MUSIC_COLOR,
+    load_multi_dataset_runs,
+    mo,
+    multi_dataset_run_ids,
+    np,
+    pd,
+    pandas_to_polars,
+    plt,
+    studies_dataframe,
+):
+    """Cross-ref studies from data/raw + multi-set god spectral runs."""
+    studies = studies_dataframe()
+    multi = load_multi_dataset_runs()
+    ds_ids = multi_dataset_run_ids()
+    blocks = [
+        mo.md(
+            f"""
+## Multi-dataset QC (OpenNeuro cross-refs)
+
+Primary book QC above uses the **ds000171** feature store.  
+Multi-set spectral runs (god path) currently cover: **{', '.join(f'`{d}`' for d in ds_ids)}**.
+"""
+        )
+    ]
+    if studies is not None and not getattr(studies, "empty", True):
+        show_cols = [
+            c
+            for c in (
+                "dataset",
+                "role",
+                "status",
+                "match_level",
+                "n_subjects_on_disk",
+                "n_bold_files",
+                "short_title",
+                "modality",
+            )
+            if c in studies.columns
+        ]
+        blocks.append(mo.md("### Studies under `data/raw/` + registry"))
+        blocks.append(mo.ui.table(pandas_to_polars(studies[show_cols]), selection=None, page_size=12))
+
+    if multi is not None and not getattr(multi, "empty", True) and "dataset" in multi.columns:
+        agg_cols = [c for c in ("tsnr", "power_high", "spectral_centroid", "power_low") if c in multi.columns]
+        if agg_cols:
+            g = multi.groupby("dataset", as_index=False)[agg_cols].mean(numeric_only=True)
+            g["n_runs"] = multi.groupby("dataset").size().values
+            blocks.append(mo.md("### Multi-set run means (god / summary)"))
+            blocks.append(mo.ui.table(pandas_to_polars(g.round(4)), selection=None))
+            if "tsnr" in multi.columns:
+                fig_m, ax_m = plt.subplots(figsize=(7.2, 3.6))
+                for i, ds in enumerate(sorted(multi["dataset"].astype(str).unique())):
+                    vals = pd.to_numeric(multi.loc[multi["dataset"].astype(str) == ds, "tsnr"], errors="coerce").dropna()
+                    if len(vals):
+                        ax_m.hist(
+                            vals,
+                            bins=min(12, max(4, len(vals) // 2)),
+                            alpha=0.55,
+                            label=ds,
+                            color=[CONTROL_COLOR, MUSIC_COLOR, MDD_COLOR][i % 3],
+                            edgecolor="white",
+                        )
+                ax_m.set_xlabel("tSNR")
+                ax_m.set_title("tSNR by dataset (multi-set)")
+                ax_m.legend(frameon=False, fontsize=8)
+                fig_m.tight_layout()
+                blocks.append(fig_m)
+        sample_cols = [
+            c
+            for c in (
+                "dataset",
+                "subject",
+                "group",
+                "task",
+                "run",
+                "tsnr",
+                "power_high",
+                "spectral_centroid",
+            )
+            if c in multi.columns
+        ]
+        blocks.append(mo.md("### Sample multi-set runs"))
+        blocks.append(
+            mo.ui.table(
+                pandas_to_polars(multi[sample_cols].head(40).round(4) if sample_cols else multi.head(40)),
+                selection=None,
+                page_size=12,
+            )
+        )
+    else:
+        blocks.append(
+            mo.md(
+                "*No multi-set runs yet. On host:*  \n"
+                "`python scripts/pre_ingest_bold_to_parquet.py --datasets ds000171,ds002725`  \n"
+                "`python scripts/god_mode_bold_to_tfdata.py --smoke-tfdata`"
+            )
+        )
+    mo.vstack(blocks)
+    return multi, studies
 
 
 @app.cell
