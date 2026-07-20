@@ -5,7 +5,7 @@ Works offline (disk), via FastAPI, or WASM + static JSON / NEURO_API_BASE.
 
 # /// script
 # requires-python = ">=3.12,<3.13"
-# dependencies = ["marimo", "numpy", "pandas", "polars", "pyarrow"]
+# dependencies = ["marimo", "numpy", "pandas"]
 # ///
 
 import marimo
@@ -22,14 +22,14 @@ def _():
         load_datasets_registry,
         load_local_files_index,
         load_table,
-        records_to_polars,
+        records_to_frame,
         surface_label,
     )
     from helpers import (
         load_multi_dataset_runs,
         multi_dataset_run_ids,
         multi_studies_overview_md,
-        pandas_to_polars,
+        as_table,
         studies_dataframe,
     )
 
@@ -42,8 +42,8 @@ def _():
         mo,
         multi_dataset_run_ids,
         multi_studies_overview_md,
-        pandas_to_polars,
-        records_to_polars,
+        as_table,
+        records_to_frame,
         studies_dataframe,
         surface_label,
     )
@@ -98,13 +98,13 @@ def _(mo):
 
 
 @app.cell
-def _(load_table, mo, prefer_api, records_to_polars, table_name):
+def _(load_table, mo, prefer_api, records_to_frame, table_name):
     payload = load_table(table_name.value, prefer_api=bool(prefer_api.value))
     recs = payload.get("records") or []
     # object-shaped (bakeoff/tf)
     if recs and not isinstance(recs[0], dict):
         recs = [{"value": r} for r in recs]
-    df = records_to_polars(recs)
+    df = records_to_frame(recs)
     n = payload.get("n", getattr(df, "height", len(recs)))
     mo.vstack(
         [
@@ -128,8 +128,8 @@ def _(
     mo,
     multi_dataset_run_ids,
     multi_studies_overview_md,
-    pandas_to_polars,
-    records_to_polars,
+    as_table,
+    records_to_frame,
     studies_dataframe,
 ):
     reg = load_datasets_registry()
@@ -152,7 +152,7 @@ def _(
     blocks = [
         mo.md(multi_studies_overview_md()),
         mo.md(f"## Datasets registry · source `{reg.get('source')}`"),
-        mo.ui.table(records_to_polars(ds_rows), selection=None, page_size=12)
+        mo.ui.table(records_to_frame(ds_rows), selection=None, page_size=12)
         if ds_rows
         else mo.md("*No registry.*"),
     ]
@@ -178,7 +178,7 @@ def _(
         )
         blocks.append(
             mo.ui.table(
-                pandas_to_polars(multi[show].head(50).round(4) if show else multi.head(50)),
+                as_table(multi[show].head(50).round(4) if show else multi.head(50)),
                 selection=None,
                 page_size=15,
             )
@@ -186,7 +186,7 @@ def _(
     blocks.extend(
         [
             mo.md(f"## Local files index · source `{files.get('source')}` · n={files.get('n', len(fl))}"),
-            mo.ui.table(records_to_polars(fl), selection=None, page_size=15)
+            mo.ui.table(records_to_frame(fl), selection=None, page_size=15)
             if fl
             else mo.md(
                 "*No file index (WASM without NEURO_API_BASE). "

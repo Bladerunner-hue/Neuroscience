@@ -35,7 +35,7 @@ def _():
         load_multi_dataset_runs,
         load_spectral_features,
         multi_dataset_run_ids,
-        pandas_to_polars,
+        as_table,
         set_global_style,
         studies_dataframe,
     )
@@ -61,7 +61,7 @@ def _():
         mo,
         multi_dataset_run_ids,
         np,
-        pandas_to_polars,
+        as_table,
         pd,
         plt,
         studies_dataframe,
@@ -419,7 +419,7 @@ def _(
     mo,
     multi_dataset_run_ids,
     pd,
-    pandas_to_polars,
+    as_table,
     plt,
     studies_dataframe,
 ):
@@ -445,7 +445,7 @@ tSNR structure is in a comparable range after schema alignment.
             for c in ("dataset", "role", "status", "n_bold_files", "short_title", "match_level")
             if c in studies.columns
         ]
-        blocks.append(mo.ui.table(pandas_to_polars(studies[sc]), selection=None, page_size=10))
+        blocks.append(mo.ui.table(as_table(studies[sc]), selection=None, page_size=10))
 
     if multi is not None and not getattr(multi, "empty", True) and "dataset" in multi.columns:
         metric_cols = [c for c in ("power_high", "power_mid", "power_low", "tsnr", "spectral_centroid") if c in multi.columns]
@@ -453,7 +453,7 @@ tSNR structure is in a comparable range after schema alignment.
             by_ds = multi.groupby("dataset", as_index=False)[metric_cols].mean(numeric_only=True)
             by_ds["n_runs"] = multi.groupby("dataset").size().values
             blocks.append(mo.md("### Band / QC means by dataset"))
-            blocks.append(mo.ui.table(pandas_to_polars(by_ds.round(4)), selection=None))
+            blocks.append(mo.ui.table(as_table(by_ds.round(4)), selection=None))
 
         if "power_high" in multi.columns:
             fig_x, axes_x = plt.subplots(1, 2, figsize=(10, 3.8))
@@ -502,7 +502,7 @@ tSNR structure is in a comparable range after schema alignment.
         blocks.append(mo.md("### Multi-set run sample"))
         blocks.append(
             mo.ui.table(
-                pandas_to_polars(multi[show].head(30).round(4) if show else multi.head(30)),
+                as_table(multi[show].head(30).round(4) if show else multi.head(30)),
                 selection=None,
                 page_size=12,
             )

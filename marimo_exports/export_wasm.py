@@ -306,6 +306,11 @@ def export_one(notebook: Path, mode: str, tmp_dir: Path) -> bool:
     datasets_json = reg_path.read_text(encoding="utf-8") if reg_path.exists() else None
 
     nb_src = notebook.read_text(encoding="utf-8")
+    # Strip PEP 723 deps that pull optional columnar stacks into Pyodide.
+    nb_src = re.sub(r',\s*"polars"', "", nb_src)
+    nb_src = re.sub(r'"polars",\s*', "", nb_src)
+    nb_src = re.sub(r',\s*"pyarrow"', "", nb_src)
+    nb_src = re.sub(r'"pyarrow",\s*', "", nb_src)
     packed = _inject_modules(
         nb_src,
         helpers_src=helpers_src,
@@ -317,6 +322,17 @@ def export_one(notebook: Path, mode: str, tmp_dir: Path) -> bool:
         datasets_json=datasets_json,
     )
     _validate_packed(packed, notebook)
+    # Marimo's Pyodide worker does `if "polars" in code: import pyarrow` — and
+    # pyarrow is not available on GitHub Pages WASM. Fail the export early.
+    lower = packed.lower()
+    for banned in ("polars", "pyarrow"):
+        if banned in lower:
+            # Allow only inside base64 blobs? No — base64 of helpers would still
+            # contain the word if present. Reject any occurrence.
+            raise RuntimeError(
+                f"Refusing to export {notebook.name}: packed source contains "
+                f"{banned!r}. Public WASM pages must use pandas + as_table only."
+            )
     if re.search(r'BOOK_BUNDLE\s*=\s*\{[^}]*\btrue\b', packed):
         raise RuntimeError(
             f"Refusing to export {notebook.name}: BOOK_BUNDLE still has JSON true/false"

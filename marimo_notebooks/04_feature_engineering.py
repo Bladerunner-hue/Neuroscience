@@ -35,7 +35,7 @@ def _():
         load_participants_df,
         load_spectral_features,
         multi_dataset_run_ids,
-        pandas_to_polars,
+        as_table,
         studies_dataframe,
         load_subject_features,
         set_global_style,
@@ -59,7 +59,7 @@ def _():
         load_participants_df,
         load_spectral_features,
         multi_dataset_run_ids,
-        pandas_to_polars,
+        as_table,
         studies_dataframe,
         load_subject_features,
         mo,
@@ -105,7 +105,7 @@ def _(
     mo,
     multi_dataset_run_ids,
     pd,
-    pandas_to_polars,
+    as_table,
     studies_dataframe,
 ):
     parts = load_participants_df()
@@ -185,11 +185,11 @@ def _(
             if c in studies.columns
         ]
         blocks.append(mo.md("### OpenNeuro studies integrated in the book"))
-        blocks.append(mo.ui.table(pandas_to_polars(studies[sc]), selection=None, page_size=12))
+        blocks.append(mo.ui.table(as_table(studies[sc]), selection=None, page_size=12))
     if multi is not None and not getattr(multi, "empty", True) and "dataset" in multi.columns:
         n_by = multi.groupby("dataset").size().reset_index(name="n_runs")
         blocks.append(mo.md("### Multi-set feature coverage by dataset"))
-        blocks.append(mo.ui.table(pandas_to_polars(n_by), selection=None))
+        blocks.append(mo.ui.table(as_table(n_by), selection=None))
     mo.vstack(blocks)
     return cond, multi, parts, runs, studies, subj
 

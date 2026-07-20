@@ -6,7 +6,7 @@ Host: optional Spark Catalyst rollups; TF retrain via scripts/run_tf_offline.py.
 
 # /// script
 # requires-python = ">=3.12,<3.13"
-# dependencies = ["marimo", "numpy", "pandas", "polars", "matplotlib", "pyarrow"]
+# dependencies = ["marimo", "numpy", "pandas", "matplotlib"]
 # ///
 
 import marimo
@@ -34,7 +34,7 @@ def _():
         load_tf_results,
         multi_dataset_run_ids,
         multi_studies_overview_md,
-        pandas_to_polars,
+        as_table,
         set_global_style,
         studies_dataframe,
     )
@@ -62,7 +62,7 @@ def _():
         multi_studies_overview_md,
         np,
         pd,
-        pandas_to_polars,
+        as_table,
         plt,
         studies_dataframe,
         surface_label,
@@ -123,7 +123,7 @@ def _(
     mo,
     multi_dataset_run_ids,
     multi_studies_overview_md,
-    pandas_to_polars,
+    as_table,
     pd,
     studies_dataframe,
 ):
@@ -152,7 +152,7 @@ def _(
                     "url": v.get("url"),
                 }
             )
-    df = pandas_to_polars(pd.DataFrame(rows)) if rows else None
+    df = as_table(pd.DataFrame(rows)) if rows else None
 
     # Per-study scientific + disk detail from catalog
     detail_rows = []
@@ -182,7 +182,7 @@ def _(
                 "why_neuro": (cat.get("why_neuro") or "")[:100],
             }
         )
-    detail = pandas_to_polars(pd.DataFrame(detail_rows)) if detail_rows else None
+    detail = as_table(pd.DataFrame(detail_rows)) if detail_rows else None
 
     blocks = [
         mo.md(f"## 1. Dataset registry · source `{reg.get('source')}`"),
@@ -195,13 +195,13 @@ def _(
     if multi is not None and not getattr(multi, "empty", True) and "dataset" in multi.columns:
         n_by = multi.groupby("dataset").size().reset_index(name="n_spectral_runs")
         blocks.append(mo.md("### Spectral multi-set run counts"))
-        blocks.append(mo.ui.table(pandas_to_polars(n_by), selection=None))
+        blocks.append(mo.ui.table(as_table(n_by), selection=None))
     mo.vstack(blocks)
     return df, multi, reg, studies
 
 
 @app.cell
-def _(CONTROL_COLOR, MDD_COLOR, MUSIC_COLOR, mo, np, pd, pandas_to_polars, plt):
+def _(CONTROL_COLOR, MDD_COLOR, MUSIC_COLOR, mo, np, pd, as_table, plt):
     # Load multi-set summary: book_data embed (WASM) → disk → empty
     god = {"n_runs": 0, "records": [], "by_dataset_group": [], "datasets": []}
     try:
@@ -235,7 +235,7 @@ def _(CONTROL_COLOR, MDD_COLOR, MUSIC_COLOR, mo, np, pd, pandas_to_polars, plt):
         )
     ]
     if len(by):
-        blocks.append(mo.ui.table(pandas_to_polars(by), selection=None))
+        blocks.append(mo.ui.table(as_table(by), selection=None))
         fig, ax = plt.subplots(figsize=(7.5, 3.5))
         labels = [f"{r.dataset}\n{r.group}" for r in by.itertuples()]
         vals = by["mean_power_high"].astype(float).tolist() if "mean_power_high" in by.columns else []
@@ -260,7 +260,7 @@ def _(CONTROL_COLOR, MDD_COLOR, MUSIC_COLOR, mo, np, pd, pandas_to_polars, plt):
             "dataset", "subject", "group", "task", "run", "tsnr", "power_high", "spectral_centroid"
         )]
         blocks.append(mo.md("### Sample run-level rows (capped for WASM)"))
-        blocks.append(mo.ui.table(pandas_to_polars(rec[show] if show else rec), selection=None, page_size=12))
+        blocks.append(mo.ui.table(as_table(rec[show] if show else rec), selection=None, page_size=12))
     else:
         blocks.append(
             mo.md(
@@ -274,7 +274,7 @@ def _(CONTROL_COLOR, MDD_COLOR, MUSIC_COLOR, mo, np, pd, pandas_to_polars, plt):
 
 
 @app.cell
-def _(load_table, load_tf_results, mo, pandas_to_polars, pd, plt):
+def _(load_table, load_tf_results, mo, as_table, pd, plt):
     # Primary book store via unified loader (disk / API / bundle)
     spec = load_table("spectral")
     subj = load_table("subject")
@@ -318,7 +318,7 @@ def _(load_table, load_tf_results, mo, pandas_to_polars, pd, plt):
         else:
             mrows = [{"key": k, "value": str(v)[:80]} for k, v in list(tf.items())[:20]]
         blocks.append(mo.md("### TensorFlow offline results (view-only)"))
-        blocks.append(mo.ui.table(pandas_to_polars(pd.DataFrame(mrows)), selection=None, page_size=10))
+        blocks.append(mo.ui.table(as_table(pd.DataFrame(mrows)), selection=None, page_size=10))
         blocks.append(
             mo.md(
                 "Retrain on host: `python scripts/run_tf_offline.py` · "

@@ -35,7 +35,7 @@ def _():
         load_spectral_features,
         multi_dataset_run_ids,
         multi_studies_overview_md,
-        pandas_to_polars,
+        as_table,
         set_global_style,
         studies_dataframe,
     )
@@ -60,7 +60,7 @@ def _():
         multi_dataset_run_ids,
         multi_studies_overview_md,
         np,
-        pandas_to_polars,
+        as_table,
         pd,
         plt,
         studies_dataframe,
@@ -331,7 +331,7 @@ def _(
     mo,
     multi_dataset_run_ids,
     multi_studies_overview_md,
-    pandas_to_polars,
+    as_table,
     pd,
     studies_dataframe,
 ):
@@ -366,7 +366,7 @@ The public book claims are powered by **ds000171**. Additional cohorts under
             )
             if c in studies.columns
         ]
-        blocks.append(mo.ui.table(pandas_to_polars(studies[cols]), selection=None, page_size=12))
+        blocks.append(mo.ui.table(as_table(studies[cols]), selection=None, page_size=12))
 
     # Show participants meta for every study that has participants.tsv
     part_blocks = []
@@ -378,7 +378,7 @@ The public book claims are powered by **ds000171**. Additional cohorts under
             part_blocks.append(
                 mo.md(f"**`{ds}` participants.tsv** · n={len(p)}")
             )
-            part_blocks.append(mo.ui.table(pandas_to_polars(p.head(8)), selection=None, page_size=8))
+            part_blocks.append(mo.ui.table(as_table(p.head(8)), selection=None, page_size=8))
     if part_blocks:
         blocks.append(mo.md("### Cross-ref demographics on disk"))
         blocks.extend(part_blocks)
@@ -391,7 +391,7 @@ The public book claims are powered by **ds000171**. Additional cohorts under
                 f"Runs with extracted PSD features: **{', '.join(f'`{d}`' for d in ds_ids)}**"
             )
         )
-        blocks.append(mo.ui.table(pandas_to_polars(n_by), selection=None))
+        blocks.append(mo.ui.table(as_table(n_by), selection=None))
     mo.vstack(blocks)
     return multi, studies
 

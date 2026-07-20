@@ -6,7 +6,7 @@ latest stream_features sink. Not exported to WASM.
 
 # /// script
 # requires-python = ">=3.11"
-# dependencies = ["marimo", "numpy", "pandas", "matplotlib", "pyspark", "msgspec", "pyarrow"]
+# dependencies = ["marimo", "numpy", "pandas", "matplotlib", "pyspark", "msgspec"]
 # ///
 
 import marimo

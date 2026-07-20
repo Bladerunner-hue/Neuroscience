@@ -7,7 +7,7 @@ Local-first marimo chapter (not WASM). Polars default; optional Spark via pip + 
 # /// script
 # requires-python = ">=3.12,<3.13"
 # dependencies = [
-#   "marimo", "numpy", "pandas", "polars", "matplotlib", "pyarrow",
+#   "marimo", "numpy", "pandas", "matplotlib",
 #   "scikit-learn", "scipy", "openneuro-py", "pyspark"
 # ]
 # ///
@@ -36,11 +36,11 @@ def _():
         hypothesis_card,
         inventory_dataframe,
         load_dataset_registry,
-        load_god_run_level_polars,
+        load_god_run_level_df,
         load_participants_df,
-        load_spectral_features_polars,
+        load_spectral_features_frame,
         load_subject_features,
-        pandas_to_polars,
+        as_table,
         primary_cohort_summary,
         set_global_style,
     )
@@ -75,13 +75,13 @@ def _():
         integration_roadmap_md,
         inventory_dataframe,
         load_dataset_registry,
-        load_god_run_level_polars,
+        load_god_run_level_df,
         load_participants_df,
-        load_spectral_features_polars,
+        load_spectral_features_frame,
         load_subject_features,
         mo,
         np,
-        pandas_to_polars,
+        as_table,
         pd,
         pl,
         plt,
@@ -203,9 +203,9 @@ The original public methods book is built on a **single clinical study**:
 
 
 @app.cell
-def _(MULTI_DATASET_CATALOG, catalog_rows, load_dataset_registry, mo, pandas_to_polars, pd, pl):
+def _(MULTI_DATASET_CATALOG, catalog_rows, load_dataset_registry, mo, as_table, pd, pl):
     reg = load_dataset_registry()
-    cat = pandas_to_polars(pd.DataFrame(catalog_rows()))
+    cat = as_table(pd.DataFrame(catalog_rows()))
     live_rows = []
     for ds, meta in (reg or {}).items():
         live_rows.append(
@@ -223,7 +223,7 @@ def _(MULTI_DATASET_CATALOG, catalog_rows, load_dataset_registry, mo, pandas_to_
                 "url": meta.get("url"),
             }
         )
-    live = pandas_to_polars(pd.DataFrame(live_rows)) if live_rows else pl.DataFrame()
+    live = as_table(pd.DataFrame(live_rows)) if live_rows else pl.DataFrame()
     if live.height and cat.height:
         live = live.join(
             cat.select("dataset", "priority", "modality"),
@@ -327,8 +327,8 @@ Open each **`data/raw/<id>/`** in the file tree. `STATUS.txt` explains meta-only
 
 
 @app.cell
-def _(inventory_dataframe, mo, pandas_to_polars, pl):
-    inv = pandas_to_polars(inventory_dataframe())
+def _(inventory_dataframe, mo, as_table, pl):
+    inv = as_table(inventory_dataframe())
     by_layer = (
         inv.group_by("layer")
         .agg(
@@ -374,12 +374,12 @@ def _(
     CONTROL_COLOR,
     MDD_COLOR,
     MUSIC_COLOR,
-    load_god_run_level_polars,
+    load_god_run_level_df,
     load_participants_df,
-    load_spectral_features_polars,
+    load_spectral_features_frame,
     load_subject_features,
     mo,
-    pandas_to_polars,
+    as_table,
     pl,
     plt,
 ):
@@ -394,7 +394,7 @@ Compares **what we started with** (book spectral CSV) to **what multi-set ingest
         )
     ]
 
-    runs = load_spectral_features_polars()
+    runs = load_spectral_features_frame()
     if runs is None:
         runs = pl.DataFrame()
     drop = [c for c in ("psd_f", "psd_pxx") if c in runs.columns]
@@ -472,7 +472,7 @@ Compares **what we started with** (book spectral CSV) to **what multi-set ingest
             blocks.append(fig)
 
     subj = load_subject_features()
-    subj_pl = pandas_to_polars(subj) if subj is not None and len(subj) else pl.DataFrame()
+    subj_pl = as_table(subj) if subj is not None and len(subj) else pl.DataFrame()
     if subj_pl.height:
         show = [
             c
@@ -496,7 +496,7 @@ Compares **what we started with** (book spectral CSV) to **what multi-set ingest
             )
         )
 
-    god = load_god_run_level_polars()
+    god = load_god_run_level_df()
     if god is not None and god.height:
         blocks.append(
             mo.md(

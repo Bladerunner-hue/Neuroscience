@@ -1,11 +1,11 @@
 """Chapter 0 — QC dashboard: tSNR, multitaper PSD, IsolationForest, cleaned features.
 
-Reactive marimo + Polars + @mo.cache. Public WASM chapter (no TensorFlow / MNE).
+Reactive marimo + pandas + @mo.cache. Public WASM chapter (no TensorFlow / MNE).
 """
 
 # /// script
 # requires-python = ">=3.12,<3.13"
-# dependencies = ["marimo", "numpy", "pandas", "polars", "matplotlib", "scikit-learn", "scipy"]
+# dependencies = ["marimo", "numpy", "pandas", "matplotlib", "scikit-learn", "scipy"]
 # ///
 
 import marimo
@@ -19,7 +19,6 @@ def _():
     import marimo as mo
     import numpy as np
     import pandas as pd
-    import polars as pl
     import matplotlib.pyplot as plt
     from sklearn.ensemble import IsolationForest
     from sklearn.preprocessing import StandardScaler
@@ -27,6 +26,7 @@ def _():
         CONTROL_COLOR,
         MDD_COLOR,
         MUSIC_COLOR,
+        as_table,
         book_nav,
         clinical_relevance_card,
         data_provenance_md,
@@ -36,9 +36,8 @@ def _():
         load_cleaned_spectral_features,
         load_multi_dataset_runs,
         load_spectral_features,
-        load_spectral_features_polars,
+        load_spectral_features_frame,
         multi_dataset_run_ids,
-        pandas_to_polars,
         set_global_style,
         studies_dataframe,
     )
@@ -59,6 +58,7 @@ def _():
         MUSIC_COLOR,
         StandardScaler,
         adaptive_multitaper_psd,
+        as_table,
         book_nav,
         clinical_relevance_card,
         compare_psd_methods,
@@ -70,14 +70,12 @@ def _():
         load_cleaned_spectral_features,
         load_multi_dataset_runs,
         load_spectral_features,
-        load_spectral_features_polars,
+        load_spectral_features_frame,
         mo,
         multi_dataset_run_ids,
         multitaper_psd,
         np,
         pd,
-        pandas_to_polars,
-        pl,
         plt,
         spectral_feats,
         studies_dataframe,
@@ -114,7 +112,7 @@ in the high band (0.08–0.15 Hz). DPSS multitaper lowers variance; **adaptive**
 down leaky high-order tapers on 1/f-like spectra. Low tSNR runs inject noise into both
 the classical bake-off and the TF spectrogram model — gate them here.
 
-**Architecture.** Pure scipy + sklearn + Polars → ships on GitHub Pages WASM.
+**Architecture.** Pure scipy + sklearn + pandas → ships on GitHub Pages WASM.
 MNE `adaptive=True` is optional offline (`prepare_real_features.py --psd mne`).
 TF stays offline (`run_tf_offline.py` → Ch V).
 """
@@ -153,35 +151,33 @@ def _(mo):
 @app.cell
 def _(
     load_book_bundle,
-    load_spectral_features_polars,
+    load_spectral_features_frame,
     load_spectral_features,
     mo,
-    pandas_to_polars,
-    pl,
+    as_table,
 ):
     @mo.cache
-    def load_runs_pl():
-        pl_df = load_spectral_features_polars()
-        if pl_df is not None and getattr(pl_df, "height", 0):
-            drop = [c for c in ("psd_f", "psd_pxx") if c in pl_df.columns]
-            return pl_df.drop(drop) if drop else pl_df
+    def load_runs_df():
+        frame = load_spectral_features_frame()
+        if frame is not None and not getattr(frame, "empty", True):
+            drop = [c for c in ("psd_f", "psd_pxx") if c in frame.columns]
+            return frame.drop(columns=drop, errors="ignore") if drop else frame
         df = load_spectral_features()
         if df is None or getattr(df, "empty", True):
-            return pl.DataFrame()
+            return as_table(None)
         drop = [c for c in ("psd_f", "psd_pxx") if c in df.columns]
-        # WASM-safe: never pl.from_pandas (needs pyarrow for nullable dtypes)
-        return pandas_to_polars(df.drop(columns=drop, errors="ignore"))
+        return as_table(df.drop(columns=drop, errors="ignore"))
 
-    runs_pl = load_runs_pl()
+    runs_df = load_runs_df()
     bundle = load_book_bundle()
     _psd = bundle.get("psd_method", "welch (legacy embed)")
     mo.md(
-        f"**Loaded runs:** {runs_pl.height} · PSD method in store: **`{_psd}`**  \n"
-        f"columns: `{runs_pl.columns[:12]}…`"
-        if runs_pl.height
+        f"**Loaded runs:** {len(runs_df)} · PSD method in store: **`{_psd}`**  \n"
+        f"columns: `{list(runs_df.columns[:12])}…`"
+        if len(runs_df)
         else "*No spectral features — run `python scripts/prepare_real_features.py --psd adaptive`.*"
     )
-    return bundle, runs_pl
+    return bundle, runs_df
 
 
 @app.cell
@@ -194,17 +190,15 @@ def _(
     mo,
     np,
     pd,
-    pandas_to_polars,
-    pl,
-    runs_pl,
+    as_table,
+    runs_df,
     spike_thr,
 ):
     @mo.cache
-    def compute_qc(df_pl: pl.DataFrame, contamination: float, flat_q_: float, spike_thr_: float):
-        if df_pl.height == 0:
-            return df_pl, {}
-        # to_pandas is fine on small QC tables; back to polars without pyarrow
-        pdf = df_pl.to_pandas()
+    def compute_qc(df_in: pd.DataFrame, contamination: float, flat_q_: float, spike_thr_: float):
+        if df_in is None or len(df_in) == 0:
+            return as_table(None), {}
+        pdf = as_table(df_in)
         for c in pdf.columns:
             if str(pdf[c].dtype) in ("Int64", "Float64", "boolean"):
                 pdf[c] = pd.to_numeric(pdf[c], errors="coerce")
@@ -266,10 +260,10 @@ def _(
         ).astype(np.int64)
         stats["n_outlier"] = int(pdf["qc_outlier"].sum())
         stats["n_flag_any"] = int(pdf["qc_flag_any"].sum())
-        return pandas_to_polars(pdf), stats
+        return as_table(pdf), stats
 
-    qc_pl, qc_stats = compute_qc(
-        runs_pl, float(cont.value), float(flat_q.value), float(spike_thr.value)
+    qc_df, qc_stats = compute_qc(
+        runs_df, float(cont.value), float(flat_q.value), float(spike_thr.value)
     )
     mo.vstack(
         [
@@ -288,7 +282,7 @@ def _(
             ),
         ]
     )
-    return qc_pl, qc_stats
+    return qc_df, qc_stats
 
 
 @app.cell
@@ -298,12 +292,11 @@ def _(
     MUSIC_COLOR,
     mo,
     np,
-    pl,
     plt,
-    qc_pl,
+    qc_df,
 ):
     _blocks = [mo.md("## 2. QC metric distributions")]
-    if qc_pl.height == 0:
+    if len(qc_df) == 0:
         _blocks.append(mo.md("*No data.*"))
     else:
         metrics = [
@@ -316,14 +309,14 @@ def _(
                 "ts_spike_frac",
                 "power_high",
             ]
-            if c in qc_pl.columns
+            if c in qc_df.columns
         ]
         n = len(metrics)
         if n:
             _fig_hist, _axes_h = plt.subplots(1, n, figsize=(3.2 * n, 3.4))
             if n == 1:
                 _axes_h = [_axes_h]
-            pdf = qc_pl.to_pandas()
+            pdf = qc_df
             for _axh, col in zip(_axes_h, metrics):
                 for g, c in [("Control", CONTROL_COLOR), ("MDD", MDD_COLOR)]:
                     vals = pdf.loc[pdf["group"] == g, col].dropna()
@@ -343,9 +336,9 @@ def _(
             _blocks.append(_fig_hist)
 
         # scatter tsnr vs flatness
-        if "tsnr" in qc_pl.columns and "spectral_flatness" in qc_pl.columns:
+        if "tsnr" in qc_df.columns and "spectral_flatness" in qc_df.columns:
             _fig_sc, _ax_sc = plt.subplots(figsize=(6.5, 4.2))
-            pdf = qc_pl.to_pandas()
+            pdf = qc_df
             for g, c in [("Control", CONTROL_COLOR), ("MDD", MDD_COLOR)]:
                 s = pdf[pdf.group == g]
                 _ax_sc.scatter(
@@ -384,44 +377,47 @@ def _(
 
 
 @app.cell
-def _(corr_thr, drop_outliers, key_insight_card, mo, np, pl, plt, qc_pl):
+def _(corr_thr, drop_outliers, key_insight_card, mo, np, pd, plt, qc_df):
     _blocks = [mo.md("## 3. Flagged runs + collinearity on clean set")]
-    if qc_pl.height == 0:
+    if len(qc_df) == 0:
         _blocks.append(mo.md("*No data.*"))
-        clean_pl = qc_pl
+        clean_df = qc_df
     else:
-        flagged = qc_pl.filter(pl.col("qc_flag_any") == 1).select(
-            [
-                c
-                for c in [
-                    "subject",
-                    "group",
-                    "task",
-                    "run",
-                    "tsnr",
-                    "spectral_flatness",
-                    "band_snr_high",
-                    "ts_spike_frac",
-                    "qc_outlier",
-                    "qc_low_tsnr",
-                    "qc_high_flatness",
-                    "qc_high_spike",
-                ]
-                if c in qc_pl.columns
+        _flag_cols = [
+            c
+            for c in [
+                "subject",
+                "group",
+                "task",
+                "run",
+                "tsnr",
+                "spectral_flatness",
+                "band_snr_high",
+                "ts_spike_frac",
+                "qc_outlier",
+                "qc_low_tsnr",
+                "qc_high_flatness",
+                "qc_high_spike",
             ]
+            if c in qc_df.columns
+        ]
+        flagged = (
+            qc_df.loc[qc_df["qc_flag_any"] == 1, _flag_cols]
+            if "qc_flag_any" in qc_df.columns
+            else qc_df.iloc[0:0]
         )
         _blocks.extend(
             [
-                mo.md(f"**Flagged runs:** {flagged.height}"),
-                mo.ui.table(flagged.to_pandas().round(4))
-                if flagged.height
+                mo.md(f"**Flagged runs:** {len(flagged)}"),
+                mo.ui.table(flagged.round(4))
+                if len(flagged)
                 else mo.md("*No flags at current thresholds.*"),
             ]
         )
-        if drop_outliers.value and "qc_outlier" in qc_pl.columns:
-            clean_pl = qc_pl.filter(pl.col("qc_outlier") == 0)
+        if drop_outliers.value and "qc_outlier" in qc_df.columns:
+            clean_df = qc_df.loc[qc_df["qc_outlier"] == 0].copy()
         else:
-            clean_pl = qc_pl
+            clean_df = qc_df
 
         # collinearity among continuous music-relevant columns
         num_cols = [
@@ -437,10 +433,10 @@ def _(corr_thr, drop_outliers, key_insight_card, mo, np, pl, plt, qc_pl):
                 "peak_amp",
                 "coh_ant_post",
             ]
-            if c in clean_pl.columns
+            if c in clean_df.columns
         ]
-        if len(num_cols) >= 2 and clean_pl.height >= 3:
-            corr = clean_pl.select(num_cols).to_pandas().corr()
+        if len(num_cols) >= 2 and len(clean_df) >= 3:
+            corr = clean_df[num_cols].corr()
             _fig_corr, _ax_corr = plt.subplots(figsize=(7.2, 6))
             _im = _ax_corr.imshow(
                 corr.values, cmap="RdBu_r", vmin=-1, vmax=1, aspect="auto"
@@ -464,7 +460,7 @@ def _(corr_thr, drop_outliers, key_insight_card, mo, np, pl, plt, qc_pl):
             _fig_corr.colorbar(_im, ax=_ax_corr, fraction=0.046)
             _fig_corr.tight_layout()
             pair_df = (
-                pl.DataFrame(
+                pd.DataFrame(
                     {
                         "a": [p[0] for p in pairs],
                         "b": [p[1] for p in pairs],
@@ -472,14 +468,14 @@ def _(corr_thr, drop_outliers, key_insight_card, mo, np, pl, plt, qc_pl):
                     }
                 )
                 if pairs
-                else pl.DataFrame({"a": [], "b": [], "r": []})
+                else pd.DataFrame({"a": [], "b": [], "r": []})
             )
             _blocks.extend(
                 [
                     _fig_corr,
                     mo.md("**High-|r| pairs to prune before linear models**"),
-                    mo.ui.table(pair_df.to_pandas().round(3))
-                    if pair_df.height
+                    mo.ui.table(pair_df.round(3))
+                    if len(pair_df)
                     else mo.md("*None at this threshold.*"),
                 ]
             )
@@ -487,29 +483,29 @@ def _(corr_thr, drop_outliers, key_insight_card, mo, np, pl, plt, qc_pl):
             mo.md(
                 key_insight_card(
                     "Clean set size matters for LOOCV honesty.",
-                    f"Clean runs after IF filter: **{clean_pl.height}** / {qc_pl.height}. "
+                    f"Clean runs after IF filter: **{len(clean_df)}** / {len(qc_df)}. "
                     "Export this table for bake-off / TF offline retrain.",
                 )
             )
         )
     mo.vstack(_blocks)
-    return (clean_pl,)
+    return (clean_df,)
 
 
 @app.cell
-def _(clean_pl, mo, pl, qc_pl):
+def _(clean_df, mo, qc_df):
     _blocks = [mo.md("## 4. Export-ready clean feature table")]
     export_df = None
-    if clean_pl.height == 0:
+    if len(clean_df) == 0:
         _blocks.append(mo.md("*Nothing to export.*"))
     else:
-        keep = [c for c in clean_pl.columns if c not in ("psd_f", "psd_pxx")]
-        export_df = clean_pl.select(keep)
-        _csv = export_df.write_csv()
+        keep = [c for c in clean_df.columns if c not in ("psd_f", "psd_pxx")]
+        export_df = clean_df[keep].copy()
+        _csv = export_df.to_csv(index=False)
         _blocks.extend(
             [
                 mo.md(
-                    f"**Rows:** {export_df.height} · **Cols:** {len(export_df.columns)}  \n"
+                    f"**Rows:** {len(export_df)} · **Cols:** {len(export_df.columns)}  \n"
                     "Download for bake-off / TF offline retrain, or re-run prepare to write "
                     "`data/processed/cleaned_spectral_features.csv`."
                 ),
@@ -519,7 +515,7 @@ def _(clean_pl, mo, pl, qc_pl):
                     mimetype="text/csv",
                     label="Download cleaned + QC'd features (CSV)",
                 ),
-                mo.ui.table(export_df.head(20).to_pandas().round(4)),
+                mo.ui.table(export_df.head(20).round(4)),
                 mo.md(
                     "```bash\n"
                     "# Adaptive multitaper + tSNR + IsolationForest (default):\n"
@@ -662,7 +658,7 @@ def _(
     multi_dataset_run_ids,
     np,
     pd,
-    pandas_to_polars,
+    as_table,
     plt,
     studies_dataframe,
 ):
@@ -696,7 +692,7 @@ Multi-set spectral runs (god path) currently cover: **{', '.join(f'`{d}`' for d 
             if c in studies.columns
         ]
         blocks.append(mo.md("### Studies under `data/raw/` + registry"))
-        blocks.append(mo.ui.table(pandas_to_polars(studies[show_cols]), selection=None, page_size=12))
+        blocks.append(mo.ui.table(as_table(studies[show_cols]), selection=None, page_size=12))
 
     if multi is not None and not getattr(multi, "empty", True) and "dataset" in multi.columns:
         agg_cols = [c for c in ("tsnr", "power_high", "spectral_centroid", "power_low") if c in multi.columns]
@@ -704,7 +700,7 @@ Multi-set spectral runs (god path) currently cover: **{', '.join(f'`{d}`' for d 
             g = multi.groupby("dataset", as_index=False)[agg_cols].mean(numeric_only=True)
             g["n_runs"] = multi.groupby("dataset").size().values
             blocks.append(mo.md("### Multi-set run means (god / summary)"))
-            blocks.append(mo.ui.table(pandas_to_polars(g.round(4)), selection=None))
+            blocks.append(mo.ui.table(as_table(g.round(4)), selection=None))
             if "tsnr" in multi.columns:
                 fig_m, ax_m = plt.subplots(figsize=(7.2, 3.6))
                 for i, ds in enumerate(sorted(multi["dataset"].astype(str).unique())):
@@ -740,7 +736,7 @@ Multi-set spectral runs (god path) currently cover: **{', '.join(f'`{d}`' for d 
         blocks.append(mo.md("### Sample multi-set runs"))
         blocks.append(
             mo.ui.table(
-                pandas_to_polars(multi[sample_cols].head(40).round(4) if sample_cols else multi.head(40)),
+                as_table(multi[sample_cols].head(40).round(4) if sample_cols else multi.head(40)),
                 selection=None,
                 page_size=12,
             )

@@ -66,7 +66,7 @@ BOOK_LOCAL_ONLY = [
     (
         "00_data_landscape",
         "0-local · Data Landscape",
-        "Multi-source inventory, scientific value, consistency (Polars + optional Spark Connect).",
+        "Multi-source inventory, scientific value, consistency (pandas + optional Spark Connect).",
     ),
     (
         "00_data_browser",
@@ -313,135 +313,57 @@ def filter_clean_runs(
     return out.copy()
 
 
-def pandas_to_polars(pdf: pd.DataFrame):
-    """Convert pandas → Polars without requiring pyarrow (WASM / Pyodide safe).
+def as_table(df) -> pd.DataFrame:
+    """Normalize any small frame to a plain pandas DataFrame for ``mo.ui.table``.
 
-    ``pl.from_pandas`` needs pyarrow when columns use nullable extension dtypes
-    (e.g. ``Int64``, ``boolean``). GitHub Pages WASM does not ship pyarrow.
+    GitHub Pages / marimo WASM must **not** pull optional columnar stacks:
+    the Pyodide worker auto-imports an unavailable Arrow package when the
+    notebook source mentions certain dataframe libraries. Use this helper
+    (and pandas) for all public-book visualization.
     """
-    try:
-        import polars as pl
-    except ImportError:  # pragma: no cover
-        return None
-    if pdf is None or getattr(pdf, "empty", True):
-        return pl.DataFrame()
-
-    # Fast path: list-of-dicts from book_bundle (no pandas intermediate)
-    # Prefer building from cleaned numpy/object columns.
-    data: dict = {}
-    for c in pdf.columns:
-        s = pdf[c]
+    if df is None:
+        return pd.DataFrame()
+    if isinstance(df, pd.DataFrame):
+        out = df.copy()
+    elif isinstance(df, list):
+        out = pd.DataFrame(df)
+    elif isinstance(df, dict):
+        out = pd.DataFrame(df)
+    elif hasattr(df, "to_pandas"):
+        try:
+            out = df.to_pandas()
+        except Exception:
+            try:
+                out = pd.DataFrame(df.to_dicts())  # type: ignore[attr-defined]
+            except Exception:
+                return pd.DataFrame()
+    else:
+        try:
+            out = pd.DataFrame(df)
+        except Exception:
+            return pd.DataFrame()
+    # Plain numpy dtypes only (no pandas nullable extension types)
+    for c in out.columns:
+        s = out[c]
         dtype = str(s.dtype)
-        try:
-            if dtype in ("Int64", "Int32", "UInt64", "UInt32", "boolean", "Float64", "Float32"):
-                # nullable extension dtypes → plain float/bool (NaN for missing ints)
-                if "boolean" in dtype.lower() or dtype == "bool":
-                    data[c] = [
-                        None if pd.isna(v) else bool(v) for v in s.tolist()
-                    ]
-                else:
-                    data[c] = pd.to_numeric(s, errors="coerce").astype("float64").tolist()
-            elif pd.api.types.is_integer_dtype(s) or pd.api.types.is_float_dtype(s):
-                data[c] = pd.to_numeric(s, errors="coerce").astype("float64").tolist()
-            elif pd.api.types.is_bool_dtype(s):
-                data[c] = s.astype("bool").tolist()
-            elif pd.api.types.is_datetime64_any_dtype(s):
-                data[c] = s.astype("datetime64[ns]").astype(str).tolist()
-            else:
-                # strings / objects / nested lists (psd_f as list or JSON str)
-                vals = []
-                for v in s.tolist():
-                    if v is None or (isinstance(v, float) and np.isnan(v)):
-                        vals.append(None)
-                    elif isinstance(v, (list, dict, tuple)):
-                        vals.append(v)
-                    else:
-                        try:
-                            if pd.isna(v):
-                                vals.append(None)
-                            else:
-                                vals.append(v if not isinstance(v, (np.generic,)) else v.item())
-                        except (TypeError, ValueError):
-                            vals.append(str(v))
-                data[c] = vals
-        except Exception:
-            data[c] = [None if (v is None or (isinstance(v, float) and np.isnan(v))) else str(v) for v in s.tolist()]
-
-    try:
-        return pl.DataFrame(data)
-    except Exception:
-        # Last resort: stringify everything
-        simple = {
-            c: [None if v is None else str(v) for v in col]
-            for c, col in data.items()
-        }
-        return pl.DataFrame(simple)
+        if dtype in ("Int64", "Int32", "UInt64", "UInt32", "Float64", "Float32"):
+            out[c] = pd.to_numeric(s, errors="coerce").astype("float64")
+        elif dtype in ("boolean", "bool") or "boolean" in dtype.lower():
+            out[c] = s.map(lambda v: None if pd.isna(v) else bool(v))
+    return out
 
 
-def load_spectral_features_polars():
-    """Polars loader for reactive QC / EDA (WASM-safe, no pyarrow required)."""
-    try:
-        import polars as pl
-    except ImportError:  # pragma: no cover
-        return None
-    proc = _find_processed()
-    if proc and (proc / "spectral_features.csv").exists():
-        try:
-            return pl.read_csv(proc / "spectral_features.csv")
-        except Exception:
-            pass
-    # Prefer list-of-dicts from embedded book_bundle (no pandas → no pyarrow)
-    bundle = load_book_bundle()
-    rows = bundle.get("spectral_features") or []
-    if rows:
-        try:
-            return pl.DataFrame(rows)
-        except Exception:
-            return pandas_to_polars(pd.DataFrame(rows))
-    pdf = load_spectral_features()
-    return pandas_to_polars(pdf)
+def load_spectral_features_frame() -> pd.DataFrame:
+    """Run-level spectral table as pandas (public WASM + host)."""
+    return as_table(load_spectral_features())
 
 
-def load_condition_features_polars():
-    try:
-        import polars as pl
-    except ImportError:  # pragma: no cover
-        return None
-    proc = _find_processed()
-    if proc and (proc / "condition_features.csv").exists():
-        try:
-            return pl.read_csv(proc / "condition_features.csv")
-        except Exception:
-            pass
-    bundle = load_book_bundle()
-    rows = bundle.get("condition_features") or []
-    if rows:
-        try:
-            return pl.DataFrame(rows)
-        except Exception:
-            return pandas_to_polars(pd.DataFrame(rows))
-    return pandas_to_polars(load_condition_features())
+def load_condition_features_frame() -> pd.DataFrame:
+    return as_table(load_condition_features())
 
 
-def load_subject_features_polars():
-    try:
-        import polars as pl
-    except ImportError:  # pragma: no cover
-        return None
-    proc = _find_processed()
-    if proc and (proc / "subject_features.csv").exists():
-        try:
-            return pl.read_csv(proc / "subject_features.csv")
-        except Exception:
-            pass
-    bundle = load_book_bundle()
-    rows = bundle.get("subject_features") or []
-    if rows:
-        try:
-            return pl.DataFrame(rows)
-        except Exception:
-            return pandas_to_polars(pd.DataFrame(rows))
-    return pandas_to_polars(load_subject_features())
+def load_subject_features_frame() -> pd.DataFrame:
+    return as_table(load_subject_features())
 
 
 def load_bold_timeseries() -> pd.DataFrame:
@@ -762,12 +684,8 @@ def inventory_data_sources() -> list[dict]:
             if path.is_dir():
                 parts = list(path.glob("**/*.parquet"))
                 n_extra = sum(p.stat().st_size for p in parts)
-                try:
-                    import pyarrow.parquet as pq
-
-                    n_rows = int(pq.ParquetDataset(str(path)).read().num_rows)
-                except Exception:
-                    n_rows = len(parts)
+                # Avoid optional parquet engines here (not available in WASM).
+                n_rows = len(parts)
             elif path.suffix == ".json":
                 try:
                     blob = json.loads(path.read_text())
@@ -793,7 +711,7 @@ def inventory_data_sources() -> list[dict]:
 
 
 def inventory_dataframe() -> pd.DataFrame:
-    """Pandas inventory table (small) for marimo tables / Polars conversion."""
+    """Small inventory table for marimo ``mo.ui.table``."""
     return pd.DataFrame(inventory_data_sources())
 
 
@@ -818,25 +736,45 @@ See `multi_dataset_catalog.py` for ranked integration metadata.
 """
 
 
-def load_god_run_level_polars():
-    """Multi-dataset Catalyst run_level table (Polars), or empty."""
-    try:
-        import polars as pl
-    except ImportError:
-        return None
+def load_god_run_level_df() -> pd.DataFrame:
+    """Multi-dataset Catalyst run_level as pandas.
+
+    Prefer ``god_run_summary.json`` records (WASM-safe). On host, try reading
+    parquet via pandas if an engine is installed; never hard-require it.
+    """
+    # Prefer pre-aggregated JSON (always works on Pages / Pyodide)
+    god = _load_god_run_summary_dict()
+    recs = god.get("records") or []
+    if recs:
+        return pd.DataFrame(recs)
+
     for root in REPO_CANDIDATES:
         p = root / "data" / "processed" / "god_features" / "run_level"
-        if p.exists():
-            try:
-                return pl.read_parquet(str(p))
-            except Exception:
-                try:
-                    import pyarrow.parquet as pq
+        if not p.exists():
+            continue
+        # Optional host path — import by string pieces so WASM source scanners
+        # do not auto-install unavailable packages.
+        try:
+            import importlib
 
-                    return pl.from_arrow(pq.read_table(p))
-                except Exception:
-                    pass
-    return pl.DataFrame() if "pl" in dir() else None
+            eng = importlib.import_module("pand" + "as")
+            return eng.read_parquet(str(p))
+        except Exception:
+            try:
+                parts = sorted(p.glob("**/*.parquet"))
+                if not parts:
+                    continue
+                frames = []
+                for part in parts:
+                    try:
+                        frames.append(pd.read_parquet(part))
+                    except Exception:
+                        continue
+                if frames:
+                    return pd.concat(frames, ignore_index=True)
+            except Exception:
+                pass
+    return pd.DataFrame()
 
 
 def _repo_root() -> Path | None:
@@ -962,31 +900,19 @@ def load_multi_dataset_runs() -> pd.DataFrame:
     """Unified run-level spectral table with a ``dataset`` column.
 
     Priority:
-      1. ``god_features/run_level`` parquet (Catalyst multi-set)
-      2. ``god_run_summary.json`` embedded records
-      3. Primary book ``spectral_features.csv`` tagged as ds000171
+      1. ``god_run_summary.json`` / god run_level (multi-set)
+      2. Primary book ``spectral_features.csv`` tagged as ds000171
     """
-    # 1) God parquet
     try:
-        pl_df = load_god_run_level_polars()
-        if pl_df is not None and getattr(pl_df, "height", 0):
-            pdf = pl_df.to_pandas()
+        pdf = load_god_run_level_df()
+        if pdf is not None and not getattr(pdf, "empty", True):
             if "dataset" not in pdf.columns:
-                pdf["dataset"] = "ds000171"
+                pdf = pdf.copy()
+                pdf.insert(0, "dataset", "ds000171")
             return pdf
     except Exception:
         pass
 
-    # 2) Summary JSON (WASM-safe)
-    god = _load_god_run_summary_dict()
-    recs = god.get("records") or []
-    if recs:
-        pdf = pd.DataFrame(recs)
-        if "dataset" not in pdf.columns:
-            pdf["dataset"] = "ds000171"
-        return pdf
-
-    # 3) Primary feature store
     sf = load_spectral_features()
     if sf is None or getattr(sf, "empty", True):
         return pd.DataFrame()
@@ -996,19 +922,9 @@ def load_multi_dataset_runs() -> pd.DataFrame:
     return out
 
 
-def load_multi_dataset_runs_polars():
-    """Polars multi-set runs (empty frame if unavailable)."""
-    try:
-        import polars as pl
-    except ImportError:  # pragma: no cover
-        return None
-    pl_df = load_god_run_level_polars()
-    if pl_df is not None and getattr(pl_df, "height", 0):
-        if "dataset" not in pl_df.columns:
-            pl_df = pl_df.with_columns(pl.lit("ds000171").alias("dataset"))
-        return pl_df
-    pdf = load_multi_dataset_runs()
-    return pandas_to_polars(pdf) if pdf is not None else pl.DataFrame()
+def load_multi_dataset_runs_frame() -> pd.DataFrame:
+    """Multi-set runs as pandas (alias of :func:`load_multi_dataset_runs`)."""
+    return as_table(load_multi_dataset_runs())
 
 
 def load_raw_participants(ds_id: str = "ds000171") -> pd.DataFrame:

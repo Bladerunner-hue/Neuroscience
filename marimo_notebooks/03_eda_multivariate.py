@@ -23,6 +23,7 @@ def _():
         MUSIC_COLOR,
         NONMUSIC_COLOR,
         HIGHLIGHT,
+        as_table,
         book_nav,
         clinical_relevance_card,
         data_provenance_md,
@@ -32,10 +33,13 @@ def _():
         load_cleaned_spectral_features,
         load_condition_features,
         load_ml_bakeoff,
+        load_multi_dataset_runs,
         load_spatial_connectivity,
         load_spectral_features,
         load_subject_features,
+        multi_dataset_run_ids,
         set_global_style,
+        studies_dataframe,
     )
 
     set_global_style()
@@ -45,6 +49,7 @@ def _():
         MDD_COLOR,
         MUSIC_COLOR,
         NONMUSIC_COLOR,
+        as_table,
         book_nav,
         clinical_relevance_card,
         data_provenance_md,
@@ -54,13 +59,16 @@ def _():
         load_cleaned_spectral_features,
         load_condition_features,
         load_ml_bakeoff,
+        load_multi_dataset_runs,
         load_spatial_connectivity,
         load_spectral_features,
         load_subject_features,
         mo,
+        multi_dataset_run_ids,
         np,
         pd,
         plt,
+        studies_dataframe,
     )
 
 
@@ -817,6 +825,54 @@ def _(best_summary, clinical_relevance_card, key_insight_card, mo, pd):
             ),
         ]
     )
+    return
+
+
+@app.cell
+def _(
+    as_table,
+    load_multi_dataset_runs,
+    mo,
+    multi_dataset_run_ids,
+    pd,
+    studies_dataframe,
+):
+    studies = studies_dataframe()
+    multi = load_multi_dataset_runs()
+    ds_ids = multi_dataset_run_ids()
+    blocks = [
+        mo.md(
+            f"""
+## Cross-cohort feature coverage (multi-dataset)
+
+Bake-off / RecSys models train on **ds000171**. Multi-set spectral runs available for:
+**{', '.join(f'`{d}`' for d in ds_ids)}**.
+"""
+        )
+    ]
+    if studies is not None and not getattr(studies, "empty", True):
+        sc = [
+            c
+            for c in (
+                "dataset",
+                "role",
+                "status",
+                "match_level",
+                "n_bold_files",
+                "short_title",
+            )
+            if c in studies.columns
+        ]
+        blocks.append(mo.ui.table(as_table(studies[sc]), selection=None, page_size=10))
+    if multi is not None and not getattr(multi, "empty", True) and "dataset" in multi.columns:
+        n_by = multi.groupby("dataset").size().reset_index(name="n_runs")
+        metric = [c for c in ("power_high", "tsnr") if c in multi.columns]
+        if metric:
+            means = multi.groupby("dataset", as_index=False)[metric].mean(numeric_only=True)
+            n_by = n_by.merge(means, on="dataset", how="left")
+        blocks.append(mo.md("### Multi-set run means (god / summary)"))
+        blocks.append(mo.ui.table(as_table(n_by.round(4)), selection=None))
+    mo.vstack(blocks)
     return
 
 

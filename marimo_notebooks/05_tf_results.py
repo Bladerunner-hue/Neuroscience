@@ -24,12 +24,16 @@ def _():
         CONTROL_COLOR,
         MDD_COLOR,
         MUSIC_COLOR,
+        as_table,
         book_nav,
         clinical_relevance_card,
         data_provenance_md,
         key_insight_card,
+        load_multi_dataset_runs,
         load_tf_results,
+        multi_dataset_run_ids,
         set_global_style,
+        studies_dataframe,
     )
 
     set_global_style()
@@ -37,15 +41,19 @@ def _():
         CONTROL_COLOR,
         MDD_COLOR,
         MUSIC_COLOR,
+        as_table,
         book_nav,
         clinical_relevance_card,
         data_provenance_md,
         key_insight_card,
+        load_multi_dataset_runs,
         load_tf_results,
         mo,
+        multi_dataset_run_ids,
         np,
         pd,
         plt,
+        studies_dataframe,
     )
 
 
@@ -324,6 +332,41 @@ def _(MUSIC_COLOR, key_insight_card, mo, pd, plt, tfres):
             ]
         )
     mo.vstack(_blocks)
+    return
+
+
+@app.cell
+def _(
+    as_table,
+    load_multi_dataset_runs,
+    mo,
+    multi_dataset_run_ids,
+    studies_dataframe,
+):
+    studies = studies_dataframe()
+    multi = load_multi_dataset_runs()
+    ds_ids = multi_dataset_run_ids()
+    blocks = [
+        mo.md(
+            f"""
+## Multi-dataset context for neural metrics
+
+TF metrics are trained on the **primary** feature store (ds000171).  
+Multi-set spectral runs on disk/summary: **{', '.join(f'`{d}`' for d in ds_ids)}**.
+"""
+        )
+    ]
+    if studies is not None and not getattr(studies, "empty", True):
+        sc = [
+            c
+            for c in ("dataset", "role", "status", "n_bold_files", "short_title", "match_level")
+            if c in studies.columns
+        ]
+        blocks.append(mo.ui.table(as_table(studies[sc]), selection=None, page_size=10))
+    if multi is not None and not getattr(multi, "empty", True) and "dataset" in multi.columns:
+        n_by = multi.groupby("dataset").size().reset_index(name="n_spectral_runs")
+        blocks.append(mo.ui.table(as_table(n_by), selection=None))
+    mo.vstack(blocks)
     return
 
 

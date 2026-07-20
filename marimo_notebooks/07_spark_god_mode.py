@@ -6,7 +6,7 @@ pre-ingested Parquet and demos the tf.data hand-off.
 
 # /// script
 # requires-python = ">=3.12,<3.13"
-# dependencies = ["marimo", "numpy", "pandas", "matplotlib", "pyspark", "pyarrow", "msgspec", "tensorflow"]
+# dependencies = ["marimo", "numpy", "pandas", "matplotlib", "pyspark", "msgspec", "tensorflow"]
 # ///
 
 import marimo

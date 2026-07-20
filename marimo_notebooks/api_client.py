@@ -378,18 +378,13 @@ def _scan_local_files() -> dict[str, Any]:
     }
 
 
-def records_to_polars(records: list[dict[str, Any]]):
-    """Small helper for marimo tables (Polars preferred)."""
-    try:
-        import polars as pl
+def records_to_frame(records: list[dict[str, Any]]):
+    """Small helper for marimo tables (plain pandas — WASM-safe)."""
+    import pandas as pd
 
-        if not records:
-            return pl.DataFrame()
-        return pl.DataFrame(records)
-    except Exception:
-        import pandas as pd
-
-        return pd.DataFrame(records)
+    if not records:
+        return pd.DataFrame()
+    return pd.DataFrame(records)
 
 
 def connectivity_banner_md() -> str:

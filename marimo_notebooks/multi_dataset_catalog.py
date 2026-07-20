@@ -230,7 +230,7 @@ MULTI_DATASET_CATALOG: dict[str, dict[str, Any]] = {
 
 
 def catalog_rows() -> list[dict[str, Any]]:
-    """Flat table rows for marimo / Polars (static scientific catalog)."""
+    """Flat table rows for marimo / pandas tables (static scientific catalog)."""
     rows = []
     for ds_id, m in sorted(
         MULTI_DATASET_CATALOG.items(), key=lambda kv: kv[1].get("priority", 99)
@@ -273,7 +273,7 @@ def integration_roadmap_md() -> str:
 1. **Spectral / FFT outside JVM** — `pre_ingest_bold_to_parquet.py` (scipy multitaper).  
 2. **Spark** — pure DataFrame/SQL rollups, QC aggregates, multi-dataset joins (`dataset_id`, subject, task, run).  
 3. **Delta Lake (optional scale path)** — partitioned feature tables with provenance + time-travel.  
-4. **Marimo** — Polars for book-scale reactive tables; Spark Connect when multi-set / larger *n*.  
+4. **Marimo** — pandas tables for book-scale reactive UI; Spark Connect when multi-set / larger *n*.  
 5. **Native Connect** — `./scripts/start_local_spark_connect.sh` (pip `pyspark==4.1.1` + matching Spark binary).
 
 **Practical sequence**
